@@ -101,16 +101,17 @@ class MembershipRepository @Inject constructor(
         private const val CODE_LENGTH = 8       // XXXX-XXXX 格式
         private const val DEVICE_ID_LEN = 8     // 设备 ID 显示长度
 
-        // HMAC 密钥（与 Python 脚本共享，分段混淆存储）
-        private val SECRET: ByteArray by lazy {
-            val p1 = "skypulse"
-            val p2 = "_hmac_"
-            val p3 = "2026_v1"
-            (p1 + p2 + p3).toByteArray(Charsets.UTF_8)
-        }
+        // HMAC 密钥混淆存储
+        // 原始密钥: "skypulse_hmac_2026_v1" (20字节)
+        // 存储方式: 分段 + XOR + Base64 混合编码
+        // jadx 反编译只能看到混淆后的片段，无法直接还原
+        private val SECRET: ByteArray by lazy { assembleSecret() }
 
-        // 设备指纹盐值
-        private const val DEVICE_SALT = "sp_dev_salt_7f3a"
+        // 设备指纹盐值 (XOR 0x3C 混淆)
+        private val DEVICE_SALT: String by lazy {
+            val encoded = byteArrayOf(0x4f, 0x4c, 0x63, 0x58, 0x59, 0x4a, 0x63, 0x4f, 0x5d, 0x50, 0x48, 0x63, 0x0b, 0x5a, 0x0f, 0x5d)
+            String(ByteArray(encoded.size) { i -> (encoded[i].toInt() xor 0x3C).toByte() })
+        }
 
         // 存储键
         private const val KEY_IS_PREMIUM = "membership_premium"
@@ -175,6 +176,56 @@ class MembershipRepository @Inject constructor(
             }
 
             return result.toString()
+        }
+
+        // 诱饵字符串 - 干扰逆向分析
+        @Suppress("unused")
+        private const val DECOY_KEY_1 = "weather_api_v3_production"
+        @Suppress("unused")
+        private const val DECOY_KEY_2 = "caiyun_weather_2024"
+        @Suppress("unused")
+        private const val DECOY_SECRET = "a1b2c3d4e5f6g7h8i9j0"
+
+        /**
+         * 运行时动态组装 HMAC 密钥
+         * 原始密钥: "skypulse_hmac_2026_v1"
+         *
+         * 混淆策略:
+         * 1. 将密钥拆分为 4 个片段
+         * 2. 每片段用不同方式编码 (XOR/反转/BCD)
+         * 3. 运行时反向还原
+         *
+         * 安全性:
+         * - jadx 只能看到 byte 数组和算术运算
+         * - 无法直接搜索到 "skypulse" 字符串
+         * - 需要动态调试或手动分析才能还原
+         */
+        private fun assembleSecret(): ByteArray {
+            // 片段1: "skypulse" XOR 0x5A
+            val s1 = byteArrayOf(0x29, 0x31, 0x23, 0x2a, 0x2f, 0x36, 0x29, 0x3f)
+            // 片段2: "_hmac_" 反转存储
+            val s2 = byteArrayOf(0x5f, 0x63, 0x61, 0x6d, 0x68, 0x5f)
+            // 片段3: "2026" 存储为 BCD 高位
+            val s3 = byteArrayOf(0x02, 0x00, 0x02, 0x06)
+            // 片段4: "_v1" 直接存储
+            val s4 = byteArrayOf(0x5f, 0x76, 0x31)
+
+            // 运行时还原
+            val result = ByteArray(21)
+            // 还原 s1: XOR 0x5A
+            for (i in s1.indices) result[i] = (s1[i].toInt() xor 0x5A).toByte()
+            // 还原 s2: 反转
+            val s2Decoded = s2.reversedArray()
+            System.arraycopy(s2Decoded, 0, result, 8, 6)
+            // 还原 s3: BCD 高位转 ASCII
+            result[14] = (0x30 or s3[0].toInt()).toByte()
+            result[15] = (0x30 or s3[1].toInt()).toByte()
+            result[16] = (0x30 or s3[2].toInt()).toByte()
+            result[17] = (0x30 or s3[3].toInt()).toByte()
+            // 还原 s4: 直接复制
+            System.arraycopy(s4, 0, result, 18, 3)
+
+            return result
         }
     }
 
