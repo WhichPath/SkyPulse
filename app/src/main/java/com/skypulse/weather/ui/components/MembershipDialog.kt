@@ -130,19 +130,33 @@ fun MembershipDialog(
                         )
                     }
 
-                    Text(
-                        text = buildAnnotatedString {
-                            append("付款¥19.9成功后，联系作者激活")
-                            withStyle(SpanStyle(color = Color(0xFFFFC125), fontWeight = FontWeight.Bold)) {
-                                append("永久会员")
-                            }
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = IosTextSecondary,
-                        textAlign = TextAlign.Center,
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        lineHeight = 20.sp
-                    )
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = buildAnnotatedString {
+                                append("付款后，提供设备ID联系作者激活")
+                                withStyle(SpanStyle(color = Color(0xFFFFC125), fontWeight = FontWeight.Bold)) {
+                                    append("永久会员")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = IosTextSecondary,
+                            lineHeight = 20.sp
+                        )
+                        Text(
+                            text = buildAnnotatedString {
+                                append("更换新设备")
+                                withStyle(SpanStyle(color = Color(0xFFFFC125), fontWeight = FontWeight.Bold)) {
+                                    append("免费激活")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = IosTextSecondary,
+                            lineHeight = 20.sp
+                        )
+                    }
 
                     // 设备 ID 展示区
                     if (deviceId.isNotEmpty()) {
