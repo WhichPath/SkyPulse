@@ -52,6 +52,7 @@ fun MembershipDialog(
     deviceId: String = ""
 ) {
     var codeInput by remember { mutableStateOf("") }
+    var inviteCodeInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isActivating by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
@@ -156,6 +157,17 @@ fun MembershipDialog(
                             color = IosTextSecondary,
                             lineHeight = 20.sp
                         )
+                        Text(
+                            text = buildAnnotatedString {
+                                append("邀请好友激活可")
+                                withStyle(SpanStyle(color = Color(0xFFFFC125), fontWeight = FontWeight.Bold)) {
+                                    append("免费领取激活码")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = IosTextSecondary,
+                            lineHeight = 20.sp
+                        )
                     }
 
                     // 设备 ID 展示区
@@ -225,6 +237,39 @@ fun MembershipDialog(
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                             letterSpacing = 2.sp,
+                            color = IosTextPrimary,
+                            fontFamily = FontFamily.Monospace
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Characters,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus() }
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = IosAccentBlue,
+                            cursorColor = IosAccentBlue,
+                            focusedLabelColor = IosAccentBlue,
+                            unfocusedLabelColor = IosTextSecondary,
+                            focusedTextColor = IosTextPrimary,
+                            unfocusedTextColor = IosTextPrimary,
+                            focusedPlaceholderColor = IosTextSecondary,
+                            unfocusedPlaceholderColor = IosTextSecondary
+                        )
+                    )
+
+                    // 邀请码输入（可选）
+                    OutlinedTextField(
+                        value = inviteCodeInput,
+                        onValueChange = { inviteCodeInput = it.trim() },
+                        label = { Text("邀请码（选填）") },
+                        placeholder = { Text("sky-xxxx-xxxx") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            letterSpacing = 1.sp,
                             color = IosTextPrimary,
                             fontFamily = FontFamily.Monospace
                         ),

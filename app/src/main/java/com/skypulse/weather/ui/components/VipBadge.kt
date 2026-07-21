@@ -9,23 +9,33 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.WorkspacePremium
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
+import com.skypulse.weather.ui.theme.IosAccentBlue
+import com.skypulse.weather.ui.theme.IosDividerColor
+import com.skypulse.weather.ui.theme.IosTextPrimary
+import com.skypulse.weather.ui.theme.IosTextSecondary
 
 // VIP 金色渐变色
 private val VipGoldStart = Color(0xFFFFD700)
@@ -76,6 +86,7 @@ fun VipBadge(modifier: Modifier = Modifier) {
  */
 @Composable
 fun VipStatusCard(
+    inviteCode: String = "",
     modifier: Modifier = Modifier
 ) {
     // 微光动画
@@ -90,6 +101,8 @@ fun VipStatusCard(
         label = "shimmerOffset"
     )
 
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
     val cardShape = RoundedCornerShape(16.dp)
 
     Box(
@@ -164,6 +177,7 @@ fun VipStatusCard(
             }
 
             Column(
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
@@ -173,13 +187,158 @@ fun VipStatusCard(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Premium Member",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = VipTextDark.copy(alpha = 0.6f),
-                    fontSize = 11.sp,
-                    letterSpacing = 1.sp
+                    text = inviteCode,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.5.sp
+                    ),
+                    color = VipTextDark.copy(alpha = 0.7f),
+                    fontSize = 12.sp
                 )
             }
+
+            IconButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(inviteCode))
+                    Toast.makeText(context, "已复制邀请码", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ContentCopy,
+                    contentDescription = "复制邀请码",
+                    modifier = Modifier.size(18.dp),
+                    tint = VipGoldMid
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 邀请码卡片
+ */
+@Composable
+fun InviteCodeCard(
+    inviteCode: String,
+    modifier: Modifier = Modifier
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val cardShape = RoundedCornerShape(16.dp)
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = cardShape,
+        color = Color(0xFFF2F2F7),
+        border = androidx.compose.foundation.BorderStroke(
+            0.5.dp,
+            IosDividerColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "我的邀请码",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = IosTextSecondary,
+                    fontSize = 11.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = inviteCode,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = IosTextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "邀请好友激活可获得奖励",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = IosAccentBlue,
+                    fontSize = 11.sp
+                )
+            }
+            IconButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(inviteCode))
+                    Toast.makeText(context, "已复制邀请码", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ContentCopy,
+                    contentDescription = "复制",
+                    modifier = Modifier.size(18.dp),
+                    tint = IosAccentBlue
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 邀请码行 - 用于卡片内部
+ */
+@Composable
+fun InviteCodeRow(
+    inviteCode: String,
+    modifier: Modifier = Modifier
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .offset(y = (-8).dp)
+            .padding(horizontal = 16.dp, vertical = 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "邀请码",
+                style = MaterialTheme.typography.bodySmall,
+                color = IosTextSecondary,
+                fontSize = 12.sp
+            )
+            Text(
+                text = inviteCode,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 0.5.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = IosTextPrimary,
+                fontSize = 13.sp
+            )
+        }
+        IconButton(
+            onClick = {
+                clipboardManager.setText(AnnotatedString(inviteCode))
+                Toast.makeText(context, "已复制邀请码", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ContentCopy,
+                contentDescription = "复制邀请码",
+                modifier = Modifier.size(16.dp),
+                tint = IosAccentBlue
+            )
         }
     }
 }

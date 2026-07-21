@@ -51,6 +51,18 @@ class MembershipRepository @Inject constructor(
     }
 
     /**
+     * 生成邀请码
+     * 格式：sky-xxxx-xxxx（基于设备ID，唯一）
+     */
+    fun generateInviteCode(): String {
+        val deviceId = getDeviceId()
+        // 使用设备ID + 盐值生成哈希，取前8位
+        val hash = sha256("invite_${deviceId}_sky")
+        val code = hash.take(8).uppercase()
+        return "sky-${code.take(4)}-${code.takeLast(4)}"
+    }
+
+    /**
      * 获取本设备的设备 ID（8 位大写十六进制）
      * 用户将此 ID 发给开发者，开发者用脚本生成该设备的专属激活码
      */
