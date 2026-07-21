@@ -1,6 +1,13 @@
 package com.skypulse.weather.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -9,9 +16,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +32,11 @@ private val VipGoldStart = Color(0xFFFFD700)
 private val VipGoldEnd = Color(0xFFFFA500)
 private val VipGoldMid = Color(0xFFFFC125)
 private val VipTextDark = Color(0xFF7A5A00)
+
+// 磨砂玻璃浅色 - 与设置页面协调
+private val GlassLight = Color(0xFFFAFAFA)
+private val GlassLightMid = Color(0xFFF5F5F5)
+private val GlassBorder = Color(0x33FFD700)
 
 /**
  * VIP 永久会员勋章 — 金色渐变胶囊
@@ -58,67 +72,114 @@ fun VipBadge(modifier: Modifier = Modifier) {
 }
 
 /**
- * VIP 设置卡片 — 展示会员状态和激活信息
+ * VIP 设置卡片 — 方案A：磨砂玻璃 + 微光动效
  */
 @Composable
 fun VipStatusCard(
-    activatedAt: Long,
     modifier: Modifier = Modifier
 ) {
-    val dateStr = rememberFormattedDate(activatedAt)
+    // 微光动画
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -300f,
+        targetValue = 800f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
 
-    Column(
+    val cardShape = RoundedCornerShape(16.dp)
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(cardShape)
             .background(
                 Brush.linearGradient(
-                    colors = listOf(
-                        VipGoldStart.copy(alpha = 0.15f),
-                        VipGoldMid.copy(alpha = 0.10f),
-                        VipGoldEnd.copy(alpha = 0.15f)
-                    )
+                    colors = listOf(GlassLight, GlassLightMid, GlassLight)
                 )
             )
-            .padding(horizontal = 16.dp, vertical = 14.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.WorkspacePremium,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = VipGoldMid
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        GlassBorder,
+                        VipGoldMid.copy(alpha = 0.3f),
+                        GlassBorder
+                    )
+                ),
+                shape = cardShape
             )
-            Column {
+    ) {
+        // 微光层
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            VipGoldMid.copy(alpha = 0.05f),
+                            VipGoldStart.copy(alpha = 0.10f),
+                            VipGoldMid.copy(alpha = 0.05f),
+                            Color.Transparent
+                        ),
+                        start = Offset(shimmerOffset, 0f),
+                        end = Offset(shimmerOffset + 300f, 300f)
+                    )
+                )
+        )
+
+        // 内容
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 皇冠图标 - 金色渐变背景
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                VipGoldStart.copy(alpha = 0.15f),
+                                VipGoldEnd.copy(alpha = 0.15f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.WorkspacePremium,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = VipGoldMid
+                )
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 Text(
                     text = "SkyPulse 永久会员",
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color(0xFF7A5A00),
+                    color = VipTextDark,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "激活于 $dateStr",
+                    text = "Premium Member",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF9A7A20),
-                    fontSize = 12.sp
+                    color = VipTextDark.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    letterSpacing = 1.sp
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun rememberFormattedDate(timestamp: Long): String {
-    return if (timestamp > 0) {
-        val cal = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
-        val y = cal.get(java.util.Calendar.YEAR)
-        val m = cal.get(java.util.Calendar.MONTH) + 1
-        val d = cal.get(java.util.Calendar.DAY_OF_MONTH)
-        "$y 年 $m 月 $d 日"
-    } else {
-        "未知"
     }
 }
