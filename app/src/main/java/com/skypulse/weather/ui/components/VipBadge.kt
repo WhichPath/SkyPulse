@@ -86,7 +86,6 @@ fun VipBadge(modifier: Modifier = Modifier) {
  */
 @Composable
 fun VipStatusCard(
-    inviteCode: String = "",
     modifier: Modifier = Modifier
 ) {
     // 微光动画
@@ -101,8 +100,6 @@ fun VipStatusCard(
         label = "shimmerOffset"
     )
 
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
     val cardShape = RoundedCornerShape(16.dp)
 
     Box(
@@ -176,169 +173,15 @@ fun VipStatusCard(
                 )
             }
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "SkyPulse 永久会员",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = VipTextDark,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = inviteCode,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = VipTextDark.copy(alpha = 0.7f),
-                    fontSize = 12.sp
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(inviteCode))
-                    Toast.makeText(context, "已复制邀请码", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.ContentCopy,
-                    contentDescription = "复制邀请码",
-                    modifier = Modifier.size(18.dp),
-                    tint = VipGoldMid
-                )
-            }
-        }
-    }
-}
-
-/**
- * 邀请码卡片
- */
-@Composable
-fun InviteCodeCard(
-    inviteCode: String,
-    modifier: Modifier = Modifier
-) {
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
-    val cardShape = RoundedCornerShape(16.dp)
-
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = cardShape,
-        color = Color(0xFFF2F2F7),
-        border = androidx.compose.foundation.BorderStroke(
-            0.5.dp,
-            IosDividerColor
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    text = "我的邀请码",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = IosTextSecondary,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = inviteCode,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 1.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = IosTextPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "邀请好友激活可获得奖励",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = IosAccentBlue,
-                    fontSize = 11.sp
-                )
-            }
-            IconButton(
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(inviteCode))
-                    Toast.makeText(context, "已复制邀请码", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.ContentCopy,
-                    contentDescription = "复制",
-                    modifier = Modifier.size(18.dp),
-                    tint = IosAccentBlue
-                )
-            }
-        }
-    }
-}
-
-/**
- * 邀请码行 - 用于卡片内部
- */
-@Composable
-fun InviteCodeRow(
-    inviteCode: String,
-    modifier: Modifier = Modifier
-) {
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .offset(y = (-8).dp)
-            .padding(horizontal = 16.dp, vertical = 0.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
             Text(
-                text = "邀请码",
-                style = MaterialTheme.typography.bodySmall,
-                color = IosTextSecondary,
-                fontSize = 12.sp
-            )
-            Text(
-                text = inviteCode,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 0.5.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                color = IosTextPrimary,
-                fontSize = 13.sp
-            )
-        }
-        IconButton(
-            onClick = {
-                clipboardManager.setText(AnnotatedString(inviteCode))
-                Toast.makeText(context, "已复制邀请码", Toast.LENGTH_SHORT).show()
-            },
-            modifier = Modifier.size(28.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.ContentCopy,
-                contentDescription = "复制邀请码",
-                modifier = Modifier.size(16.dp),
-                tint = IosAccentBlue
+                text = "SkyPulse 永久会员",
+                style = MaterialTheme.typography.titleSmall,
+                color = VipTextDark,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
         }
     }
 }
+
+
