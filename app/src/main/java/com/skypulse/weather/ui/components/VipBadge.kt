@@ -86,6 +86,7 @@ fun VipBadge(modifier: Modifier = Modifier) {
  */
 @Composable
 fun VipStatusCard(
+    deviceId: String = "",
     modifier: Modifier = Modifier
 ) {
     // 微光动画
@@ -173,13 +174,27 @@ fun VipStatusCard(
                 )
             }
 
-            Text(
-                text = "SkyPulse 永久会员",
-                style = MaterialTheme.typography.titleSmall,
-                color = VipTextDark,
-                fontWeight = FontWeight.Bold,
+            Column(
                 modifier = Modifier.weight(1f)
-            )
+            ) {
+                Text(
+                    text = "SkyPulse 永久会员",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = VipTextDark,
+                    fontWeight = FontWeight.Bold
+                )
+                if (deviceId.isNotEmpty()) {
+                    Text(
+                        text = deviceId,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = VipTextDark.copy(alpha = 0.6f),
+                        fontSize = 11.sp
+                    )
+                }
+            }
         }
     }
 }
