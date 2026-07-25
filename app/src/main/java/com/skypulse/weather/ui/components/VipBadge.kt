@@ -11,9 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,10 +62,10 @@ fun VipBadge(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Icon(
-            imageVector = Icons.Outlined.WorkspacePremium,
+        LucideIcon(
+            name = "award",
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            size = 16.dp,
             tint = VipTextDark
         )
         Text(
@@ -166,10 +163,10 @@ fun VipStatusCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.WorkspacePremium,
+                LucideIcon(
+                    name = "award",
                     contentDescription = null,
-                    modifier = Modifier.size(26.dp),
+                    size = 26.dp,
                     tint = VipGoldMid
                 )
             }

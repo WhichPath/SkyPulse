@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -201,10 +199,10 @@ fun MembershipDialog(
                                     },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.ContentCopy,
+                                    LucideIcon(
+                                        name = "copy",
                                         contentDescription = "复制",
-                                        modifier = Modifier.size(18.dp),
+                                        size = 18.dp,
                                         tint = IosAccentBlue
                                     )
                                 }
