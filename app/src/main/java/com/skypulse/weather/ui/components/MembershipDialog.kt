@@ -88,7 +88,7 @@ fun MembershipDialog(
                 ) {
                     VipBadge()
                     Text(
-                        text = "恭喜，你已成为 SkyPulse 永久会员！\n所有高级功能已解锁。",
+                        text = "恭喜，你已成为 南风天气永久会员！\n所有高级功能已解锁。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = IosTextSecondary,
                         textAlign = TextAlign.Center,

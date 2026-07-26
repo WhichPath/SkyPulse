@@ -175,7 +175,7 @@ fun VipStatusCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "SkyPulse 永久会员",
+                    text = "南风天气永久会员",
                     style = MaterialTheme.typography.titleSmall,
                     color = VipTextDark,
                     fontWeight = FontWeight.Bold
