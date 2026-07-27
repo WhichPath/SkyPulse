@@ -29,6 +29,17 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Use standard Maven repos for CI
+        run: |
+          # The upstream settings.gradle.kts puts Aliyun mirrors first (optimized for China).
+          # On GitHub Actions (US-based runners) Aliyun can be unreachable, which breaks
+          # plugin resolution (e.g. KSP plugin marker is only on Maven Central, not Google
+          # Maven). Remove the Aliyun lines so CI uses google() + mavenCentral() +
+          # gradlePluginPortal() directly. This is CI-only; settings.gradle.kts is not committed.
+          sed -i '/maven.aliyun.com/d' settings.gradle.kts
+          echo "--- settings.gradle.kts after cleanup ---"
+          cat settings.gradle.kts
+
       - name: Generate local.properties
         run: |
           # The app keeps the upstream author's proxy by default
