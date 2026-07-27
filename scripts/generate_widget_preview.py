@@ -54,7 +54,7 @@ def create_2x2_preview():
     draw.text((275, forecast_y + 65), "25°", fill="white", font=font_small)
     
     # Save the image
-    output_path = "C:/Users/linsh/weather-none/app/src/main/res/drawable-nodpi/widget_preview_image.png"
+    output_path = "app/src/main/res/drawable-nodpi/widget_preview_image.png"
     img.save(output_path, "PNG")
     print(f"Generated 2x2 preview image: {output_path}")
 

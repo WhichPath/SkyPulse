@@ -20,7 +20,7 @@
 
 A beautifully crafted, feature-rich Android weather app built with **Kotlin** and **Jetpack Compose**, featuring Apple-style weather icons drawn entirely with Canvas API, glassmorphism UI, and smooth animations.
 
-[![Download APK](https://img.shields.io/badge/Download-APK-FF6B35?style=for-the-badge&logo=android&logoColor=white)](https://github.com/qnmlgbd250/weather-none/releases/latest)
+[![Download APK](https://img.shields.io/badge/Download-APK-FF6B35?style=for-the-badge&logo=android&logoColor=white)](https://github.com/WhichPath/SkyPulse/releases/latest)
 
 </div>
 
@@ -87,8 +87,8 @@ MVVM + Repository Pattern
 
 ```bash
 # Clone the repository
-git clone git@github.com:qnmlgbd250/weather-none.git
-cd weather-none
+git clone git@github.com:WhichPath/SkyPulse.git
+cd SkyPulse
 
 # Open in Android Studio, sync Gradle, and run on device
 ```
@@ -112,7 +112,7 @@ GET /airquality/v1/current/{lat}/{lon}
 
 <div align="center">
 
-[![Download APK](https://img.shields.io/badge/Download%20v1.8.96-APK-blue?style=for-the-badge&logo=android&logoColor=white)](https://github.com/qnmlgbd250/weather-none/releases/latest)
+[![Download APK](https://img.shields.io/badge/Download%20v3.4.52-APK-blue?style=for-the-badge&logo=android&logoColor=white)](https://github.com/WhichPath/SkyPulse/releases/latest)
 
 </div>
 
@@ -136,7 +136,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ### ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=qnmlgbd250/weather-none&type=Date)](https://star-history.com/#qnmlgbd250/weather-none&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=WhichPath/SkyPulse&type=Date)](https://star-history.com/#WhichPath/SkyPulse&Date)
 
 </div>
 
@@ -166,7 +166,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 一款精心打造的 Android 天气应用，使用 **Kotlin** + **Jetpack Compose** 构建，采用纯 Canvas API 绘制苹果风格天气图标，搭配毛玻璃 UI 和丝滑动画。
 
-[![Download APK](https://img.shields.io/badge/下载-APK-FF6B35?style=for-the-badge&logo=android&logoColor=white)](https://github.com/qnmlgbd250/weather-none/releases/latest)
+[![Download APK](https://img.shields.io/badge/下载-APK-FF6B35?style=for-the-badge&logo=android&logoColor=white)](https://github.com/WhichPath/SkyPulse/releases/latest)
 
 </div>
 
@@ -233,8 +233,8 @@ MVVM + Repository 模式
 
 ```bash
 # 克隆仓库
-git clone git@github.com:qnmlgbd250/weather-none.git
-cd weather-none
+git clone git@github.com:WhichPath/SkyPulse.git
+cd SkyPulse
 
 # 用 Android Studio 打开，同步 Gradle，运行到设备
 ```
@@ -258,7 +258,7 @@ GET /airquality/v1/current/{lat}/{lon}
 
 <div align="center">
 
-[![Download APK](https://img.shields.io/badge/下载%20v1.8.96-APK-blue?style=for-the-badge&logo=android&logoColor=white)](https://github.com/qnmlgbd250/weather-none/releases/latest)
+[![Download APK](https://img.shields.io/badge/下载%20v3.4.52-APK-blue?style=for-the-badge&logo=android&logoColor=white)](https://github.com/WhichPath/SkyPulse/releases/latest)
 
 </div>
 
@@ -282,7 +282,7 @@ GET /airquality/v1/current/{lat}/{lon}
 
 ### ⭐ Star 趋势
 
-[![Star History Chart](https://api.star-history.com/svg?repos=qnmlgbd250/weather-none&type=Date)](https://star-history.com/#qnmlgbd250/weather-none&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=WhichPath/SkyPulse&type=Date)](https://star-history.com/#WhichPath/SkyPulse&Date)
 
 如果觉得不错，请给个 ⭐ Star 支持一下！
 

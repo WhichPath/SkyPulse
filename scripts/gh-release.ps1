@@ -81,7 +81,7 @@ try {
         -H "Authorization: token $token" `
         -H "Content-Type: application/json; charset=utf-8" `
         --data-binary "@$tmpFile" `
-        "https://api.github.com/repos/qnmlgbd250/weather-none/releases" 2>$null
+        "https://api.github.com/repos/WhichPath/SkyPulse/releases" 2>$null
     $release = $response | ConvertFrom-Json
     if (-not $release.id) {
         $errorMsg = if ($response) { $response } else { "Empty response" }
@@ -98,7 +98,7 @@ Write-Host "  Created: $($release.html_url)" -ForegroundColor Green
 
 # 7. Upload APK and verify integrity. If verification fails, delete the broken asset and retry once.
 Write-Host "[4/5] Uploading APK ..." -ForegroundColor Cyan
-$uploadUrl = "https://uploads.github.com/repos/qnmlgbd250/weather-none/releases/$($release.id)/assets?name=skypulse-v$Version.apk"
+$uploadUrl = "https://uploads.github.com/repos/WhichPath/SkyPulse/releases/$($release.id)/assets?name=skypulse-v$Version.apk"
 $tempPath = Join-Path $env:TEMP "skypulse-verify.apk"
 
 function Upload-ApkAsset {
@@ -154,7 +154,7 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
 
     if ($asset.id) {
         Write-Host "  Deleting corrupted asset and retrying upload ..." -ForegroundColor Yellow
-        Invoke-RestMethod -Uri "https://api.github.com/repos/qnmlgbd250/weather-none/releases/assets/$($asset.id)" `
+        Invoke-RestMethod -Uri "https://api.github.com/repos/WhichPath/SkyPulse/releases/assets/$($asset.id)" `
             -Method Delete `
             -Headers @{ Authorization = "token $token" } | Out-Null
     }

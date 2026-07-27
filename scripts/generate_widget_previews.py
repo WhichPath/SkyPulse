@@ -163,7 +163,7 @@ def create_new_4x2_preview():
     return img
 
 if __name__ == "__main__":
-    output_dir = "C:/Users/ttt/weather-none/app/src/main/res/drawable-nodpi"
+    output_dir = "app/src/main/res/drawable-nodpi"
     
     # Generate medium 4x2 preview (with gradient background)
     img1 = create_medium_4x2_preview()
