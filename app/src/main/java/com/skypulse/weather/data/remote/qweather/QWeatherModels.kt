@@ -1,0 +1,218 @@
+package com.skypulse.weather.data.remote.qweather
+
+import com.squareup.moshi.JsonClass
+
+/**
+ * 和风天气 API 响应模型。
+ *
+ * 数据源：https://dev.qweather.com/
+ * 认证方式：JWT (Ed25519 签名)，通过 Authorization: Bearer 头传递。
+ *
+ * 注意单位差异（和风 vs 彩云）：
+ * - 湿度：和风为百分比(0-100)，彩云为小数(0-1) -> 映射时 /100
+ * - 气压：和风为 hPa，彩云为 Pa -> 映射时 *100
+ * - 能见度：和风为 km，彩云为 m -> 映射时 *1000
+ * - 云量：和风为百分比(0-100)，彩云为小数(0-1) -> 映射时 /100
+ * - 风速：和风为 km/h，彩云也为 km/h -> 无需转换
+ * - 温度：均为摄氏度 -> 无需转换
+ */
+
+// ============ Weather Now (实况) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherNowResponse(
+    val code: String? = null,
+    val updateTime: String? = null,
+    val now: QWeatherNow? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherNow(
+    val obsTime: String? = null,
+    val temp: String? = null,
+    val feelsLike: String? = null,
+    val icon: String? = null,
+    val text: String? = null,
+    val wind360: String? = null,
+    val windDir: String? = null,
+    val windScale: String? = null,
+    val windSpeed: String? = null,
+    val humidity: String? = null,
+    val precip: String? = null,
+    val pressure: String? = null,
+    val vis: String? = null,
+    val cloud: String? = null,
+    val dew: String? = null
+)
+
+// ============ Daily Forecast (逐日预报) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherDailyResponse(
+    val code: String? = null,
+    val daily: List<QWeatherDaily>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherDaily(
+    val fxDate: String? = null,
+    val sunrise: String? = null,
+    val sunset: String? = null,
+    val moonrise: String? = null,
+    val moonset: String? = null,
+    val moonPhase: String? = null,
+    val moonPhaseIcon: String? = null,
+    val tempMax: String? = null,
+    val tempMin: String? = null,
+    val iconDay: String? = null,
+    val textDay: String? = null,
+    val iconNight: String? = null,
+    val textNight: String? = null,
+    val wind360Day: String? = null,
+    val windDirDay: String? = null,
+    val windScaleDay: String? = null,
+    val windSpeedDay: String? = null,
+    val wind360Night: String? = null,
+    val windDirNight: String? = null,
+    val windScaleNight: String? = null,
+    val windSpeedNight: String? = null,
+    val humidity: String? = null,
+    val precip: String? = null,
+    val pressure: String? = null,
+    val vis: String? = null,
+    val cloud: String? = null,
+    val uvIndex: String? = null
+)
+
+// ============ Hourly Forecast (逐小时预报) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherHourlyResponse(
+    val code: String? = null,
+    val hourly: List<QWeatherHourly>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherHourly(
+    val fxTime: String? = null,
+    val temp: String? = null,
+    val icon: String? = null,
+    val text: String? = null,
+    val wind360: String? = null,
+    val windDir: String? = null,
+    val windScale: String? = null,
+    val windSpeed: String? = null,
+    val humidity: String? = null,
+    val pop: String? = null,
+    val precip: String? = null,
+    val pressure: String? = null,
+    val cloud: String? = null,
+    val dew: String? = null,
+    val vis: String? = null
+)
+
+// ============ Minutely Precipitation (分钟级降水) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherMinutelyResponse(
+    val code: String? = null,
+    val summary: String? = null,
+    val minutely: List<QWeatherMinutelyItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherMinutelyItem(
+    val fxTime: String? = null,
+    val precip: String? = null,
+    val type: String? = null
+)
+
+// ============ Weather Warning (天气预警, v1 API) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherWarningResponse(
+    val metadata: QWeatherWarningMeta? = null,
+    val alerts: List<QWeatherAlert>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherWarningMeta(
+    val zeroResult: Boolean? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAlert(
+    val id: String? = null,
+    val senderName: String? = null,
+    val issuedTime: String? = null,
+    val eventType: QWeatherEventType? = null,
+    val severity: String? = null,
+    val icon: String? = null,
+    val color: QWeatherAlertColor? = null,
+    val headline: String? = null,
+    val description: String? = null,
+    val instruction: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherEventType(
+    val name: String? = null,
+    val code: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAlertColor(
+    val code: String? = null,
+    val red: Int? = null,
+    val green: Int? = null,
+    val blue: Int? = null,
+    val alpha: Double? = null
+)
+
+// ============ Air Quality (空气质量, v1 API) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirResponse(
+    val indexes: List<QWeatherAirIndex>? = null,
+    val pollutants: List<QWeatherPollutant>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirIndex(
+    val code: String? = null,
+    val name: String? = null,
+    val aqi: Double? = null,
+    val category: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherPollutant(
+    val code: String? = null,
+    val name: String? = null,
+    val concentration: QWeatherConcentration? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherConcentration(
+    val value: Double? = null,
+    val unit: String? = null
+)
+
+// ============ GeoAPI (城市搜索, v2 API) ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherGeoResponse(
+    val code: String? = null,
+    val location: List<QWeatherGeoLocation>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherGeoLocation(
+    val name: String? = null,
+    val id: String? = null,
+    val lat: String? = null,
+    val lon: String? = null,
+    val adm2: String? = null,
+    val adm1: String? = null,
+    val country: String? = null
+)

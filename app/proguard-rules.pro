@@ -35,6 +35,10 @@
 -dontwarn okio.**
 -dontwarn javax.annotation.**
 
+# === BouncyCastle (Ed25519 JWT signing for QWeather) ===
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+
 # === Accompanist ===
 -keep class com.google.accompanist.** { *; }
 -dontwarn com.google.accompanist.**

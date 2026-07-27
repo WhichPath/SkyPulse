@@ -1,12 +1,10 @@
 package com.skypulse.weather.di
 
 import com.skypulse.weather.BuildConfig
-import com.skypulse.weather.data.XiaomiGeocodingApi
-import com.skypulse.weather.data.remote.CaiyunAlertApi
-import com.skypulse.weather.data.remote.CaiyunApi
 import com.skypulse.weather.data.remote.GithubApi
 import com.skypulse.weather.data.remote.WeatherApiService
-import com.skypulse.weather.data.remote.XiaomiWeatherApi
+import com.skypulse.weather.data.remote.qweather.QWeatherApi
+import com.skypulse.weather.data.remote.qweather.QWeatherAuthInterceptor
 import com.squareup.moshi.Moshi
 import dagger.Binds
 import dagger.Module
@@ -51,28 +49,37 @@ object NetworkModule {
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    /**
+     * 和风天气专用 Retrofit 实例。
+     *
+     * 在共享 OkHttpClient 基础上追加 QWeatherAuthInterceptor（JWT 鉴权）。
+     * Base URL 为用户在 local.properties 中配置的项目 API Host。
+     */
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient, moshi: Moshi): Retrofit = Retrofit.Builder()
-        .baseUrl(BuildConfig.WEATHER_BASE_URL)
-        .client(client)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
+    fun provideQWeatherRetrofit(
+        client: OkHttpClient,
+        authInterceptor: QWeatherAuthInterceptor,
+        moshi: Moshi
+    ): Retrofit {
+        val qweatherClient = client.newBuilder()
+            .addInterceptor(authInterceptor)
+            .build()
 
-    @Provides
-    @Singleton
-    fun provideCaiyunApi(retrofit: Retrofit): CaiyunApi =
-        retrofit.create(CaiyunApi::class.java)
+        var baseUrl = BuildConfig.QWEATHER_API_HOST
+        if (!baseUrl.endsWith("/")) baseUrl += "/"
 
-    @Provides
-    @Singleton
-    fun provideCaiyunAlertApi(client: OkHttpClient, moshi: Moshi): CaiyunAlertApi =
-        Retrofit.Builder()
-            .baseUrl(BuildConfig.ALERT_BASE_URL)
-            .client(client)
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(qweatherClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
-            .create(CaiyunAlertApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideQWeatherApi(retrofit: Retrofit): QWeatherApi =
+        retrofit.create(QWeatherApi::class.java)
 
     @Provides
     @Singleton
@@ -83,31 +90,10 @@ object NetworkModule {
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(GithubApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideXiaomiGeocodingApi(client: OkHttpClient, moshi: Moshi): XiaomiGeocodingApi =
-        Retrofit.Builder()
-            .baseUrl("https://weatherapi.market.xiaomi.com/")
-            .client(client)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(XiaomiGeocodingApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideXiaomiWeatherApi(client: OkHttpClient, moshi: Moshi): XiaomiWeatherApi =
-        Retrofit.Builder()
-            .baseUrl("https://weatherapi.market.xiaomi.com/")
-            .client(client)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(XiaomiWeatherApi::class.java)
 }
 
 /**
- * 将 WeatherApiService 接口绑定 to CaiyunApiService 实现。
- * 未来切换 API 提供商时，只需修改这里的绑定。
+ * 将 WeatherApiService 接口绑定到 QWeatherApiService 实现。
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -116,6 +102,6 @@ abstract class ApiModule {
     @Binds
     @Singleton
     abstract fun bindWeatherApiService(
-        impl: com.skypulse.weather.data.remote.CaiyunApiService
+        impl: com.skypulse.weather.data.remote.qweather.QWeatherApiService
     ): WeatherApiService
 }

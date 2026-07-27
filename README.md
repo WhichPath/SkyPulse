@@ -97,10 +97,15 @@ cd weather-none
 
 ## ☁️ Weather API
 
-Powered by [Caiyun Weather API](https://docs.caiyunapp.com/) v2.6:
+Powered by [QWeather API](https://dev.qweather.com/):
 
 ```
-GET /v2.6/{token}/{lon},{lat}/weather?alert=true&dailysteps=15&hourlysteps=48
+GET /v7/weather/now?location={lon},{lat}
+GET /v7/weather/15d?location={lon},{lat}
+GET /v7/weather/24h?location={lon},{lat}
+GET /v7/minutely/5m?location={lon},{lat}
+GET /weatheralert/v1/current/{lat}/{lon}
+GET /airquality/v1/current/{lat}/{lon}
 ```
 
 ## 📦 Download
@@ -238,10 +243,15 @@ cd weather-none
 
 ## ☁️ 天气 API
 
-由 [彩云天气 API](https://docs.caiyunapp.com/) v2.6 提供数据：
+由 [和风天气 API](https://dev.qweather.com/) 提供数据：
 
 ```
-GET /v2.6/{token}/{lon},{lat}/weather?alert=true&dailysteps=15&hourlysteps=48
+GET /v7/weather/now?location={lon},{lat}
+GET /v7/weather/15d?location={lon},{lat}
+GET /v7/weather/24h?location={lon},{lat}
+GET /v7/minutely/5m?location={lon},{lat}
+GET /weatheralert/v1/current/{lat}/{lon}
+GET /airquality/v1/current/{lat}/{lon}
 ```
 
 ## 📦 下载

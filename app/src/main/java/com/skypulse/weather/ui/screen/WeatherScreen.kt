@@ -738,26 +738,10 @@ private fun WeatherContentBody(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "\u6c14\u8c61\u6570\u636e\u6765\u81ea",
+                    text = "\u6c14\u8c61\u6570\u636e\u6765\u81ea \u548c\u98ce\u5929\u6c14",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary.copy(alpha = 0.4f)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                val ctx = LocalContext.current
-                val logoBitmap = remember(ctx) {
-                    val bmp = android.graphics.BitmapFactory.decodeResource(
-                        ctx.resources, com.skypulse.weather.R.drawable.ic_caiyun_logo
-                    )
-                    bmp?.asImageBitmap()
-                }
-                logoBitmap?.let { bitmap ->
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.height(10.dp)
-                    )
-                }
             }
             Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
         }

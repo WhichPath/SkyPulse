@@ -1,15 +1,13 @@
-﻿package com.skypulse.weather.sync
+package com.skypulse.weather.sync
 
 import android.util.Log
 import com.skypulse.weather.data.LocationManager
 import com.skypulse.weather.data.LocationRequestCoordinator
-import com.skypulse.weather.data.remote.SkyconCalibrator
 import com.skypulse.weather.model.City
 import com.skypulse.weather.model.WeatherResponse
 import com.skypulse.weather.repository.CityRepository
 import com.skypulse.weather.repository.WeatherRepository
 import com.skypulse.weather.util.FileLogger
-import com.skypulse.weather.util.WeatherUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -34,7 +32,6 @@ class WeatherSyncManager @Inject constructor(
     private val repository: WeatherRepository,
     private val cityRepository: CityRepository,
     private val locationManager: LocationManager,
-    private val skyconCalibrator: SkyconCalibrator,
     private val locationRequestCoordinator: LocationRequestCoordinator
 ) {
 
@@ -148,14 +145,8 @@ class WeatherSyncManager @Inject constructor(
             Log.i(TAG, "refreshWeather: 网络请求完成, success=${result.isSuccess}")
             result.fold(
                 onSuccess = { rawResponse ->
-                    // 校准彩云的"阴天"和"多云"偏差（定位城市 + 收藏克隆城市）
-                    val response = if (shouldCalibrate(cityId)) {
-                        calibrateSkyconIfNeeded(rawResponse, longitude, latitude)
-                    } else {
-                        rawResponse
-                    }
-
                     markFetched(cityId, longitude, latitude)
+                    val response = rawResponse
                     val saveStartMs = android.os.SystemClock.elapsedRealtime()
                     repository.saveWeatherToCache(cityId, response)
                     locI("weather_cache_saved: cityId=$cityId, elapsed=${elapsedSince(saveStartMs)}ms, total=${elapsedSince(startMs)}ms")
@@ -483,39 +474,6 @@ class WeatherSyncManager @Inject constructor(
         !repository.isCacheStale(cityId, RefreshPolicy.CITY_RATE_LIMIT_MS)
     }
 
-
-
-    /**
-     * 判断是否需要校准：定位城市或收藏克隆城市。
-     */
-    private suspend fun shouldCalibrate(cityId: String): Boolean {
-        if (cityId == CURRENT_LOCATION_ID) return true
-        return cityRepository.getCities().any { it.id == cityId && it.isBookmarked }
-    }
-
-    /**
-     * 校准彩云天气的"阴天"和"多云"偏差。
-     * 在 skycon == "CLOUDY" 或 skycon == "PARTLY_CLOUDY_DAY/NIGHT" 时触发小米天气请求。
-     * 校准成功则覆盖 skycon，失败则保持原值。
-     */
-    private suspend fun calibrateSkyconIfNeeded(
-        response: WeatherResponse,
-        longitude: Double,
-        latitude: Double
-    ): WeatherResponse {
-        val originalSkycon = response.result?.realtime?.skycon
-        val isDay = WeatherUtils.isCurrentlyDay(response.result?.daily)
-        val calibratedSkycon = skyconCalibrator.calibrateIfNeeded(originalSkycon, longitude, latitude, isDay)
-        if (calibratedSkycon == originalSkycon) {
-            return response
-        }
-        weatherI("skycon_calibrated: $originalSkycon → $calibratedSkycon, isDay=$isDay, lon=$longitude, lat=$latitude")
-        return response.copy(
-            result = response.result?.copy(
-                realtime = response.result.realtime?.copy(skycon = calibratedSkycon)
-            )
-        )
-    }
 
     private fun markFetched(cityId: String, longitude: Double, latitude: Double) {
         lastFetchRecordsByCityId[cityId] = FetchRecord(

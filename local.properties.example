@@ -3,30 +3,25 @@
 # In GitHub Actions CI, `local.properties` is generated automatically from repository secrets.
 # All values are optional unless marked [REQUIRED].
 
-# ===== Caiyun Weather API =====
-# The app uses the upstream author's proxy by default:
-#   WEATHER_BASE_URL = https://wrapper.cyapi.cn/
-#   ALERT_BASE_URL   = https://starplucker.cyapi.cn/
-# The token below is sent as a path parameter to the proxy. Whether the proxy
-# requires a valid token depends on the author's server setup -- leave it empty
-# first and test connectivity; set it only if the proxy rejects an empty token.
-# To register your own Caiyun token (free): https://dashboard.caiyunapp.com/
-# CAIYUN_TOKEN=
-
-# [OPTIONAL] Override the weather / alert base URLs (e.g. switch to the official
-# Caiyun API at https://api.caiyunapp.com/ with your own token).
-# WEATHER_BASE_URL=
-# ALERT_BASE_URL=
+# ===== QWeather (和风天气) API =====
+# The app uses QWeather (和风天气) as the weather data provider.
+# QWeather offers 50,000 free requests per month (weather & basic services).
+#
+# Authentication uses JWT (Ed25519). You need to:
+# 1. Register at https://dev.qweather.com/ and create a project
+# 2. Generate an Ed25519 key pair:
+#      openssl genpkey -algorithm ED25519 -out ed25519-private.pem
+#      openssl pkey -pubout -in ed25519-private.pem > ed25519-public.pem
+# 3. Upload the public key (ed25519-public.pem) to the QWeather console
+# 4. Fill in the following values from your project's credential page:
+#
+# QWEATHER_PROJECT_ID=   # Project ID (JWT "sub" field)
+# QWEATHER_KEY_ID=       # Credential/Key ID (JWT "kid" field)
+# QWEATHER_PRIVATE_KEY=  # Full PEM content of ed25519-private.pem (including BEGIN/END markers)
+# QWEATHER_API_HOST=     # Your project's API Host, e.g. https://abc123.qweatherapi.com/
 
 # ===== AMap (高德地图) - all optional =====
 # Without these keys the app falls back to Android system location & geocoder (slightly less precise in China).
 # To enable AMap, register at https://lbs.amap.com/ and bind the key to your package name + signing cert SHA-1.
 # AMAP_API_KEY=
 # AMAP_WEB_API_KEY=
-
-# ===== Xiaomi Weather - optional =====
-# Used only for city-name search and skycon calibration. Without them, city search returns empty
-# (multi-city still works by bookmarking your current location).
-# These are the Xiaomi Weather app's own keys, not user-owned.
-# XIAOMI_APP_KEY=
-# XIAOMI_SIGN=

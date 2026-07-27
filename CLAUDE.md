@@ -3,15 +3,23 @@
 ## 构建环境
 - **JAVA_HOME**: `C:\Program Files\Android\Android Studio\jbr`
 - **Gradle Wrapper**: `gradlew.bat` (Gradle 8.5)
-- **compileSdk / targetSdk**: 34
+- **compileSdk / targetSdk**: 35
 - **minSdk**: 26
-- **Java Version**: 21
+- **Java Version**: 17
 
 ## 签名信息 (Release)
 - **Keystore 文件**: `app/release-keystore.jks`
 - **Store Password**: `weather123`
 - **Key Alias**: `weather-app`
 - **Key Password**: `weather123`
+
+## QWeather (和风天气)
+- **天气数据源**: 使用 QWeather API 提供天气/预警/空气质量/分钟降水数据
+- **认证方式**: JWT (Ed25519 签名)，比 API Key 更安全
+- **免费额度**: 每月 50,000 次请求（天气和基础服务）
+- **API 配置位置**: `local.properties` 中的 `QWEATHER_PROJECT_ID`、`QWEATHER_KEY_ID`、`QWEATHER_PRIVATE_KEY`、`QWEATHER_API_HOST`
+- **JWT 生成**: App 运行时使用 BouncyCastle (Ed25519) 在本地签名生成 JWT，私钥由用户保管
+- **依赖库**: `org.bouncycastle:bcprov-jdk18on` (Ed25519 签名支持 minSdk 26)
 
 ## AMAP (高德地图)
 - **定位服务**: 使用 AMAP Location SDK 进行 GPS 定位

@@ -25,27 +25,28 @@ val amapWebApiKey = providers.gradleProperty("AMAP_WEB_API_KEY")
     .get()
 val escapedAmapWebApiKey = amapWebApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
 
-val caiyunToken = providers.gradleProperty("CAIYUN_TOKEN")
-    .orElse(localProperties.getProperty("CAIYUN_TOKEN", ""))
+val qweatherProjectId = providers.gradleProperty("QWEATHER_PROJECT_ID")
+    .orElse(localProperties.getProperty("QWEATHER_PROJECT_ID", ""))
     .get()
-val escapedCaiyunToken = caiyunToken.replace("\\", "\\\\").replace("\"", "\\\"")
+val escapedQweatherProjectId = qweatherProjectId.replace("\\", "\\\\").replace("\"", "\\\"")
 
-
-val xiaomiAppKey = providers.gradleProperty("XIAOMI_APP_KEY")
-    .orElse(localProperties.getProperty("XIAOMI_APP_KEY", ""))
+val qweatherKeyId = providers.gradleProperty("QWEATHER_KEY_ID")
+    .orElse(localProperties.getProperty("QWEATHER_KEY_ID", ""))
     .get()
-val escapedXiaomiAppKey = xiaomiAppKey.replace("\\", "\\\\").replace("\"", "\\\"")
+val escapedQweatherKeyId = qweatherKeyId.replace("\\", "\\\\").replace("\"", "\\\"")
 
-val xiaomiSign = providers.gradleProperty("XIAOMI_SIGN")
-    .orElse(localProperties.getProperty("XIAOMI_SIGN", ""))
+val qweatherPrivateKey = providers.gradleProperty("QWEATHER_PRIVATE_KEY")
+    .orElse(localProperties.getProperty("QWEATHER_PRIVATE_KEY", ""))
     .get()
-val escapedXiaomiSign = xiaomiSign.replace("\\", "\\\\").replace("\"", "\\\"")
+// PEM 私钥可能含换行符，需转义为 \n 以正确嵌入 BuildConfig 字符串字面量
+val escapedQweatherPrivateKey = qweatherPrivateKey
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+    .replace("\n", "\\n")
+    .replace("\r", "")
 
-val weatherBaseUrl = providers.gradleProperty("WEATHER_BASE_URL")
-    .orElse(localProperties.getProperty("WEATHER_BASE_URL", "https://wrapper.cyapi.cn/"))
-    .get()
-val alertBaseUrl = providers.gradleProperty("ALERT_BASE_URL")
-    .orElse(localProperties.getProperty("ALERT_BASE_URL", "https://starplucker.cyapi.cn/"))
+val qweatherApiHost = providers.gradleProperty("QWEATHER_API_HOST")
+    .orElse(localProperties.getProperty("QWEATHER_API_HOST", "https://devapi.qweatherapi.com/"))
     .get()
 
 android {
@@ -66,11 +67,10 @@ android {
         manifestPlaceholders["AMAP_API_KEY"] = amapApiKey
         buildConfigField("String", "AMAP_API_KEY", "\"$escapedAmapApiKey\"")
         buildConfigField("String", "AMAP_WEB_API_KEY", "\"$escapedAmapWebApiKey\"")
-        buildConfigField("String", "CAIYUN_TOKEN", "\"$escapedCaiyunToken\"")
-        buildConfigField("String", "XIAOMI_APP_KEY", "\"$escapedXiaomiAppKey\"")
-        buildConfigField("String", "XIAOMI_SIGN", "\"$escapedXiaomiSign\"")
-        buildConfigField("String", "WEATHER_BASE_URL", "\"${weatherBaseUrl.replace("\"", "\\\"")}\"")
-        buildConfigField("String", "ALERT_BASE_URL", "\"${alertBaseUrl.replace("\"", "\\\"")}\"")
+        buildConfigField("String", "QWEATHER_PROJECT_ID", "\"$escapedQweatherProjectId\"")
+        buildConfigField("String", "QWEATHER_KEY_ID", "\"$escapedQweatherKeyId\"")
+        buildConfigField("String", "QWEATHER_PRIVATE_KEY", "\"$escapedQweatherPrivateKey\"")
+        buildConfigField("String", "QWEATHER_API_HOST", "\"${qweatherApiHost.replace("\"", "\\\"")}\"")
     }
 
     signingConfigs {
@@ -141,6 +141,7 @@ dependencies {
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
     implementation(libs.okhttp.logging)
+    implementation(libs.bouncycastle)
 
     // Location
     implementation(libs.play.services.location)

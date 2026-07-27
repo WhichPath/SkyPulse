@@ -42,13 +42,14 @@ jobs:
 
       - name: Generate local.properties
         run: |
-          # The app keeps the upstream author's proxy by default
-          # (WEATHER_BASE_URL=https://wrapper.cyapi.cn/, ALERT_BASE_URL=https://starplucker.cyapi.cn/).
-          # CAIYUN_TOKEN is optional: leave the secret unset to test proxy connectivity with an
-          # empty token, or set it if the proxy requires one. AMap / Xiaomi keys are intentionally
-          # left empty (system location fallback; city search returns empty).
+          # QWeather (和风天气) JWT authentication.
+          # Secrets: QWEATHER_PROJECT_ID, QWEATHER_KEY_ID, QWEATHER_PRIVATE_KEY, QWEATHER_API_HOST
+          # AMap keys are optional (system location fallback if empty).
           {
-            echo "CAIYUN_TOKEN=${{ secrets.CAIYUN_TOKEN }}"
+            echo "QWEATHER_PROJECT_ID=${{ secrets.QWEATHER_PROJECT_ID }}"
+            echo "QWEATHER_KEY_ID=${{ secrets.QWEATHER_KEY_ID }}"
+            echo "QWEATHER_PRIVATE_KEY=${{ secrets.QWEATHER_PRIVATE_KEY }}"
+            echo "QWEATHER_API_HOST=${{ secrets.QWEATHER_API_HOST }}"
           } > local.properties
 
       - name: Build release APK

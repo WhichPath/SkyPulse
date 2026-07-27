@@ -5,8 +5,7 @@ import com.skypulse.weather.model.WeatherResponse
 /**
  * 天气 API 的抽象接口。
  *
- * 为未来切换天气提供商（和风天气、OpenWeather 等）做准备。
- * 当前唯一实现：CaiyunApiService（彩云天气）。
+ * 当前实现：QWeatherApiService（和风天气）。
  */
 interface WeatherApiService {
 
