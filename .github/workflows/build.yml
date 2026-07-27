@@ -41,16 +41,22 @@ jobs:
           cat settings.gradle.kts
 
       - name: Generate local.properties
+        env:
+          QWEATHER_PROJECT_ID: ${{ secrets.QWEATHER_PROJECT_ID }}
+          QWEATHER_KEY_ID: ${{ secrets.QWEATHER_KEY_ID }}
+          QWEATHER_PRIVATE_KEY: ${{ secrets.QWEATHER_PRIVATE_KEY }}
+          QWEATHER_API_HOST: ${{ secrets.QWEATHER_API_HOST }}
         run: |
-          # QWeather (和风天气) JWT authentication.
-          # Secrets: QWEATHER_PROJECT_ID, QWEATHER_KEY_ID, QWEATHER_PRIVATE_KEY, QWEATHER_API_HOST
-          # AMap keys are optional (system location fallback if empty).
-          {
-            echo "QWEATHER_PROJECT_ID=${{ secrets.QWEATHER_PROJECT_ID }}"
-            echo "QWEATHER_KEY_ID=${{ secrets.QWEATHER_KEY_ID }}"
-            echo "QWEATHER_PRIVATE_KEY=${{ secrets.QWEATHER_PRIVATE_KEY }}"
-            echo "QWEATHER_API_HOST=${{ secrets.QWEATHER_API_HOST }}"
-          } > local.properties
+          python3 << 'PYEOF'
+          import os
+          with open('local.properties', 'w') as f:
+              f.write('QWEATHER_PROJECT_ID=' + os.environ.get('QWEATHER_PROJECT_ID', '') + '\n')
+              f.write('QWEATHER_KEY_ID=' + os.environ.get('QWEATHER_KEY_ID', '') + '\n')
+              # PEM key may span multiple lines; escape newlines as \n for Java Properties format
+              pk = os.environ.get('QWEATHER_PRIVATE_KEY', '').replace('\n', '\\n').replace('\r', '')
+              f.write('QWEATHER_PRIVATE_KEY=' + pk + '\n')
+              f.write('QWEATHER_API_HOST=' + os.environ.get('QWEATHER_API_HOST', '') + '\n')
+          PYEOF
 
       - name: Build release APK
         run: ./gradlew assembleRelease --no-daemon --stacktrace

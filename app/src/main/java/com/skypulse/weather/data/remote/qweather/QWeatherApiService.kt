@@ -84,6 +84,9 @@ class QWeatherApiService @Inject constructor(
         val warning = warningDeferred.await()
         val air = airDeferred.await()
 
+        // 诊断日志：记录各端点响应码
+        FileLogger.i(TAG, "api_response_codes: now=${now?.code}, daily=${daily?.code}, hourly=${hourly?.code}, minutely=${minutely?.code}, warning=${warning?.alerts?.size ?: -1}, air=${air?.indexes?.size ?: -1}")
+
         // 核心数据缺失则抛异常
         if (now?.now == null || daily?.daily == null || hourly?.hourly == null) {
             val elapsed = SystemClock.elapsedRealtime() - startMs
