@@ -43,7 +43,10 @@ class MembershipRepository @Inject constructor(
     val isPremium: StateFlow<Boolean> = _isPremium.asStateFlow()
 
     private fun loadPremiumState(): Boolean {
-        return securePrefs.getBoolean(KEY_IS_PREMIUM, false)
+        // [FORK] 全功能解锁：始终返回 true，绕过客户端激活码校验。
+        // 所有功能门控（多城市、15日预报、卡片、通知、桌面小元件等）均读取此 StateFlow，
+        // 因此仅需这一处改动即可解锁全部功能，且不影响上游其余文件，便于同步更新。
+        return true
     }
 
     fun getActivatedAt(): Long {

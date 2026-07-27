@@ -1,0 +1,32 @@
+# SkyPulse Weather - local properties template
+# Copy this file to `local.properties` and fill in the values you need.
+# In GitHub Actions CI, `local.properties` is generated automatically from repository secrets.
+# All values are optional unless marked [REQUIRED].
+
+# ===== Caiyun Weather API =====
+# The app uses the upstream author's proxy by default:
+#   WEATHER_BASE_URL = https://wrapper.cyapi.cn/
+#   ALERT_BASE_URL   = https://starplucker.cyapi.cn/
+# The token below is sent as a path parameter to the proxy. Whether the proxy
+# requires a valid token depends on the author's server setup -- leave it empty
+# first and test connectivity; set it only if the proxy rejects an empty token.
+# To register your own Caiyun token (free): https://dashboard.caiyunapp.com/
+# CAIYUN_TOKEN=
+
+# [OPTIONAL] Override the weather / alert base URLs (e.g. switch to the official
+# Caiyun API at https://api.caiyunapp.com/ with your own token).
+# WEATHER_BASE_URL=
+# ALERT_BASE_URL=
+
+# ===== AMap (高德地图) - all optional =====
+# Without these keys the app falls back to Android system location & geocoder (slightly less precise in China).
+# To enable AMap, register at https://lbs.amap.com/ and bind the key to your package name + signing cert SHA-1.
+# AMAP_API_KEY=
+# AMAP_WEB_API_KEY=
+
+# ===== Xiaomi Weather - optional =====
+# Used only for city-name search and skycon calibration. Without them, city search returns empty
+# (multi-city still works by bookmarking your current location).
+# These are the Xiaomi Weather app's own keys, not user-owned.
+# XIAOMI_APP_KEY=
+# XIAOMI_SIGN=
