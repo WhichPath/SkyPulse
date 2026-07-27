@@ -21,6 +21,20 @@
 - **JWT 生成**: App 运行时使用 BouncyCastle (Ed25519) 在本地签名生成 JWT，私钥由用户保管
 - **依赖库**: `org.bouncycastle:bcprov-jdk18on` (Ed25519 签名支持 minSdk 26)
 
+### 已使用的 API 能力（每次刷新 6 个请求）
+- **天气预报**: `/v7/weather/now`（实况）、`/v7/weather/15d`（逐日）、`/v7/weather/24h`（逐小时）
+- **分钟降水**: `/v7/minutely/5m`（未来 2 小时分钟级降水）
+- **天气预警**: `/weatheralert/v1/current/{lat}/{lon}`
+- **空气质量**: `/airquality/v1/current/{lat}/{lon}`
+- **GeoAPI**: `/geo/v2/city/lookup`（城市搜索，用户输入城市名时触发）
+- **天文（部分）**: 日出日落数据从逐日预报响应中提取，映射到 `DailyAstro`，无需单独请求
+
+### 未使用的 API 能力（下一步计划）
+- **天气指数** (`/v7/indices/1d`): 和风提供穿衣、洗车、感冒、运动、钓鱼、旅游、花粉、舒适度等 16+ 种生活指数。当前仅从日报 `uvIndex` 映射了紫外线。计划调用此端点补充完整生活指数卡片。
+- **天文 - 月相**: 逐日预报响应已含 `moonrise`/`moonset`/`moonPhase`/`moonPhaseIcon`，但未映射到模型和 UI。计划在日出日落卡片中增加月相展示。
+- **GeoAPI 扩展**: 当前仅用城市搜索。和风还提供 POI 搜索（`/geo/v2/poi/lookup`，搜索地标景区）、热门城市（`/geo/v2/city/top`）、POI 范围搜索（`/geo/v2/poi/range`）。按需添加。
+- **时光机**: 历史天气数据，可视需要添加历史天气回顾功能。
+
 ## AMAP (高德地图)
 - **定位服务**: 使用 AMAP Location SDK 进行 GPS 定位
 - **API Key 配置位置**: `local.properties` 中的 `AMAP_API_KEY`
