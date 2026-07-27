@@ -15,10 +15,14 @@ import com.skypulse.weather.model.DailyTemperature
 import com.skypulse.weather.model.DailyValue
 import com.skypulse.weather.model.DailyWind
 import com.skypulse.weather.model.HourlyForecast
+import com.skypulse.weather.model.HourlyLifeIndex
 import com.skypulse.weather.model.HourlySkycon
+import com.skypulse.weather.model.HourlyUvItem
 import com.skypulse.weather.model.HourlyValue
 import com.skypulse.weather.model.HourlyWind
+import com.skypulse.weather.model.LifeIndex
 import com.skypulse.weather.model.LifeIndexDay
+import com.skypulse.weather.model.LifeIndexItem
 import com.skypulse.weather.model.MinutelyForecast
 import com.skypulse.weather.model.Precipitation
 import com.skypulse.weather.model.PrecipitationLocal
@@ -59,9 +63,12 @@ object QWeatherMapper {
     ): WeatherResponse {
         val tzOffsetSeconds = TimeZone.getDefault().rawOffset / 1000
 
-        val realtime = mapRealtime(now, air)
+        // 提取今日 UV 索引，用于 realtime 和 hourly（和风 now/hourly 端点不含 UV）
+        val todayUvIndex = daily?.daily?.firstOrNull()?.uvIndex
+
+        val realtime = mapRealtime(now, air, todayUvIndex)
         val minutelyForecast = mapMinutely(minutely)
-        val hourlyForecast = mapHourly(hourly)
+        val hourlyForecast = mapHourly(hourly, todayUvIndex)
         val dailyForecast = mapDaily(daily)
         val alert = mapWarning(warning)
 
@@ -89,7 +96,8 @@ object QWeatherMapper {
 
     private fun mapRealtime(
         now: QWeatherNowResponse?,
-        air: QWeatherAirResponse?
+        air: QWeatherAirResponse?,
+        todayUvIndex: String?
     ): RealtimeWeather? {
         val n = now?.now ?: return null
         return RealtimeWeather(
@@ -114,7 +122,12 @@ object QWeatherMapper {
                 )
             ),
             air_quality = mapAirQuality(air),
-            life_index = null
+            life_index = if (todayUvIndex != null) {
+                LifeIndex(
+                    ultraviolet = LifeIndexItem(index = todayUvIndex, desc = uvDescription(todayUvIndex)),
+                    comfort = null
+                )
+            } else null
         )
     }
 
@@ -122,11 +135,14 @@ object QWeatherMapper {
 
     private fun mapAirQuality(air: QWeatherAirResponse?): AirQuality? {
         if (air == null) return null
-        val indexes = air.indexes ?: emptyList()
+        val indexes = air.indexes
+        if (indexes.isNullOrEmpty()) return null
         val pollutants = air.pollutants ?: emptyList()
 
         val usEpa = indexes.firstOrNull { it.code == "us-epa" }
-        val qaqi = indexes.firstOrNull { it.code == "qaqi" }
+        // 和风无中国国标 AQI，优先用 qaqi，其次取任意非 us-epa 索引兜底
+        val chnIndex = indexes.firstOrNull { it.code == "qaqi" }
+            ?: indexes.firstOrNull { it.code != "us-epa" }
 
         fun pollutantValue(code: String): Double? =
             pollutants.firstOrNull { it.code == code }?.concentration?.value
@@ -139,11 +155,11 @@ object QWeatherMapper {
             no2 = pollutantValue("no2"),
             co = pollutantValue("co"),
             aqi = AirQualityIndex(
-                chn = qaqi?.aqi, // 和风无中国国标 AQI，用 QAQI 替代
+                chn = chnIndex?.aqi ?: usEpa?.aqi,
                 usa = usEpa?.aqi
             ),
             description = AirQualityDescription(
-                chn = qaqi?.category,
+                chn = chnIndex?.category ?: usEpa?.category,
                 usa = usEpa?.category
             )
         )
@@ -168,9 +184,16 @@ object QWeatherMapper {
 
     // ============ Hourly (逐小时) ============
 
-    private fun mapHourly(hourly: QWeatherHourlyResponse?): HourlyForecast? {
+    private fun mapHourly(hourly: QWeatherHourlyResponse?, todayUvIndex: String?): HourlyForecast? {
         val items = hourly?.hourly ?: return null
         if (items.isEmpty()) return null
+
+        // 和风 hourly 不含 UV，用今日 daily UV 索引填充每小时
+        val hourlyUv = if (todayUvIndex != null) {
+            items.map {
+                HourlyUvItem(datetime = it.fxTime, index = todayUvIndex, desc = uvDescription(todayUvIndex))
+            }
+        } else null
 
         return HourlyForecast(
             status = "ok",
@@ -211,7 +234,7 @@ object QWeatherMapper {
             },
             dswrf = null,
             air_quality = null,
-            life_index = null
+            life_index = if (hourlyUv != null) HourlyLifeIndex(ultraviolet = hourlyUv) else null
         )
     }
 
@@ -357,6 +380,20 @@ object QWeatherMapper {
     }
 
     // ============ 天气码 -> Skycon 映射 ============
+
+    /**
+     * UV 索引数值 -> 中文描述。
+     */
+    private fun uvDescription(uvIndex: String?): String? {
+        val v = uvIndex?.toIntOrNull() ?: return null
+        return when {
+            v <= 2 -> "弱"
+            v <= 5 -> "中等"
+            v <= 7 -> "强"
+            v <= 10 -> "很强"
+            else -> "极强"
+        }
+    }
 
     /**
      * 和风天气 icon 编码 -> 彩云 skycon 字符串。

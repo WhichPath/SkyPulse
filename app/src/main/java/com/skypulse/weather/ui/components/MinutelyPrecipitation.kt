@@ -30,8 +30,6 @@ import kotlin.math.pow
 import com.skypulse.weather.ui.screen.LocalSkipCardAnimation
 
 private const val BAR_COUNT = 48
-private const val BAR_WIDTH_DP = 3f
-private const val BAR_GAP_DP = 3f
 private const val CHART_HEIGHT_DP = 60f
 
 @Composable
@@ -87,26 +85,16 @@ private fun MinutelyBarChart(
     data: List<Double>,
     modifier: Modifier = Modifier
 ) {
-    val barWidthDp = BAR_WIDTH_DP.dp
-    val barGapDp = BAR_GAP_DP.dp
     val chartHeightDp = CHART_HEIGHT_DP.dp
-
-    // Pre-calculate bar dimensions in px for alignment
     val density = LocalDensity.current
-    val barWidthPx = with(density) { barWidthDp.toPx() }
-    val barGapPx = with(density) { barGapDp.toPx() }
 
     Column(modifier = modifier) {
-        // Use BoxWithConstraints to get container width and calculate bar alignment
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val containerWidthPx = with(density) { maxWidth.toPx() }
-            val totalBarWidthPx = data.size * barWidthPx + (data.size - 1) * barGapPx
-            val startX = ((containerWidthPx - totalBarWidthPx) / 2f).coerceAtLeast(0f)
-            val endX = startX + totalBarWidthPx
-
-            // Convert alignment positions to Dp for layout
-            val startPaddingDp = with(density) { startX.toDp() }
-            val endPaddingDp = with(density) { (containerWidthPx - endX).toDp() }
+            // 自适应柱宽：柱和间隙各占一半，填满容器宽度
+            val unitWidth = containerWidthPx / (data.size * 2 - 1)
+            val barWidthPx = unitWidth
+            val barGapPx = unitWidth
 
             Column {
                 // Bar chart canvas
@@ -141,7 +129,7 @@ private fun MinutelyBarChart(
                             else -> (0.90f + (value - 16.0) / 14.0 * 0.10f).coerceIn(0.90, 1.0).toFloat()
                         }
                         val visualRatio = if (fillRatio > 0f) fillRatio.pow(0.70f) else 0f
-                        val left = startX + i * step
+                        val left = i * step
                         val fillH = chartH * visualRatio
                         val fillTop = chartH - fillH
 
@@ -200,9 +188,6 @@ private fun MinutelyBarChart(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Left spacer to align with chart left edge
-                    Spacer(modifier = Modifier.width(startPaddingDp))
-
                     Text(
                         text = t0,
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
@@ -224,9 +209,6 @@ private fun MinutelyBarChart(
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
                         color = TextSecondary
                     )
-
-                    // Right spacer to align with chart right edge
-                    Spacer(modifier = Modifier.width(endPaddingDp))
                 }
             }
         }
