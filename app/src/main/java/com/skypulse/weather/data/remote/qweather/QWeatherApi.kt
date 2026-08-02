@@ -7,39 +7,16 @@ import retrofit2.http.Query
 /**
  * 和风天气 Retrofit API 接口。
  *
- * 包含三类端点，URL 路径风格不同：
- * - v7 天气端点：location 为查询参数，格式 "经度,纬度"（lon,lat）
- * - v1 预警/空气端点：经纬度为路径参数，格式 {lat}/{lon}（纬度在前）
+ * 端点 URL 路径风格：
+ * - v1 天气/预警/空气端点：经纬度为路径参数，格式 {lat}/{lon}（纬度在前）
+ * - v7 分钟降水端点：location 为查询参数，格式 "经度,纬度"（lon,lat），和风无 v1 版本
  * - v2 GeoAPI：location 为查询参数，可为城市名或 "经度,纬度"
  *
  * 所有请求由 QWeatherAuthInterceptor 自动附加 JWT 鉴权头。
  */
 interface QWeatherApi {
 
-    // ============ v7 天气预报 ============
-
-    /** 实况天气 */
-    @GET("v7/weather/now")
-    suspend fun getWeatherNow(
-        @Query("location") location: String,
-        @Query("lang") lang: String = "zh"
-    ): QWeatherNowResponse
-
-    /** 逐日预报，days 可选 "3d"/"7d"/"10d"/"15d"/"30d" */
-    @GET("v7/weather/{days}")
-    suspend fun getWeatherDaily(
-        @Path("days") days: String,
-        @Query("location") location: String,
-        @Query("lang") lang: String = "zh"
-    ): QWeatherDailyResponse
-
-    /** 逐小时预报，hours 可选 "24h"/"72h"/"168h" */
-    @GET("v7/weather/{hours}")
-    suspend fun getWeatherHourly(
-        @Path("hours") hours: String,
-        @Query("location") location: String,
-        @Query("lang") lang: String = "zh"
-    ): QWeatherHourlyResponse
+    // ============ v7 分钟级降水（和风无 v1 版本） ============
 
     /** 分钟级降水预报（未来 2 小时） */
     @GET("v7/minutely/5m")
@@ -79,6 +56,15 @@ interface QWeatherApi {
     ): QWeatherGeoResponse
 
     // ============ v1 天气预报 (新版 API) ============
+
+    /** 实况天气（路径参数：纬度/经度，含真实 uvIndex 和 windGust） */
+    @GET("weather/v1/current/{lat}/{lon}")
+    suspend fun getWeatherNowV1(
+        @Path("lat") lat: Double,
+        @Path("lon") lon: Double,
+        @Query("localTime") localTime: Boolean = true,
+        @Query("lang") lang: String = "zh"
+    ): QWeatherV1NowResponse
 
     /** 逐小时预报（路径参数：纬度/经度，含真实逐小时 uvIndex） */
     @GET("weather/v1/hourly/{lat}/{lon}")

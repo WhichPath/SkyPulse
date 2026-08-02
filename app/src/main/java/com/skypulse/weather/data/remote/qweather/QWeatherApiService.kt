@@ -16,10 +16,10 @@ import javax.inject.Singleton
  * 将结果映射为现有的 WeatherResponse（彩云格式）模型。
  *
  * 一次刷新发起 6 个并行请求：
- * 1. 实况天气 /v7/weather/now
+ * 1. 实况天气 /weather/v1/current/{lat}/{lon}（v1，含 uvIndex）
  * 2. 逐日预报 /weather/v1/daily/{lat}/{lon}（v1，含 uvIndexMax）
  * 3. 逐小时预报 /weather/v1/hourly/{lat}/{lon}（v1，含真实逐小时 uvIndex）
- * 4. 分钟级降水 /v7/minutely/5m
+ * 4. 分钟级降水 /v7/minutely/5m（v7，和风无 v1 版本）
  * 5. 天气预警 /weatheralert/v1/current/{lat}/{lon}
  * 6. 空气质量 /airquality/v1/current/{lat}/{lon}
  *
@@ -60,10 +60,10 @@ class QWeatherApiService @Inject constructor(
         lang: String
     ): WeatherResponse = coroutineScope {
         val startMs = SystemClock.elapsedRealtime()
-        val location = "$longitude,$latitude" // 和风 v7 格式：经度,纬度（now 和 minutely 使用）
+        val location = "$longitude,$latitude" // 和风 v7 格式：经度,纬度（仅 minutely 使用）
 
         // 核心请求（并行）
-        val nowDeferred = async { safeApiCall { api.getWeatherNow(location) } }
+        val nowDeferred = async { safeApiCall { api.getWeatherNowV1(latitude, longitude) } }
         val dailyDeferred = async { safeApiCall { api.getWeatherDailyV1(latitude, longitude, days = 10) } }
         val hourlyDeferred = async { safeApiCall { api.getWeatherHourlyV1(latitude, longitude, hours = if (hourlySteps > 24) 72 else 24) } }
 
@@ -82,12 +82,12 @@ class QWeatherApiService @Inject constructor(
         val air = airDeferred.await()
 
         // 诊断日志：记录各端点响应码
-        FileLogger.i(TAG, "api_response_codes: now=${now?.code}, daily=${daily?.days?.size ?: -1}, hourly=${hourly?.hours?.size ?: -1}, minutely=${minutely?.code}, warning=${warning?.alerts?.size ?: -1}, air=${air?.indexes?.size ?: -1}")
+        FileLogger.i(TAG, "api_response_codes: now=${now?.condition?.code}, daily=${daily?.days?.size ?: -1}, hourly=${hourly?.hours?.size ?: -1}, minutely=${minutely?.code}, warning=${warning?.alerts?.size ?: -1}, air=${air?.indexes?.size ?: -1}")
 
         // 核心数据缺失则抛异常
-        if (now?.now == null || daily?.days == null || hourly?.hours == null) {
+        if (now?.condition == null || daily?.days == null || hourly?.hours == null) {
             val elapsed = SystemClock.elapsedRealtime() - startMs
-            FileLogger.e(TAG, "core weather data missing: now=${now?.now != null}, daily=${daily?.days != null}, hourly=${hourly?.hours != null}, elapsed=${elapsed}ms")
+            FileLogger.e(TAG, "core weather data missing: now=${now?.condition != null}, daily=${daily?.days != null}, hourly=${hourly?.hours != null}, elapsed=${elapsed}ms")
             throw Exception("QWeather core data incomplete")
         }
 

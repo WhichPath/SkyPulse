@@ -48,14 +48,14 @@ import java.util.TimeZone
  * - 温度：°C -> °C，无需转换
  * - 降水概率：小数(0-1) -> 百分比(0-100)，乘以 100
  *
- * 注意：实况(now)和分钟降水(minutely)仍使用 v7 API，单位转换规则见各方法。
+ * 注意：分钟降水(minutely)仍使用 v7 API（和风无 v1 版本），其字段为字符串类型。
  */
 object QWeatherMapper {
 
     // ============ 主映射入口 ============
 
     fun mapToWeatherResponse(
-        now: QWeatherNowResponse?,
+        now: QWeatherV1NowResponse?,
         daily: QWeatherV1DailyResponse?,
         hourly: QWeatherV1HourlyResponse?,
         minutely: QWeatherMinutelyResponse?,
@@ -66,10 +66,7 @@ object QWeatherMapper {
     ): WeatherResponse {
         val tzOffsetSeconds = TimeZone.getDefault().rawOffset / 1000
 
-        // 提取今日 UV 索引，用于 realtime（和风 now 端点不含 UV）
-        val todayUvIndex = daily?.days?.firstOrNull()?.uvIndexMax?.toInt()?.toString()
-
-        val realtime = mapRealtime(now, air, todayUvIndex)
+        val realtime = mapRealtimeV1(now, air)
         val minutelyForecast = mapMinutely(minutely)
         val hourlyForecast = mapHourlyV1(hourly)
         val dailyForecast = mapDailyV1(daily)
@@ -95,39 +92,40 @@ object QWeatherMapper {
         )
     }
 
-    // ============ Realtime (实况) ============
+    // ============ Realtime (实况, v1 API) ============
 
-    private fun mapRealtime(
-        now: QWeatherNowResponse?,
-        air: QWeatherAirResponse?,
-        todayUvIndex: String?
+    private fun mapRealtimeV1(
+        now: QWeatherV1NowResponse?,
+        air: QWeatherAirResponse?
     ): RealtimeWeather? {
-        val n = now?.now ?: return null
+        if (now?.condition == null) return null
+        // v1 实况自带 uvIndex，无需从逐日预报提取
+        val uvStr = now.uvIndex?.toInt()?.toString()
         return RealtimeWeather(
             status = "ok",
-            temperature = n.temp?.toDoubleOrNull(),
-            humidity = n.humidity?.toDoubleOrNull()?.div(100.0),
-            cloudrate = n.cloud?.toDoubleOrNull()?.div(100.0),
-            skycon = iconToSkycon(n.icon),
-            visibility = n.vis?.toDoubleOrNull()?.times(1000.0),
+            temperature = now.temperature?.value,
+            humidity = now.humidity, // 已是 [0,1]
+            cloudrate = now.cloudCover, // 已是 [0,1]
+            skycon = iconToSkycon(now.condition?.code),
+            visibility = now.visibility?.value, // 已是 m
             dswrf = null,
             wind = Wind(
-                speed = n.windSpeed?.toDoubleOrNull(),
-                direction = n.wind360?.toDoubleOrNull()
+                speed = now.wind?.speed?.value?.times(3.6), // m/s -> km/h
+                direction = now.wind?.direction?.degree
             ),
-            pressure = n.pressure?.toDoubleOrNull()?.times(100.0),
-            apparent_temperature = n.feelsLike?.toDoubleOrNull(),
+            pressure = now.pressure?.value?.times(100.0), // hPa -> Pa
+            apparent_temperature = now.feelsLike?.value,
             precipitation = Precipitation(
                 local = PrecipitationLocal(
                     status = "ok",
                     datasource = "qweather",
-                    intensity = n.precip?.toDoubleOrNull()
+                    intensity = now.precipitation?.intensity?.value // mm/h
                 )
             ),
             air_quality = mapAirQuality(air),
-            life_index = if (todayUvIndex != null) {
+            life_index = if (uvStr != null) {
                 LifeIndex(
-                    ultraviolet = LifeIndexItem(index = todayUvIndex, desc = uvDescription(todayUvIndex)),
+                    ultraviolet = LifeIndexItem(index = uvStr, desc = uvDescription(uvStr)),
                     comfort = null
                 )
             } else null

@@ -22,12 +22,12 @@
 - **依赖库**: `org.bouncycastle:bcprov-jdk18on` (Ed25519 签名支持 minSdk 26)
 
 ### 已使用的 API 能力（每次刷新 6 个请求）
-- **天气预报**: `/v7/weather/now`（实况）、`/weather/v1/daily/{lat}/{lon}`（逐日，v1，最多 10 天）、`/weather/v1/hourly/{lat}/{lon}`（逐小时，v1，含真实逐小时 UV）
-- **分钟降水**: `/v7/minutely/5m`（未来 2 小时分钟级降水）
+- **天气预报**: `/weather/v1/current/{lat}/{lon}`（实况，v1，含 uvIndex）、`/weather/v1/daily/{lat}/{lon}`（逐日，v1，最多 10 天）、`/weather/v1/hourly/{lat}/{lon}`（逐小时，v1，含真实逐小时 uvIndex）
+- **分钟降水**: `/v7/minutely/5m`（未来 2 小时分钟级降水，和风无 v1 版本，保留 v7）
 - **天气预警**: `/weatheralert/v1/current/{lat}/{lon}`
 - **空气质量**: `/airquality/v1/current/{lat}/{lon}`
 - **GeoAPI**: `/geo/v2/city/lookup`（城市搜索，用户输入城市名时触发）
-- **天文（部分）**: 日出日落数据从 v1 逐日预报响应的 `astro` 中提取，映射到 `DailyAstro`，无需单独请求。v1 逐小时预报自带真实逐小时 `uvIndex`，v1 逐日预报含 `uvIndexMax`（当日最大值）
+- **天文（部分）**: 日出日落数据从 v1 逐日预报响应的 `astro` 中提取，映射到 `DailyAstro`，无需单独请求。v1 实况、逐小时、逐日均含 UV 数据（实况为实时值，逐小时为逐小时值，逐日为 `uvIndexMax` 当日最大值）
 
 ### 未使用的 API 能力（下一步计划）
 - **天气指数** (`/v7/indices/1d`): 和风提供穿衣、洗车、感冒、运动、钓鱼、旅游、花粉、舒适度等 16+ 种生活指数。当前仅从日报 `uvIndex` 映射了紫外线。计划调用此端点补充完整生活指数卡片。

@@ -17,101 +17,8 @@ import com.squareup.moshi.JsonClass
  * - 温度：均为摄氏度 -> 无需转换
  */
 
-// ============ Weather Now (实况) ============
-
-@JsonClass(generateAdapter = true)
-data class QWeatherNowResponse(
-    val code: String? = null,
-    val updateTime: String? = null,
-    val now: QWeatherNow? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class QWeatherNow(
-    val obsTime: String? = null,
-    val temp: String? = null,
-    val feelsLike: String? = null,
-    val icon: String? = null,
-    val text: String? = null,
-    val wind360: String? = null,
-    val windDir: String? = null,
-    val windScale: String? = null,
-    val windSpeed: String? = null,
-    val humidity: String? = null,
-    val precip: String? = null,
-    val pressure: String? = null,
-    val vis: String? = null,
-    val cloud: String? = null,
-    val dew: String? = null
-)
-
-// ============ Daily Forecast (逐日预报) ============
-
-@JsonClass(generateAdapter = true)
-data class QWeatherDailyResponse(
-    val code: String? = null,
-    val daily: List<QWeatherDaily>? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class QWeatherDaily(
-    val fxDate: String? = null,
-    val sunrise: String? = null,
-    val sunset: String? = null,
-    val moonrise: String? = null,
-    val moonset: String? = null,
-    val moonPhase: String? = null,
-    val moonPhaseIcon: String? = null,
-    val tempMax: String? = null,
-    val tempMin: String? = null,
-    val iconDay: String? = null,
-    val textDay: String? = null,
-    val iconNight: String? = null,
-    val textNight: String? = null,
-    val wind360Day: String? = null,
-    val windDirDay: String? = null,
-    val windScaleDay: String? = null,
-    val windSpeedDay: String? = null,
-    val wind360Night: String? = null,
-    val windDirNight: String? = null,
-    val windScaleNight: String? = null,
-    val windSpeedNight: String? = null,
-    val humidity: String? = null,
-    val precip: String? = null,
-    val pressure: String? = null,
-    val vis: String? = null,
-    val cloud: String? = null,
-    val uvIndex: String? = null
-)
-
-// ============ Hourly Forecast (逐小时预报) ============
-
-@JsonClass(generateAdapter = true)
-data class QWeatherHourlyResponse(
-    val code: String? = null,
-    val hourly: List<QWeatherHourly>? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class QWeatherHourly(
-    val fxTime: String? = null,
-    val temp: String? = null,
-    val icon: String? = null,
-    val text: String? = null,
-    val wind360: String? = null,
-    val windDir: String? = null,
-    val windScale: String? = null,
-    val windSpeed: String? = null,
-    val humidity: String? = null,
-    val pop: String? = null,
-    val precip: String? = null,
-    val pressure: String? = null,
-    val cloud: String? = null,
-    val dew: String? = null,
-    val vis: String? = null
-)
-
-// ============ Minutely Precipitation (分钟级降水) ============
+// ============ Minutely Precipitation (分钟级降水, v7 API) ============
+// 和风无 v1 版本，保留 v7 端点 /v7/minutely/5m
 
 @JsonClass(generateAdapter = true)
 data class QWeatherMinutelyResponse(
@@ -215,6 +122,27 @@ data class QWeatherGeoLocation(
     val adm2: String? = null,
     val adm1: String? = null,
     val country: String? = null
+)
+
+// ============ v1 Weather Current (实况天气, 新版 API) ============
+// 端点: /weather/v1/current/{lat}/{lon}
+// 与 v7 的主要区别: 结构化对象（非字符串）、含 uvIndex/windGust、单位为 m/s（非 km/h）
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1NowResponse(
+    val metadata: QWeatherV1Metadata? = null,
+    val condition: QWeatherV1Condition? = null,
+    val temperature: QWeatherV1Metric? = null,
+    val feelsLike: QWeatherV1Metric? = null,
+    val humidity: Double? = null,
+    val wind: QWeatherV1Wind? = null,
+    val windGust: QWeatherV1Metric? = null,
+    val precipitation: QWeatherV1Precipitation? = null,
+    val pressure: QWeatherV1Metric? = null,
+    val visibility: QWeatherV1Metric? = null,
+    val dewPoint: QWeatherV1Metric? = null,
+    val cloudCover: Double? = null,
+    val uvIndex: Double? = null
 )
 
 // ============ v1 Weather Hourly (逐小时预报, 新版 API) ============
