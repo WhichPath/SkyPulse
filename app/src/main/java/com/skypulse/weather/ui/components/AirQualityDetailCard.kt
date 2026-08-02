@@ -47,8 +47,8 @@ private fun aqiCategory(aqi: Int): String = when {
 // ============ 污染物定义 ============
 private data class PollutantItem(
     val label: String,
-    value: Double?,
-    unit: String
+    val value: Double?,
+    val unit: String
 )
 
 private fun formatPollutantValue(value: Double?): String {
