@@ -713,6 +713,15 @@ private fun WeatherContentBody(
 
             Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
 
+            AirQualityDetailCard(
+                airQuality = realtime?.air_quality,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
+            )
+
+            Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
+
             if (isPremium && settings.showCardDetail) {
                 WeatherDetailCards(
                     realtime = realtime,

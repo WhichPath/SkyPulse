@@ -162,7 +162,11 @@ object QWeatherMapper {
             description = AirQualityDescription(
                 chn = chnIndex?.category ?: usEpa?.category,
                 usa = usEpa?.category
-            )
+            ),
+            primaryPollutant = (chnIndex ?: usEpa)?.primaryPollutant?.name,
+            healthEffect = (chnIndex ?: usEpa)?.health?.effect,
+            healthAdviceGeneral = (chnIndex ?: usEpa)?.health?.advice?.generalPopulation,
+            healthAdviceSensitive = (chnIndex ?: usEpa)?.health?.advice?.sensitivePopulation
         )
     }
 

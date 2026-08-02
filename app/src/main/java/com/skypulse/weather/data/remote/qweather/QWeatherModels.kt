@@ -89,13 +89,35 @@ data class QWeatherAirIndex(
     val code: String? = null,
     val name: String? = null,
     val aqi: Double? = null,
-    val category: String? = null
+    val category: String? = null,
+    val primaryPollutant: QWeatherAirPrimaryPollutant? = null,
+    val health: QWeatherAirHealth? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirPrimaryPollutant(
+    val code: String? = null,
+    val name: String? = null,
+    val fullName: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirHealth(
+    val effect: String? = null,
+    val advice: QWeatherAirAdvice? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirAdvice(
+    val generalPopulation: String? = null,
+    val sensitivePopulation: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class QWeatherPollutant(
     val code: String? = null,
     val name: String? = null,
+    val fullName: String? = null,
     val concentration: QWeatherConcentration? = null
 )
 
