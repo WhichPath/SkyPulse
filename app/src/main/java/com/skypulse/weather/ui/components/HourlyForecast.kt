@@ -55,12 +55,12 @@ private fun aqiLabel(aqi: Double?): String {
     if (aqi == null) return ""
     val v = aqi.toInt()
     return when {
-        v <= 50 -> "${v}优"
-        v <= 100 -> "${v}良"
-        v <= 150 -> "${v}轻度"
-        v <= 200 -> "${v}中度"
-        v <= 300 -> "${v}重度"
-        else -> "${v}严重"
+        v <= 50 -> "$v"
+        v <= 100 -> "$v 中等"
+        v <= 150 -> "$v 敏感"
+        v <= 200 -> "$v 不健康"
+        v <= 300 -> "$v 重度"
+        else -> "$v 危险"
     }
 }
 
@@ -511,7 +511,7 @@ private fun HourlyTemperatureChart(
         if (showAqi) {
             Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
                 temperatures.forEachIndexed { index, _ ->
-                    val aqi = aqiValues?.getOrNull(index)?.value?.chn
+                    val aqi = aqiValues?.getOrNull(index)?.value?.usa ?: aqiValues?.getOrNull(index)?.value?.chn
                     val label = aqiLabel(aqi)
                     val color = aqiColor(aqi, isBrightBg)
                     Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {

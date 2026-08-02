@@ -264,18 +264,33 @@ fun CurrentWeather(
     LaunchedEffect(Unit) { visible = true }
     LaunchedEffect(skipAnimation) { if (skipAnimation) visible = true }
 
-    val aqiValue = realtime?.air_quality?.aqi?.chn?.toInt()
-    val aqiDesc = realtime?.air_quality?.description?.chn ?: aqiValue?.let {
+    val aqiValue = realtime?.air_quality?.aqi?.usa?.toInt() ?: realtime?.air_quality?.aqi?.chn?.toInt()
+    val aqiDesc = realtime?.air_quality?.description?.usa ?: aqiValue?.let {
         when {
             it <= 50 -> "优"
-            it <= 100 -> "良"
-            it <= 150 -> "轻度"
-            it <= 200 -> "中度"
-            it <= 300 -> "重度"
-            else -> "严重"
+            it <= 100 -> "中等"
+            it <= 150 -> "轻度不健康"
+            it <= 200 -> "不健康"
+            it <= 300 -> "重度不健康"
+            else -> "危险"
         }
-    } ?: "--"
-    val aqiText = if (aqiValue != null) "空气 $aqiDesc $aqiValue" else "空气 $aqiDesc"
+    }
+    // "优"(Good)不显示等级，其他情况显示
+    val aqiText = when {
+        aqiValue != null && aqiValue <= 50 -> "空气 $aqiValue"
+        aqiValue != null && aqiDesc != null -> "空气 $aqiDesc $aqiValue"
+        else -> "空气 --"
+    }
+    val aqiColor = aqiValue?.let {
+        when {
+            it <= 50 -> Color(0xFF43A047)
+            it <= 100 -> Color(0xFFFFD54F)
+            it <= 150 -> Color(0xFFFFB74D)
+            it <= 200 -> Color(0xFFE57373)
+            it <= 300 -> Color(0xFFCE93D8)
+            else -> Color(0xFFA1887F)
+        }
+    } ?: TextSecondary
 
     Column(
         modifier = modifier
@@ -322,7 +337,7 @@ fun CurrentWeather(
                 Text(
                     text = aqiText,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary
+                    color = aqiColor
                 )
             }
         }

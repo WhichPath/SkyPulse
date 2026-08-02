@@ -589,17 +589,18 @@ object WeatherWidgetUpdater {
             val humidityText = if (humidity != null) "湿度 ${(humidity * 100).toInt()}%" else "湿度 --"
 
             // Get AQI
-            val aqi = realtime?.air_quality?.aqi?.chn
+            val aqi = realtime?.air_quality?.aqi?.usa ?: realtime?.air_quality?.aqi?.chn
             val aqiText = if (aqi != null) {
-                val aqiDesc = when {
-                    aqi <= 50 -> "优"
-                    aqi <= 100 -> "良"
-                    aqi <= 150 -> "轻度"
-                    aqi <= 200 -> "中度"
-                    aqi <= 300 -> "重度"
-                    else -> "严重"
+                val v = aqi.toInt()
+                val desc = when {
+                    v <= 50 -> null
+                    v <= 100 -> "中等"
+                    v <= 150 -> "轻度不健康"
+                    v <= 200 -> "不健康"
+                    v <= 300 -> "重度不健康"
+                    else -> "危险"
                 }
-                "空气 $aqiDesc ${aqi.toInt()}"
+                if (desc != null) "空气 $desc $v" else "空气 $v"
             } else "空气 --"
 
             // Get UV index

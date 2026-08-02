@@ -172,15 +172,22 @@ fun SwipeableCityListRow(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Row 2: air quality (left) + weather description (right)
-                val aqiValue = weather?.result?.realtime?.air_quality?.aqi?.chn?.toInt()
+                val aqiValue = weather?.result?.realtime?.air_quality?.aqi?.usa?.toInt()
+                    ?: weather?.result?.realtime?.air_quality?.aqi?.chn?.toInt()
                 val aqiDesc = aqiValue?.let {
                     when {
-                        it <= 50 -> "空气优"
-                        it <= 100 -> "空气良"
-                        it <= 150 -> "空气轻度污染"
-                        it <= 200 -> "空气中度污染"
-                        else -> "空气重度污染"
+                        it <= 50 -> null
+                        it <= 100 -> "中等"
+                        it <= 150 -> "轻度不健康"
+                        it <= 200 -> "不健康"
+                        it <= 300 -> "重度不健康"
+                        else -> "危险"
                     }
+                }
+                val aqiText = when {
+                    aqiValue != null && aqiDesc != null -> "空气 $aqiDesc $aqiValue"
+                    aqiValue != null -> "空气 $aqiValue"
+                    else -> "--"
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -188,7 +195,7 @@ fun SwipeableCityListRow(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (aqiDesc != null) "$aqiDesc $aqiValue" else "--",
+                        text = aqiText,
                         fontSize = 15.sp,
                         color = Color.White.copy(alpha = 0.75f),
                     )

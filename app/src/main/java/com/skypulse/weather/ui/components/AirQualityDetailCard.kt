@@ -37,11 +37,11 @@ private fun aqiColor(aqi: Int): Color = when {
 
 private fun aqiCategory(aqi: Int): String = when {
     aqi <= 50 -> "优"
-    aqi <= 100 -> "良"
-    aqi <= 150 -> "轻度污染"
-    aqi <= 200 -> "中度污染"
-    aqi <= 300 -> "重度污染"
-    else -> "严重污染"
+    aqi <= 100 -> "中等"
+    aqi <= 150 -> "轻度不健康"
+    aqi <= 200 -> "不健康"
+    aqi <= 300 -> "重度不健康"
+    else -> "危险"
 }
 
 // ============ 污染物定义 ============
@@ -66,11 +66,12 @@ fun AirQualityDetailCard(
 ) {
     if (airQuality == null) return
 
-    val aqiValue = airQuality.aqi?.chn?.toInt()
+    val aqiValue = airQuality.aqi?.usa?.toInt() ?: airQuality.aqi?.chn?.toInt()
     if (aqiValue == null) return
 
-    val category = airQuality.description?.chn ?: aqiCategory(aqiValue)
-    val color = aqiColor(aqiValue)
+    val category = airQuality.description?.usa ?: aqiCategory(aqiValue)
+    // "优"(Good)不显示等级
+    val showCategory = aqiValue > 50 && category != null
 
     val pollutants = listOf(
         PollutantItem("PM2.5", airQuality.pm25, "μg/m³"),
@@ -87,43 +88,29 @@ fun AirQualityDetailCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // ---- 标题行: 图标 + "空气质量" + AQI 标签 ----
+            // ---- 标题行: "空气质量" + AQI 数值( + 等级) ----
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(color)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "空气质量",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                        color = TextPrimary
-                    )
-                }
+                Text(
+                    text = "空气质量",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                    color = TextPrimary
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "$aqiValue",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = color
+                        color = TextPrimary
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(color.copy(alpha = 0.25f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
+                    if (showCategory) {
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = category,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = TextPrimary
+                            color = TextSecondary
                         )
                     }
                 }
