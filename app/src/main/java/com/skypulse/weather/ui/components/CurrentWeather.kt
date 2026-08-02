@@ -264,7 +264,8 @@ fun CurrentWeather(
     LaunchedEffect(Unit) { visible = true }
     LaunchedEffect(skipAnimation) { if (skipAnimation) visible = true }
 
-    val aqiDesc = realtime?.air_quality?.description?.chn ?: realtime?.air_quality?.aqi?.chn?.toInt()?.let {
+    val aqiValue = realtime?.air_quality?.aqi?.chn?.toInt()
+    val aqiDesc = realtime?.air_quality?.description?.chn ?: aqiValue?.let {
         when {
             it <= 50 -> "优"
             it <= 100 -> "良"
@@ -274,6 +275,7 @@ fun CurrentWeather(
             else -> "严重"
         }
     } ?: "--"
+    val aqiText = if (aqiValue != null) "空气 $aqiDesc $aqiValue" else "空气 $aqiDesc"
 
     Column(
         modifier = modifier
@@ -318,7 +320,7 @@ fun CurrentWeather(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "空气 $aqiDesc",
+                    text = aqiText,
                     style = MaterialTheme.typography.bodyLarge,
                     color = TextSecondary
                 )

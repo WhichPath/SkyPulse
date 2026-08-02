@@ -216,3 +216,123 @@ data class QWeatherGeoLocation(
     val adm1: String? = null,
     val country: String? = null
 )
+
+// ============ v1 Weather Hourly (逐小时预报, 新版 API) ============
+// 端点: /weather/v1/hourly/{lat}/{lon}
+// 与 v7 的主要区别: 结构化对象（非字符串）、含 uvIndex、单位为 m/s（非 km/h）
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1HourlyResponse(
+    val metadata: QWeatherV1Metadata? = null,
+    val hours: List<QWeatherV1Hour>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Hour(
+    val forecastTime: String? = null,
+    val condition: QWeatherV1Condition? = null,
+    val temperature: QWeatherV1Metric? = null,
+    val feelsLike: QWeatherV1Metric? = null,
+    val humidity: Double? = null,
+    val wind: QWeatherV1Wind? = null,
+    val windGust: QWeatherV1Metric? = null,
+    val precipitation: QWeatherV1Precipitation? = null,
+    val pressure: QWeatherV1Metric? = null,
+    val visibility: QWeatherV1Metric? = null,
+    val dewPoint: QWeatherV1Metric? = null,
+    val cloudCover: Double? = null,
+    val uvIndex: Double? = null
+)
+
+// ============ v1 Weather Daily (逐日预报, 新版 API) ============
+// 端点: /weather/v1/daily/{lat}/{lon}
+// 最多 10 天（v7 为 15d），含 uvIndexMax、白天/夜间分段预报、完整天文数据
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1DailyResponse(
+    val metadata: QWeatherV1Metadata? = null,
+    val days: List<QWeatherV1Day>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Day(
+    val forecastStartTime: String? = null,
+    val forecastEndTime: String? = null,
+    val astro: QWeatherV1Astro? = null,
+    val temperatureMax: QWeatherV1Metric? = null,
+    val temperatureMin: QWeatherV1Metric? = null,
+    val temperatureAvg: QWeatherV1Metric? = null,
+    val uvIndexMax: Double? = null,
+    val daytime: QWeatherV1DayPart? = null,
+    val nighttime: QWeatherV1DayPart? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Astro(
+    val sunrise: String? = null,
+    val sunset: String? = null,
+    val solarNoon: String? = null,
+    val solarMidnight: String? = null,
+    val moonrise: String? = null,
+    val moonset: String? = null,
+    val moonPhase: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1DayPart(
+    val condition: QWeatherV1Condition? = null,
+    val temperatureMax: QWeatherV1Metric? = null,
+    val temperatureMin: QWeatherV1Metric? = null,
+    val wind: QWeatherV1Wind? = null,
+    val windGustMax: QWeatherV1Metric? = null,
+    val precipitation: QWeatherV1Precipitation? = null,
+    val cloudCover: Double? = null,
+    val humidity: Double? = null
+)
+
+// ============ v1 通用子模型 ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Metadata(
+    val tag: String? = null,
+    val attributions: List<String>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Condition(
+    val text: String? = null,
+    val code: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Metric(
+    val value: Double? = null,
+    val unit: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Wind(
+    val direction: QWeatherV1WindDirection? = null,
+    val speed: QWeatherV1WindSpeed? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1WindDirection(
+    val degree: Double? = null,
+    val compass: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1WindSpeed(
+    val value: Double? = null,
+    val unit: String? = null,
+    val scale: Double? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherV1Precipitation(
+    val amount: QWeatherV1Metric? = null,
+    val intensity: QWeatherV1Metric? = null,
+    val probability: Double? = null,
+    val type: String? = null
+)

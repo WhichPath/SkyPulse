@@ -39,13 +39,16 @@ import java.util.TimeZone
  * 保留彩云的 skycon 字符串体系作为 UI 层的内部抽象，
  * 和风的 icon 天气码在此处统一转换为 skycon，UI 层无需任何改动。
  *
- * 单位转换规则（和风 -> 彩云）：
- * - 湿度：百分比(0-100) -> 小数(0-1)，除以 100
- * - 云量：百分比(0-100) -> 小数(0-1)，除以 100
+ * 单位转换规则（和风 v1 -> 彩云）：
+ * - 湿度：小数(0-1) -> 小数(0-1)，无需转换
+ * - 云量：小数(0-1) -> 小数(0-1)，无需转换
  * - 气压：hPa -> Pa，乘以 100
- * - 能见度：km -> m，乘以 1000
- * - 风速：km/h -> km/h，无需转换
+ * - 能见度：m -> m，无需转换
+ * - 风速：m/s -> km/h，乘以 3.6
  * - 温度：°C -> °C，无需转换
+ * - 降水概率：小数(0-1) -> 百分比(0-100)，乘以 100
+ *
+ * 注意：实况(now)和分钟降水(minutely)仍使用 v7 API，单位转换规则见各方法。
  */
 object QWeatherMapper {
 
@@ -53,8 +56,8 @@ object QWeatherMapper {
 
     fun mapToWeatherResponse(
         now: QWeatherNowResponse?,
-        daily: QWeatherDailyResponse?,
-        hourly: QWeatherHourlyResponse?,
+        daily: QWeatherV1DailyResponse?,
+        hourly: QWeatherV1HourlyResponse?,
         minutely: QWeatherMinutelyResponse?,
         warning: QWeatherWarningResponse?,
         air: QWeatherAirResponse?,
@@ -63,13 +66,13 @@ object QWeatherMapper {
     ): WeatherResponse {
         val tzOffsetSeconds = TimeZone.getDefault().rawOffset / 1000
 
-        // 提取今日 UV 索引，用于 realtime 和 hourly（和风 now/hourly 端点不含 UV）
-        val todayUvIndex = daily?.daily?.firstOrNull()?.uvIndex
+        // 提取今日 UV 索引，用于 realtime（和风 now 端点不含 UV）
+        val todayUvIndex = daily?.days?.firstOrNull()?.uvIndexMax?.toInt()?.toString()
 
         val realtime = mapRealtime(now, air, todayUvIndex)
         val minutelyForecast = mapMinutely(minutely)
-        val hourlyForecast = mapHourly(hourly, todayUvIndex)
-        val dailyForecast = mapDaily(daily)
+        val hourlyForecast = mapHourlyV1(hourly)
+        val dailyForecast = mapDailyV1(daily)
         val alert = mapWarning(warning)
 
         return WeatherResponse(
@@ -184,152 +187,168 @@ object QWeatherMapper {
 
     // ============ Hourly (逐小时) ============
 
-    private fun mapHourly(hourly: QWeatherHourlyResponse?, todayUvIndex: String?): HourlyForecast? {
-        val items = hourly?.hourly ?: return null
+    // ============ Hourly (逐小时, v1 API) ============
+
+    private fun mapHourlyV1(hourly: QWeatherV1HourlyResponse?): HourlyForecast? {
+        val items = hourly?.hours ?: return null
         if (items.isEmpty()) return null
 
-        // 和风 hourly 不含 UV，用今日 daily UV 索引填充每小时
-        val hourlyUv = if (todayUvIndex != null) {
-            items.map {
-                HourlyUvItem(datetime = it.fxTime, index = todayUvIndex, desc = uvDescription(todayUvIndex))
-            }
-        } else null
+        // v1 hourly 自带真实逐小时 UV 指数
+        val hourlyUv = items.map { hour ->
+            val uvStr = hour.uvIndex?.toInt()?.toString()
+            HourlyUvItem(
+                datetime = hour.forecastTime,
+                index = uvStr,
+                desc = uvDescription(uvStr)
+            )
+        }
 
         return HourlyForecast(
             status = "ok",
             description = null,
             precipitation = items.map {
                 HourlyValue(
-                    datetime = it.fxTime,
-                    value = it.precip?.toDoubleOrNull(),
-                    probability = it.pop?.toDoubleOrNull()
+                    datetime = it.forecastTime,
+                    value = it.precipitation?.amount?.value,
+                    probability = it.precipitation?.probability?.times(100.0)
                 )
             },
             temperature = items.map {
-                HourlyValue(datetime = it.fxTime, value = it.temp?.toDoubleOrNull())
+                HourlyValue(datetime = it.forecastTime, value = it.temperature?.value)
             },
-            apparent_temperature = null,
+            apparent_temperature = items.map {
+                HourlyValue(datetime = it.forecastTime, value = it.feelsLike?.value)
+            },
             wind = items.map {
                 HourlyWind(
-                    datetime = it.fxTime,
-                    speed = it.windSpeed?.toDoubleOrNull(),
-                    direction = it.wind360?.toDoubleOrNull()
+                    datetime = it.forecastTime,
+                    speed = it.wind?.speed?.value?.times(3.6), // m/s -> km/h
+                    direction = it.wind?.direction?.degree
                 )
             },
-            gust = null,
+            gust = items.map {
+                HourlyValue(datetime = it.forecastTime, value = it.windGust?.value?.times(3.6))
+            },
             humidity = items.map {
-                HourlyValue(datetime = it.fxTime, value = it.humidity?.toDoubleOrNull()?.div(100.0))
+                HourlyValue(datetime = it.forecastTime, value = it.humidity)
             },
             cloudrate = items.map {
-                HourlyValue(datetime = it.fxTime, value = it.cloud?.toDoubleOrNull()?.div(100.0))
+                HourlyValue(datetime = it.forecastTime, value = it.cloudCover)
             },
             skycon = items.map {
-                HourlySkycon(datetime = it.fxTime, value = iconToSkycon(it.icon))
+                HourlySkycon(datetime = it.forecastTime, value = iconToSkycon(it.condition?.code))
             },
             pressure = items.map {
-                HourlyValue(datetime = it.fxTime, value = it.pressure?.toDoubleOrNull()?.times(100.0))
+                HourlyValue(datetime = it.forecastTime, value = it.pressure?.value?.times(100.0))
             },
             visibility = items.map {
-                HourlyValue(datetime = it.fxTime, value = it.vis?.toDoubleOrNull()?.times(1000.0))
+                HourlyValue(datetime = it.forecastTime, value = it.visibility?.value)
             },
             dswrf = null,
             air_quality = null,
-            life_index = if (hourlyUv != null) HourlyLifeIndex(ultraviolet = hourlyUv) else null
+            life_index = HourlyLifeIndex(ultraviolet = hourlyUv)
         )
     }
 
-    // ============ Daily (逐日) ============
+    // ============ Daily (逐日, v1 API) ============
 
-    private fun mapDaily(daily: QWeatherDailyResponse?): DailyForecast? {
-        val items = daily?.daily ?: return null
+    private fun mapDailyV1(daily: QWeatherV1DailyResponse?): DailyForecast? {
+        val items = daily?.days ?: return null
         if (items.isEmpty()) return null
 
         return DailyForecast(
             status = "ok",
             astro = items.map {
+                val date = it.forecastStartTime?.substringBefore("T")
                 DailyAstro(
-                    date = it.fxDate,
-                    sunrise = AstroTime(time = it.sunrise),
-                    sunset = AstroTime(time = it.sunset)
+                    date = date,
+                    sunrise = AstroTime(time = extractTime(it.astro?.sunrise)),
+                    sunset = AstroTime(time = extractTime(it.astro?.sunset))
                 )
             },
             precipitation = items.map {
+                val date = it.forecastStartTime?.substringBefore("T")
+                val dayPrecip = it.daytime?.precipitation
                 DailyPrecipitation(
-                    date = it.fxDate,
-                    max = it.precip?.toDoubleOrNull(),
-                    min = it.precip?.toDoubleOrNull(),
-                    avg = it.precip?.toDoubleOrNull(),
-                    probability = null
+                    date = date,
+                    max = dayPrecip?.amount?.value,
+                    min = dayPrecip?.amount?.value,
+                    avg = dayPrecip?.amount?.value,
+                    probability = dayPrecip?.probability?.times(100.0)
                 )
             },
             temperature = items.map {
+                val date = it.forecastStartTime?.substringBefore("T")
                 DailyTemperature(
-                    date = it.fxDate,
-                    max = it.tempMax?.toDoubleOrNull(),
-                    min = it.tempMin?.toDoubleOrNull(),
-                    avg = null
+                    date = date,
+                    max = it.temperatureMax?.value,
+                    min = it.temperatureMin?.value,
+                    avg = it.temperatureAvg?.value
                 )
             },
             temperature_08h_20h = null,
             temperature_20h_32h = null,
             wind = items.map {
+                val date = it.forecastStartTime?.substringBefore("T")
                 DailyWind(
-                    date = it.fxDate,
-                    max = Wind(speed = it.windSpeedDay?.toDoubleOrNull(), direction = it.wind360Day?.toDoubleOrNull()),
-                    min = Wind(speed = it.windSpeedNight?.toDoubleOrNull(), direction = it.wind360Night?.toDoubleOrNull()),
+                    date = date,
+                    max = Wind(
+                        speed = it.daytime?.wind?.speed?.value?.times(3.6),
+                        direction = it.daytime?.wind?.direction?.degree
+                    ),
+                    min = Wind(
+                        speed = it.nighttime?.wind?.speed?.value?.times(3.6),
+                        direction = it.nighttime?.wind?.direction?.degree
+                    ),
                     avg = null
                 )
             },
             wind_08h_20h = null,
             wind_20h_32h = null,
             humidity = items.map {
+                val date = it.forecastStartTime?.substringBefore("T")
+                val dayH = it.daytime?.humidity
+                val nightH = it.nighttime?.humidity
                 DailyValue(
-                    date = it.fxDate,
-                    max = it.humidity?.toDoubleOrNull()?.div(100.0),
-                    min = it.humidity?.toDoubleOrNull()?.div(100.0),
-                    avg = it.humidity?.toDoubleOrNull()?.div(100.0)
+                    date = date,
+                    max = dayH,
+                    min = nightH,
+                    avg = if (dayH != null && nightH != null) (dayH + nightH) / 2.0 else null
                 )
             },
             cloudrate = items.map {
+                val date = it.forecastStartTime?.substringBefore("T")
+                val dayC = it.daytime?.cloudCover
+                val nightC = it.nighttime?.cloudCover
                 DailyValue(
-                    date = it.fxDate,
-                    max = it.cloud?.toDoubleOrNull()?.div(100.0),
-                    min = it.cloud?.toDoubleOrNull()?.div(100.0),
-                    avg = it.cloud?.toDoubleOrNull()?.div(100.0)
+                    date = date,
+                    max = dayC,
+                    min = nightC,
+                    avg = if (dayC != null && nightC != null) (dayC + nightC) / 2.0 else null
                 )
             },
-            pressure = items.map {
-                DailyValue(
-                    date = it.fxDate,
-                    max = it.pressure?.toDoubleOrNull()?.times(100.0),
-                    min = it.pressure?.toDoubleOrNull()?.times(100.0),
-                    avg = it.pressure?.toDoubleOrNull()?.times(100.0)
-                )
-            },
-            visibility = items.map {
-                DailyValue(
-                    date = it.fxDate,
-                    max = it.vis?.toDoubleOrNull()?.times(1000.0),
-                    min = it.vis?.toDoubleOrNull()?.times(1000.0),
-                    avg = it.vis?.toDoubleOrNull()?.times(1000.0)
-                )
-            },
+            pressure = null,
+            visibility = null,
             dswrf = null,
             skycon = items.map {
-                DailySkycon(date = it.fxDate, value = iconToSkycon(it.iconDay))
+                val date = it.forecastStartTime?.substringBefore("T")
+                DailySkycon(date = date, value = iconToSkycon(it.daytime?.condition?.code))
             },
             skycon_08h_20h = items.map {
-                DailySkycon(date = it.fxDate, value = iconToSkycon(it.iconDay))
+                val date = it.forecastStartTime?.substringBefore("T")
+                DailySkycon(date = date, value = iconToSkycon(it.daytime?.condition?.code))
             },
             skycon_20h_32h = items.map {
-                DailySkycon(date = it.fxDate, value = iconToSkycon(it.iconNight))
+                val date = it.forecastStartTime?.substringBefore("T")
+                DailySkycon(date = date, value = iconToSkycon(it.nighttime?.condition?.code))
             },
             air_quality = null,
             life_index = DailyLifeIndex(
                 ultraviolet = items.map {
+                    val date = it.forecastStartTime?.substringBefore("T")
                     LifeIndexDay(
-                        date = it.fxDate,
-                        index = it.uvIndex,
+                        date = date,
+                        index = it.uvIndexMax?.toInt()?.toString(),
                         desc = null
                     )
                 },
@@ -380,6 +399,15 @@ object QWeatherMapper {
     }
 
     // ============ 天气码 -> Skycon 映射 ============
+
+    /** 从 v1 ISO 时间（如 "2024-08-11T04:22Z" 或 "2024-08-11T12:22+08:00"）中提取 "HH:mm"。 */
+    private fun extractTime(isoTime: String?): String? {
+        if (isoTime.isNullOrBlank()) return null
+        val tIndex = isoTime.indexOf('T')
+        if (tIndex < 0) return null
+        val timePart = isoTime.substring(tIndex + 1)
+        return if (timePart.length >= 5) timePart.substring(0, 5) else null
+    }
 
     /**
      * UV 索引数值 -> 中文描述。

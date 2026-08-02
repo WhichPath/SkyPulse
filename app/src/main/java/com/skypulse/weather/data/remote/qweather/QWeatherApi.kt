@@ -77,4 +77,26 @@ interface QWeatherApi {
         @Query("number") number: Int = 10,
         @Query("lang") lang: String = "zh"
     ): QWeatherGeoResponse
+
+    // ============ v1 天气预报 (新版 API) ============
+
+    /** 逐小时预报（路径参数：纬度/经度，含真实逐小时 uvIndex） */
+    @GET("weather/v1/hourly/{lat}/{lon}")
+    suspend fun getWeatherHourlyV1(
+        @Path("lat") lat: Double,
+        @Path("lon") lon: Double,
+        @Query("hours") hours: Int = 24,
+        @Query("localTime") localTime: Boolean = true,
+        @Query("lang") lang: String = "zh"
+    ): QWeatherV1HourlyResponse
+
+    /** 逐日预报（路径参数：纬度/经度，含 uvIndexMax 和白天/夜间分段，最多 10 天） */
+    @GET("weather/v1/daily/{lat}/{lon}")
+    suspend fun getWeatherDailyV1(
+        @Path("lat") lat: Double,
+        @Path("lon") lon: Double,
+        @Query("days") days: Int = 10,
+        @Query("localTime") localTime: Boolean = true,
+        @Query("lang") lang: String = "zh"
+    ): QWeatherV1DailyResponse
 }

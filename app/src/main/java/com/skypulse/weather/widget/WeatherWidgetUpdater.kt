@@ -599,7 +599,7 @@ object WeatherWidgetUpdater {
                     aqi <= 300 -> "重度"
                     else -> "严重"
                 }
-                "空气 $aqiDesc"
+                "空气 $aqiDesc ${aqi.toInt()}"
             } else "空气 --"
 
             // Get UV index
