@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
@@ -46,9 +47,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.skypulse.weather.data.WeatherSettings
+import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.domain.CitySelectionPolicy
 import com.skypulse.weather.model.sortedByPublishTimeDescending
 import com.skypulse.weather.util.WeatherUtils
+import com.skypulse.weather.util.skyGradientColorStops
 import com.skypulse.weather.ui.components.*
 import com.skypulse.weather.ui.theme.*
 import com.skypulse.weather.viewmodel.AppScreen
@@ -194,7 +197,13 @@ fun WeatherScreen(
     }
 
     // 主页沉浸天空恒用浅色图标；次级页面跟随深浅色主题（浅色主题深色图标，深色主题浅色图标）
-    SetLightStatusBarEffect(lightStatusBar = currentScreen != AppScreen.CityDetail && !settings.darkMode)
+    val isSystemDark = isSystemInDarkTheme()
+    val resolvedDark = when (settings.themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemDark
+    }
+    SetLightStatusBarEffect(lightStatusBar = currentScreen != AppScreen.CityDetail && !resolvedDark)
 
     if (!onboardingReady) {
         LoadingShimmer(
@@ -215,7 +224,7 @@ fun WeatherScreen(
     }
 
     // 次级页面（城市管理/预警详情/设置）深浅色配色，主页与小组件不受影响
-    val secondaryPageColors = if (settings.darkMode) SecondaryPageDarkColors else SecondaryPageLightColors
+    val secondaryPageColors = if (resolvedDark) SecondaryPageDarkColors else SecondaryPageLightColors
 
     CompositionLocalProvider(
         LocalWeatherTheme provides weatherTheme,
@@ -396,7 +405,8 @@ fun WeatherScreen(
                                                         } else {
                                                             showMembershipDialog = true
                                                         }
-                                                    }
+                                                    },
+                                                    onRadarClick = { viewModel.navigateToRadarMap() }
                                                 )
                                             } else {
                                                 LoadingShimmer(modifier = Modifier.fillMaxSize())
@@ -462,7 +472,8 @@ fun WeatherScreen(
                     onShowCardDetailChange = { settingsViewModel.setShowCardDetail(it) },
                     onShowCardSunriseSunsetChange = { settingsViewModel.setShowCardSunriseSunset(it) },
                     onShowCardMinutelyChange = { settingsViewModel.setShowCardMinutely(it) },
-                    onDarkModeChange = { settingsViewModel.setDarkMode(it) },
+                    onShowCardTyphoonChange = { settingsViewModel.setShowCardTyphoon(it) },
+                    onThemeModeChange = { settingsViewModel.setThemeMode(it) },
                     isPremium = isPremium,
                     activatedAt = settingsViewModel.getActivatedAt(),
                     deviceId = settingsViewModel.getDeviceId(),
@@ -478,6 +489,20 @@ fun WeatherScreen(
                 AlertDetailScreen(
                     alerts = contents,
                     initialSelectedIndex = selectedAlertIndex,
+                    onBack = { viewModel.navigateBack() }
+                )
+            }
+
+            AppScreen.RadarMap -> {
+                val currentCity = remember {
+                    savedCities.find { it.id == selectedCityId }
+                        ?: savedCities.firstOrNull { it.isCurrentLocation }
+                        ?: savedCities.firstOrNull()
+                }
+                RadarMapScreen(
+                    latitude = currentCity?.latitude,
+                    longitude = currentCity?.longitude,
+                    locationName = effectiveLocationName,
                     onBack = { viewModel.navigateBack() }
                 )
             }
@@ -503,6 +528,13 @@ private fun dampedPullOffsetPx(
 }
 
 private fun AnimatedContentTransitionScope<AppScreen>.skyPulseScreenTransition(): ContentTransform {
+    // 台风路径是持续重绘的 WebView 全屏地图：过渡动画中的缩放/位移会强制 WebView
+    // 走分层合成，且动画期间页面仍在重绘，极易掉帧。这里仅用淡入淡出，接近浏览器体验。
+    if (initialState == AppScreen.RadarMap || targetState == AppScreen.RadarMap) {
+        return (fadeIn(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)) togetherWith
+            fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))) using
+            SizeTransform(clip = false)
+    }
     val direction = if (targetState.screenOrder >= initialState.screenOrder) 1 else -1
     val enterSpec = tween<IntOffset>(durationMillis = 300, easing = FastOutSlowInEasing)
     val exitSpec = tween<IntOffset>(durationMillis = 260, easing = FastOutSlowInEasing)
@@ -521,10 +553,11 @@ private fun AnimatedContentTransitionScope<AppScreen>.skyPulseScreenTransition()
 
 private fun AppScreen.screenBackgroundBrush(weatherTheme: WeatherTheme, secondaryBackground: Color): Brush {
     return when (this) {
-        AppScreen.CityDetail -> Brush.verticalGradient(weatherTheme.backgroundGradient)
+        AppScreen.CityDetail -> Brush.verticalGradient(colorStops = *skyGradientColorStops(weatherTheme.backgroundGradient))
         AppScreen.CityList,
         AppScreen.Settings,
-        AppScreen.AlertDetail -> Brush.verticalGradient(listOf(secondaryBackground, secondaryBackground))
+        AppScreen.AlertDetail,
+        AppScreen.RadarMap -> Brush.verticalGradient(listOf(secondaryBackground, secondaryBackground))
     }
 }
 
@@ -534,6 +567,7 @@ private val AppScreen.screenOrder: Int
         AppScreen.CityDetail -> 0
         AppScreen.Settings -> 1
         AppScreen.AlertDetail -> 1
+        AppScreen.RadarMap -> 1
     }
 
 // ==================== Helper Composables ====================
@@ -596,7 +630,8 @@ private fun WeatherContentBody(
     onAlertClick: (Int) -> Unit = {},
     showBookmark: Boolean = false,
     isBookmarked: Boolean = false,
-    onBookmarkClick: () -> Unit = {}
+    onBookmarkClick: () -> Unit = {},
+    onRadarClick: () -> Unit = {}
 ) {
     val result = state.weather.result
     val realtime = result?.realtime
@@ -733,6 +768,17 @@ private fun WeatherContentBody(
             if (isPremium && settings.showCardSunriseSunset) {
                 SunriseSunsetCard(
                     astro = result?.daily?.astro,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
+                )
+                Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
+            }
+
+            // 台风雷达图预览卡片（免费用户和会员均解锁）
+            if (settings.showCardTyphoon) {
+                RadarMapCard(
+                    onClick = onRadarClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)

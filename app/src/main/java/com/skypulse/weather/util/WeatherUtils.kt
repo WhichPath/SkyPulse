@@ -8,6 +8,22 @@ import com.skypulse.weather.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * 天空渐变锚点，与 [WeatherUtils.getWeatherGradient] 返回的 5 色一一对应。
+ *
+ * 非等距：顶部天顶色（最深的 color[0]）占据上约 40%，压住「天顶」层次，
+ * 之后向地平线（最亮的 color[4]）逐步加速提亮——更接近真实天空由深到浅的过渡，
+ * 而非把 5 色机械均分在 0/0.25/0.5/0.75/1.0。
+ */
+val SkyGradientStops: List<Float> = listOf(0.0f, 0.40f, 0.65f, 0.85f, 1.0f)
+
+/**
+ * 将天空渐变色与 [SkyGradientStops] 锚点组合为 Brush.verticalGradient(vararg) 所需的颜色停靠对。
+ * 调用方用展开运算符传入：Brush.verticalGradient(colorStops = *skyGradientColorStops(colors), ...)。
+ */
+fun skyGradientColorStops(colors: List<Color>): Array<Pair<Float, Color>> =
+    colors.zip(SkyGradientStops) { color, stop -> stop to color }.toTypedArray()
+
 object WeatherUtils {
 
     private val hourFormat: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {

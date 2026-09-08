@@ -37,6 +37,10 @@ class WeatherNavigationState {
         _currentScreen.value = AppScreen.AlertDetail
     }
 
+    fun showRadarMap() {
+        _currentScreen.value = AppScreen.RadarMap
+    }
+
     fun selectCity(cityId: String?) {
         _selectedCityId.value = cityId
     }

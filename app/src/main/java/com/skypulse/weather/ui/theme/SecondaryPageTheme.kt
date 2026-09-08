@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
  * 仅作用于这三个次级页面，主页天气沉浸主题与桌面小组件不受影响。
  * 浅色为 iOS 浅灰分组风（默认），深色为 iOS 深色分组风。
  *
- * 由 WeatherScreen 根据设置项 dark_mode 通过 [LocalSecondaryPageTheme] 下发。
+ * 由 WeatherScreen 根据主题设置（浅色/深色/跟随系统）通过 [LocalSecondaryPageTheme] 下发。
  */
 @Immutable
 data class SecondaryPageColors(
@@ -40,15 +40,17 @@ val SecondaryPageLightColors = SecondaryPageColors(
     switchOffTrack = Color(0xFFE5E5EA)
 )
 
-/** 深色：iOS 深色分组风（纯黑底 + 深灰卡片） */
+/** 深色：iOS 深色分组风（纯黑底 + 深灰卡片）
+ * 文字使用降低白点值的柔和白色（约 85% 白），
+ * 减少高亮文字对散光用户的视觉刺激。 */
 val SecondaryPageDarkColors = SecondaryPageColors(
     isDark = true,
     background = Color(0xFF000000),
     cardBackground = Color(0xFF1C1C1E),
     divider = Color(0xFF38383A),
-    textPrimary = Color(0xFFFFFFFF),
+    textPrimary = Color(0xFFD9D9DE),
     textSecondary = Color(0xFF8E8E93),
-    backArrow = Color(0xFFFFFFFF),
+    backArrow = Color(0xFFD9D9DE),
     accentBlue = Color(0xFF0A84FF),
     accentGreen = Color(0xFF30D158),
     switchOffTrack = Color(0xFF39393D)
