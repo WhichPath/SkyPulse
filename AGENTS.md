@@ -41,12 +41,11 @@
 
 ## 版本管理
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
-- **版本号升级**: 由 `scripts\release.ps1` 自动完成（patch +1, versionCode +1），无需手动执行单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
+- **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
 
 ## 发版规则
-- **默认发版**: 每次代码改动完成并验证后，执行 `scripts\release.ps1` 发布到云剪贴板（内含 bump 版本 → 构建 → 上传）；除非用户明确要求暂不发版
-- **云剪贴板密码**: `888`
-- **GitHub 发版**: 仅在用户主动要求时才推送到 GitHub 并创建 Release（直接发布，非 draft）
+- **默认发版**: 每次代码改动完成并验证后，bump 版本并推送到 GitHub，以 CI 构建产物（artifact）为发版包体；除非用户明确要求暂不发版
+- **GitHub 发版（永久禁止）**: release APK 通过 BuildConfig 内嵌了 QWeather Ed25519 私钥、PROJECT_ID/KEY_ID 和高德 API Key，反编译即可提取；且 `app/release-keystore.jks` 已入库、密码公开在本文档，任何人拿到包都能提取密钥、冒签重打包。因此 APK（含 CI artifact）只可私下分发，永远不要创建公开的 GitHub Release
 - **GitHub Token**: GitHub 发版必须从 `local.properties` 读取 GitHub token，不得硬编码到源码、脚本输出或 Release 描述中
 - **GitHub 包体完整性**: GitHub 发版上传 APK 前必须记录本地 APK 文件大小和 SHA-256；上传后必须从 GitHub Release 下载该 APK 资产并重新计算文件大小和 SHA-256，二者完全一致才算发版成功；如不一致，删除损坏资产后重新上传并再次校验
 - **GitHub Release 描述**: GitHub 发版描述只写一条中文描述：`修复已知问题`
@@ -62,7 +61,7 @@
 
 ## 包体命名
 - **APK 命名**: `skypulse-v<versionName>.apk`
-- 云剪贴板和 GitHub Release 都必须使用该格式
+- GitHub Release 必须使用该格式
 - **APK 清理**: 每次构建成功并生成新的 APK 后，清理根目录中旧的 `skypulse-v*.apk` 包，仅保留最新构建产物；除非用户明确要求保留历史 APK
 
 ## 编码规范
