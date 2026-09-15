@@ -44,8 +44,8 @@
 - **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
 
 ## 发版规则
-- **默认发版**: 每次代码改动完成并验证后，bump 版本并推送到 GitHub，由 CI 构建；构建成功后把 APK 下载回本工作区作为发版包体，并立即删除远端 artifact；除非用户明确要求暂不发版
-- **CI 产物流程**: Actions 构建成功后，用 `gh run download <run-id> -R WhichPath/SkyPulse` 将 APK 下载到工作区根目录，并重命名为 `skypulse-v<versionName>.apk`；随后必须立即用 `gh api -X DELETE repos/WhichPath/SkyPulse/actions/artifacts/<artifact-id>` 删除远端 artifact，避免内嵌密钥的包长期挂在公开仓库上、被任何 GitHub 账号下载。注意本仓库另有 `upstream` 远端，所有 `gh` 命令必须显式带 `-R WhichPath/SkyPulse`，否则会误指向 upstream
+- **默认发版**: 每次代码改动完成并验证后，bump 版本并推送到 GitHub（普通 push 只做编译验证、不产出 APK），随后手动触发 CI 构建；构建成功后把 APK 下载回本工作区作为发版包体，并立即删除远端 artifact；除非用户明确要求暂不发版
+- **CI 产物流程**: 只有手动触发（`workflow_dispatch`）才会上传 artifact，普通 push 不产包。发版时用 `gh workflow run "Build APK" -R WhichPath/SkyPulse --ref main` 触发构建，构建成功后用 `gh run download <run-id> -R WhichPath/SkyPulse` 将 APK 下载到工作区根目录并重命名为 `skypulse-v<versionName>.apk`；随后必须立即用 `gh api -X DELETE repos/WhichPath/SkyPulse/actions/artifacts/<artifact-id>` 删除远端 artifact，避免内嵌密钥的包长期挂在公开仓库上、被任何 GitHub 账号下载。注意本仓库另有 `upstream` 远端，所有 `gh` 命令必须显式带 `-R WhichPath/SkyPulse`，否则会误指向 upstream
 - **GitHub 发版（永久禁止）**: release APK 通过 BuildConfig 内嵌了 QWeather Ed25519 私钥、PROJECT_ID/KEY_ID 和高德 API Key，反编译即可提取；且 `app/release-keystore.jks` 已入库、密码公开在本文档，任何人拿到包都能提取密钥、冒签重打包。因此 APK（含 CI artifact）只可私下分发，永远不要创建公开的 GitHub Release
 
 ## Git 操作规范
