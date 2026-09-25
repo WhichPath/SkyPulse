@@ -307,13 +307,15 @@ class LocationManager @Inject constructor(
         return CachedLocation(latitude = lat, longitude = lon, name = name, time = time, accuracy = accuracy, isReliableName = isReliableName)
     }
 
-    suspend fun requestBestLocation(highAccuracy: Boolean = false): CachedLocation? {
-        val startMs = android.os.SystemClock.elapsedRealtime()
-        val totalTimeoutMillis = if (highAccuracy) {
+    suspend fun requestBestLocation(
+        highAccuracy: Boolean = false,
+        totalTimeoutMillis: Long = if (highAccuracy) {
             HIGH_ACCURACY_LOCATION_TOTAL_TIMEOUT_MS
         } else {
             REGULAR_LOCATION_TOTAL_TIMEOUT_MS
         }
+    ): CachedLocation? {
+        val startMs = android.os.SystemClock.elapsedRealtime()
         locI("location_flow_start: primary=amap, fallback=system, highAccuracy=$highAccuracy, totalTimeout=${totalTimeoutMillis}ms")
         val result = withTimeoutOrNull(totalTimeoutMillis) {
             TimedNullableResult(requestBestLocationInternal(highAccuracy, totalTimeoutMillis))
