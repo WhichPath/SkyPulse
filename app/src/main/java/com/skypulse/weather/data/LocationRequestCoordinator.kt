@@ -106,34 +106,40 @@ class LocationRequestCoordinator @Inject constructor(
      */
     suspend fun requestLocation(
         caller: Caller,
-        highAccuracy: Boolean = false
+        highAccuracy: Boolean = false,
+        force: Boolean = false,
+        timeoutMillis: Long? = null
     ): LocationManager.CachedLocation? {
         val callerTag = caller.name
-        locI("request_start: caller=$callerTag, highAccuracy=$highAccuracy")
+        locI("request_start: caller=$callerTag, highAccuracy=$highAccuracy, force=$force, timeoutMillis=$timeoutMillis")
 
         // Phase 1: 快速路径 — 缓存检查（mutex 内）
         val decision = mutex.withLock {
-            // 1a. 检查时间窗口缓存
-            cacheEntry?.let { entry ->
-                val age = android.os.SystemClock.elapsedRealtime() - entry.timestampMs
-                if (age < CACHE_TTL_MS) {
-                    if (!highAccuracy || entry.highAccuracy) {
-                        locI("cache_hit: caller=$callerTag, age=${age}ms, " +
-                            "accuracy=${entry.location.accuracy}m, name=${entry.location.name}")
-                        return@withLock Decision.Cached(entry.location)
+            if (!force) {
+                // 1a. 检查时间窗口缓存
+                cacheEntry?.let { entry ->
+                    val age = android.os.SystemClock.elapsedRealtime() - entry.timestampMs
+                    if (age < CACHE_TTL_MS) {
+                        if (!highAccuracy || entry.highAccuracy) {
+                            locI("cache_hit: caller=$callerTag, age=${age}ms, " +
+                                "accuracy=${entry.location.accuracy}m, name=${entry.location.name}")
+                            return@withLock Decision.Cached(entry.location)
+                        }
+                        locI("cache_upgrade_needed: caller=$callerTag, age=${age}ms, " +
+                            "cachedHighAcc=${entry.highAccuracy}, requestedHighAcc=$highAccuracy")
                     }
-                    locI("cache_upgrade_needed: caller=$callerTag, age=${age}ms, " +
-                        "cachedHighAcc=${entry.highAccuracy}, requestedHighAcc=$highAccuracy")
                 }
-            }
 
-            // 1b. 检查失败回退
-            if (lastFailureTimeMs > 0L) {
-                val failureAge = android.os.SystemClock.elapsedRealtime() - lastFailureTimeMs
-                if (failureAge < FAILURE_BACKOFF_MS) {
-                    locW("failure_backoff: caller=$callerTag, age=${failureAge}ms")
-                    return@withLock Decision.RateLimited
+                // 1b. 检查失败回退
+                if (lastFailureTimeMs > 0L) {
+                    val failureAge = android.os.SystemClock.elapsedRealtime() - lastFailureTimeMs
+                    if (failureAge < FAILURE_BACKOFF_MS) {
+                        locW("failure_backoff: caller=$callerTag, age=${failureAge}ms")
+                        return@withLock Decision.RateLimited
+                    }
                 }
+            } else {
+                lastFailureTimeMs = 0L
             }
 
             // 1c. 检查是否有 pending 请求可合并
@@ -178,7 +184,7 @@ class LocationRequestCoordinator @Inject constructor(
 
             is Decision.StartNew -> {
                 // Phase 3: 执行实际的 AMAP 调用（mutex 外，使用 NonCancellable 隔离取消）
-                executeRequest(highAccuracy)
+                executeRequest(highAccuracy, timeoutMillis)
             }
         }
     }
@@ -193,10 +199,15 @@ class LocationRequestCoordinator @Inject constructor(
      * - 所有等待者的 deferred 在 AMAP 完成后一定会被 complete
      */
     private suspend fun executeRequest(
-        highAccuracy: Boolean
+        highAccuracy: Boolean,
+        timeoutMillis: Long? = null
     ): LocationManager.CachedLocation? {
         return withContext(NonCancellable + Dispatchers.IO) {
-            val result = locationManager.requestBestLocation(highAccuracy = highAccuracy)
+            val result = if (timeoutMillis != null) {
+                locationManager.requestBestLocation(highAccuracy = highAccuracy, totalTimeoutMillis = timeoutMillis)
+            } else {
+                locationManager.requestBestLocation(highAccuracy = highAccuracy)
+            }
 
             // 更新状态并通知所有等待者
             mutex.withLock {

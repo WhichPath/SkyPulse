@@ -1,4 +1,4 @@
-﻿package com.skypulse.weather.viewmodel
+package com.skypulse.weather.viewmodel
 
 import android.content.Context
 import android.util.Log
@@ -13,6 +13,7 @@ import com.skypulse.weather.domain.RefreshWeatherUseCase
 import com.skypulse.weather.model.City
 import com.skypulse.weather.model.WeatherResponse
 import com.skypulse.weather.repository.WeatherRepository
+import com.skypulse.weather.sync.ManualRefreshResult
 import com.skypulse.weather.sync.SyncResult
 import com.skypulse.weather.util.FileLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,7 +52,7 @@ sealed class WeatherUiState {
 }
 
 enum class RefreshPhase {
-    Idle, Refreshing, Success
+    Idle, Refreshing, PoorSignal, Success
 }
 
 data class CityWeatherData(
@@ -618,19 +619,47 @@ class WeatherViewModel @Inject constructor(
             setRefreshPhase(RefreshPhase.Refreshing, "manualRefresh", refreshCity)
             val startTime = android.os.SystemClock.elapsedRealtime()
             try {
-                val isLimited = refreshCity != null && shouldSkipRefresh(refreshCity)
-                if (!isLimited) {
-                    refreshLog("manual_refresh_run: ${refreshCity.refreshSummary()}")
-                    runRefreshWithTimeout(refreshCity, silent = false)
-                } else {
-                    refreshLog("manual_refresh_skip_limited: ${refreshCity.refreshSummary()}")
-                    Log.d(TAG, "refresh(): skip actual refresh due to rate limiting/fresh cache, but show animation")
-                }
+                if (refreshCity == null || refreshCity.isCurrentLocation) {
+                    refreshLog("manual_refresh_current_location_start: ${refreshCity.refreshSummary()}")
+                    val result = refreshWeatherUseCase.refreshCurrentLocationManual(timeoutMs = 6000L)
+                    val elapsed = elapsedSince(startTime)
+                    if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
 
-                val elapsed = elapsedSince(startTime)
-                if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
-                setRefreshPhase(RefreshPhase.Success, "manualRefresh", refreshCity, "elapsed=${elapsed}ms")
-                delay(REFRESH_SUCCESS_VISIBLE_MS)
+                    when (result) {
+                        is ManualRefreshResult.Success -> {
+                            refreshLog("manual_refresh_location_success: ${result.locationName}")
+                            setRefreshPhase(RefreshPhase.Success, "manualRefresh", refreshCity, "location=${result.locationName}")
+                            delay(REFRESH_SUCCESS_VISIBLE_MS)
+                        }
+                        is ManualRefreshResult.PoorSignal -> {
+                            refreshLog("manual_refresh_poor_signal: hasWeather=${result.weather != null}")
+                            setRefreshPhase(RefreshPhase.PoorSignal, "manualRefresh", refreshCity)
+                            delay(1500L)
+                            if (result.weather != null) {
+                                setRefreshPhase(RefreshPhase.Success, "manualRefresh", refreshCity)
+                                delay(REFRESH_SUCCESS_VISIBLE_MS)
+                            }
+                        }
+                        is ManualRefreshResult.Error -> {
+                            refreshWarn("manual_refresh_error: message=${result.message}")
+                            showRefreshFailureIfNoCache(refreshCity, silent = false, message = result.message)
+                        }
+                    }
+                } else {
+                    val isLimited = shouldSkipRefresh(refreshCity)
+                    if (!isLimited) {
+                        refreshLog("manual_refresh_run: ${refreshCity.refreshSummary()}")
+                        runRefreshWithTimeout(refreshCity, silent = false)
+                    } else {
+                        refreshLog("manual_refresh_skip_limited: ${refreshCity.refreshSummary()}")
+                        Log.d(TAG, "refresh(): skip actual refresh due to rate limiting/fresh cache, but show animation")
+                    }
+
+                    val elapsed = elapsedSince(startTime)
+                    if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+                    setRefreshPhase(RefreshPhase.Success, "manualRefresh", refreshCity, "elapsed=${elapsed}ms")
+                    delay(REFRESH_SUCCESS_VISIBLE_MS)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -264,6 +264,92 @@ class WeatherSyncManager @Inject constructor(
     }
 
     /**
+     * 下拉刷新专用的定位 + 天气刷新入口。
+     * 1. 强制检测当前定位（超时 6s，忽略缓存和失败退避）
+     * 2. 定位成功 -> 更新数据库城市名/经纬度 -> 使用最新经纬度请求天气
+     * 3. 定位信号不佳（超时/失败/无权限） -> 标记信号不佳，降级使用已有缓存坐标请求天气
+     */
+    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 6000L): ManualRefreshResult = withContext(Dispatchers.IO) {
+        val waitStartMs = android.os.SystemClock.elapsedRealtime()
+        locI("manual_refresh_location_wait_start")
+        locationMutex.withLock {
+            val startMs = android.os.SystemClock.elapsedRealtime()
+            locI("manual_refresh_location_acquired: wait=${elapsedSince(waitStartMs)}ms")
+
+            val hasLocationPermission = locationManager.hasLocationPermission()
+            val location = if (!hasLocationPermission) {
+                locW("manual_refresh_no_permission")
+                null
+            } else {
+                locationRequestCoordinator.requestLocation(
+                    caller = LocationRequestCoordinator.Caller.FOREGROUND_REFRESH,
+                    highAccuracy = true,
+                    force = true,
+                    timeoutMillis = timeoutMs
+                )
+            }
+
+            if (location != null) {
+                lastLocationCalibrationMillis = System.currentTimeMillis()
+                val lon = location.longitude
+                val lat = location.latitude
+                val locationName = location.name
+                locI("manual_refresh_location_success: elapsed=${elapsedSince(startMs)}ms, lon=$lon, lat=$lat, accuracy=${location.accuracy}m, name=$locationName")
+
+                val currentCity = if (locationName == UNKNOWN_LOCATION) {
+                    var oldName = locationManager.getCachedLocation()?.name
+                        ?: getCurrentLocationCity()?.name
+                        ?: "当前位置"
+                    if (oldName == LOCATING_NAME || oldName.isBlank()) {
+                        oldName = "当前位置"
+                    }
+                    locationManager.saveCachedLocation(oldName, lon, lat, location.time, location.accuracy, isReliableName = true)
+                    upsertCurrentLocationCity(oldName, lon, lat)
+                } else {
+                    locationManager.saveCachedLocation(locationName, lon, lat, location.time, location.accuracy, location.isReliableName)
+                    val savedName = locationManager.getCachedLocation()?.name ?: locationName
+                    upsertCurrentLocationCity(savedName, lon, lat)
+                }
+
+                val weatherResult = doRefreshWeather(currentCity.id, lon, lat)
+                return@withLock when (weatherResult) {
+                    is SyncResult.Success -> ManualRefreshResult.Success(weatherResult.weather, currentCity.name)
+                    is SyncResult.Error -> ManualRefreshResult.Error(weatherResult.message)
+                    is SyncResult.RateLimited -> {
+                        val cached = repository.getWeatherFromCache(currentCity.id)
+                        if (cached != null) ManualRefreshResult.Success(cached, currentCity.name)
+                        else ManualRefreshResult.Error("操作过于频繁，请稍后再试")
+                    }
+                    is SyncResult.LocationFailed -> ManualRefreshResult.PoorSignal(repository.getWeatherFromCache(currentCity.id))
+                }
+            }
+
+            // 定位信号不佳 / 失败 / 超时
+            locW("manual_refresh_location_poor_signal: elapsed=${elapsedSince(startMs)}ms")
+            val cachedLoc = locationManager.getCachedLocation()
+            val weather = if (cachedLoc != null) {
+                val currentCity = upsertCurrentLocationCity(
+                    cachedLoc.name,
+                    cachedLoc.longitude,
+                    cachedLoc.latitude
+                )
+                val result = doRefreshWeather(currentCity.id, cachedLoc.longitude, cachedLoc.latitude)
+                result.getOrNull() ?: repository.getWeatherFromCache(currentCity.id)
+            } else {
+                val currentCity = getCurrentLocationCity()
+                if (currentCity != null && !currentCity.isUnresolvedCurrentLocation()) {
+                    val result = doRefreshWeather(currentCity.id, currentCity.longitude, currentCity.latitude)
+                    result.getOrNull() ?: repository.getWeatherFromCache(currentCity.id)
+                } else {
+                    null
+                }
+            }
+
+            return@withLock ManualRefreshResult.PoorSignal(weather)
+        }
+    }
+
+    /**
      * 首页快路径：不做阻塞式定位，优先用已确认的当前定位城市坐标或定位缓存刷新天气。
      * 准确性由后台 calibrateCurrentLocation() 持续校准。
      */
@@ -666,5 +752,14 @@ sealed class SyncResult {
     }
 
     fun getOrNull(): WeatherResponse? = (this as? Success)?.weather
+}
+
+/**
+ * 下拉手动刷新结果。
+ */
+sealed class ManualRefreshResult {
+    data class Success(val weather: WeatherResponse, val locationName: String) : ManualRefreshResult()
+    data class PoorSignal(val weather: WeatherResponse?) : ManualRefreshResult()
+    data class Error(val message: String) : ManualRefreshResult()
 }
 

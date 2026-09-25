@@ -1,11 +1,13 @@
 package com.skypulse.weather.ui.components
 
 import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.basicMarquee
@@ -123,27 +125,57 @@ fun LocationHeader(
                         ),
                         modifier = Modifier.align(Alignment.BottomStart)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (refreshPhase == RefreshPhase.Refreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 1.5.dp,
-                                    color = TextSecondary
-                                )
-                            } else {
-                                LucideIcon(
-                                    name = "circle-check",
-                                    contentDescription = null,
-                                    size = 14.dp,
-                                    tint = TextSecondary
-                                )
+                        AnimatedContent(
+                            targetState = refreshPhase,
+                            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+                            label = "refreshPhaseAnimation"
+                        ) { phase ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                when (phase) {
+                                    RefreshPhase.Refreshing -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(14.dp),
+                                            strokeWidth = 1.5.dp,
+                                            color = TextSecondary
+                                        )
+                                        Spacer(modifier = Modifier.width(7.dp))
+                                        Text(
+                                            text = "正在更新数据",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    RefreshPhase.PoorSignal -> {
+                                        LucideIcon(
+                                            name = "triangle-alert",
+                                            contentDescription = null,
+                                            size = 14.dp,
+                                            tint = TextSecondary
+                                        )
+                                        Spacer(modifier = Modifier.width(7.dp))
+                                        Text(
+                                            text = "当前定位信号不佳",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    RefreshPhase.Success -> {
+                                        LucideIcon(
+                                            name = "circle-check",
+                                            contentDescription = null,
+                                            size = 14.dp,
+                                            tint = TextSecondary
+                                        )
+                                        Spacer(modifier = Modifier.width(7.dp))
+                                        Text(
+                                            text = "更新成功",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    RefreshPhase.Idle -> {}
+                                }
                             }
-                            Spacer(modifier = Modifier.width(7.dp))
-                            Text(
-                                text = if (refreshPhase == RefreshPhase.Refreshing) "正在更新数据" else "更新成功",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary.copy(alpha = 0.6f)
-                            )
                         }
                     }
                 }

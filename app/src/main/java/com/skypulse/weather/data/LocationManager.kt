@@ -332,9 +332,14 @@ class LocationManager @Inject constructor(
         highAccuracy: Boolean = false,
         totalTimeoutMillis: Long
     ): CachedLocation? {
+        val amapTimeout = if (totalTimeoutMillis <= 8000L) {
+            maxOf(2500L, totalTimeoutMillis - 1500L)
+        } else {
+            if (highAccuracy) HIGH_ACCURACY_TIMEOUT_MS else 8000L
+        }
         val profile = LocationRequestProfile(
             highAccuracy = highAccuracy,
-            timeoutMillis = if (highAccuracy) HIGH_ACCURACY_TIMEOUT_MS else 8000L
+            timeoutMillis = amapTimeout
         )
         val startMs = android.os.SystemClock.elapsedRealtime()
         locI("location_flow_internal_start: primary=amap, fallback=system, highAccuracy=$highAccuracy, amapTimeout=${profile.timeoutMillis}ms")
@@ -363,8 +368,9 @@ class LocationManager @Inject constructor(
                 // 高德 SDK 返回了城市或区级字段 → 名称可靠；全 null → 仅逆地理编码，可能不完整
                 var isReliableName = !amapLoc.cityName.isNullOrBlank() || !amapLoc.districtName.isNullOrBlank()
                 
-                // 语义字段为空时，等待5秒后重试一次，给高德 SDK 时间获取完整数据
-                if (!isReliableName) {
+                // 语义字段为空时，等待5秒后重试一次，给高德 SDK 时间获取完整数据（仅在时间预算充裕时）
+                val remainingForRetry = totalTimeoutMillis - elapsedSince(startMs)
+                if (!isReliableName && remainingForRetry >= 7000L) {
                     locI("amap_unreliable_wait_retry: city=${amapLoc.cityName}, district=${amapLoc.districtName}, waiting 5s")
                     kotlinx.coroutines.delay(5000L)
                     

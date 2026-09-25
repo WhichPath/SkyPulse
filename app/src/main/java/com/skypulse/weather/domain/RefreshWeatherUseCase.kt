@@ -1,5 +1,6 @@
 package com.skypulse.weather.domain
 
+import com.skypulse.weather.sync.ManualRefreshResult
 import com.skypulse.weather.sync.SyncResult
 import com.skypulse.weather.sync.WeatherSyncManager
 import javax.inject.Inject
@@ -15,6 +16,13 @@ import javax.inject.Singleton
 class RefreshWeatherUseCase @Inject constructor(
     private val syncManager: WeatherSyncManager
 ) {
+
+    /**
+     * 下拉刷新专用的定位 + 天气刷新入口。
+     */
+    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 6000L): ManualRefreshResult {
+        return syncManager.refreshCurrentLocationManual(timeoutMs = timeoutMs)
+    }
 
     /**
      * 通过 GPS 定位刷新天气。
