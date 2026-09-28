@@ -58,6 +58,8 @@ class LocationManager @Inject constructor(
 
     companion object {
         private const val TAG = "LocationManager"
+        const val UNKNOWN_LOCATION = "未知位置"
+        const val LOCATING_NAME = "定位中..."
         const val DEFAULT_LONGITUDE = 116.4074
         const val DEFAULT_LATITUDE = 39.9042
         private const val PREFS_NAME = "location_cache"
