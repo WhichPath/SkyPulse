@@ -20,16 +20,16 @@ class RefreshWeatherUseCase @Inject constructor(
     /**
      * 下拉刷新专用的定位 + 天气刷新入口。
      */
-    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 6000L): ManualRefreshResult {
+    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 7000L): ManualRefreshResult {
         return syncManager.refreshCurrentLocationManual(timeoutMs = timeoutMs)
     }
 
     /**
      * 通过 GPS 定位刷新天气。
-     * 完整流程：定位解析 → 更新城市坐标 → 获取天气 → 写入 Room。
+     * 完整流程：定位解析 → 更新城市坐标 → 获取天气 → 写入 Room；若定位信号不佳则降级使用上次位置。
      */
-    suspend fun refreshWithLocation(highAccuracy: Boolean = false): SyncResult {
-        return syncManager.refreshWeatherWithLocation(highAccuracy = highAccuracy)
+    suspend fun refreshWithLocation(highAccuracy: Boolean = true): SyncResult {
+        return syncManager.refreshWeatherWithLocation(highAccuracy = highAccuracy, force = true)
     }
 
     /**

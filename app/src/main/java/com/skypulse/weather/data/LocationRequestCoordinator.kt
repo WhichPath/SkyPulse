@@ -138,25 +138,26 @@ class LocationRequestCoordinator @Inject constructor(
                         return@withLock Decision.RateLimited
                     }
                 }
+
+                // 1c. 检查是否有 pending 请求可合并
+                pendingRequest?.let { pending ->
+                    val mergedHighAccuracy = pending.highAccuracy || highAccuracy
+                    val deferred = CompletableDeferred<LocationManager.CachedLocation?>()
+                    if (mergedHighAccuracy != pending.highAccuracy) {
+                        // 更新 pending 请求的精度
+                        pendingRequest = pending.copy(highAccuracy = mergedHighAccuracy)
+                    }
+                    pending.deferreds.add(deferred)
+                    locI("merged_into_pending: caller=$callerTag, " +
+                        "mergedHighAccuracy=$mergedHighAccuracy, waiters=${pending.deferreds.size}")
+                    return@withLock Decision.Merged(deferred)
+                }
             } else {
+                cacheEntry = null
                 lastFailureTimeMs = 0L
             }
 
-            // 1c. 检查是否有 pending 请求可合并
-            pendingRequest?.let { pending ->
-                val mergedHighAccuracy = pending.highAccuracy || highAccuracy
-                val deferred = CompletableDeferred<LocationManager.CachedLocation?>()
-                if (mergedHighAccuracy != pending.highAccuracy) {
-                    // 更新 pending 请求的精度
-                    pendingRequest = pending.copy(highAccuracy = mergedHighAccuracy)
-                }
-                pending.deferreds.add(deferred)
-                locI("merged_into_pending: caller=$callerTag, " +
-                    "mergedHighAccuracy=$mergedHighAccuracy, waiters=${pending.deferreds.size}")
-                return@withLock Decision.Merged(deferred)
-            }
-
-            // 1d. 没有可合并的请求，创建新的 pending 请求
+            // 1d. 没有可合并的请求或强制刷新，创建新的 pending 请求
             val deferred = CompletableDeferred<LocationManager.CachedLocation?>()
             pendingRequest = PendingRequest(
                 highAccuracy = highAccuracy,

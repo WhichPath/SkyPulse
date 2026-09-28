@@ -621,9 +621,17 @@ class WeatherViewModel @Inject constructor(
             try {
                 if (refreshCity == null || refreshCity.isCurrentLocation) {
                     refreshLog("manual_refresh_current_location_start: ${refreshCity.refreshSummary()}")
-                    val result = refreshWeatherUseCase.refreshCurrentLocationManual(timeoutMs = 6000L)
+                    val result = refreshWeatherUseCase.refreshCurrentLocationManual(timeoutMs = 7000L)
                     val elapsed = elapsedSince(startTime)
                     if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+
+                    // 刷新后立刻同步本地城市列表，确保 UI 能够立刻显示最新地名与坐标
+                    val freshCities = manageCityUseCase.getCities()
+                    _savedCities.value = freshCities
+                    val currentLocCity = freshCities.find { it.isCurrentLocation }
+                    if (currentLocCity != null && (selectedCityId.value == null || selectedCityId.value == "current_location")) {
+                        navigation.selectCity(currentLocCity.id)
+                    }
 
                     when (result) {
                         is ManualRefreshResult.Success -> {
@@ -799,32 +807,34 @@ class WeatherViewModel @Inject constructor(
             refreshLog("refresh_selected_manual_city_done: success=${result is SyncResult.Success}, elapsed=${elapsedSince(startMs)}ms, ${city.refreshSummary()}")
             result is SyncResult.Success
         } else {
-            val success = refreshCurrentLocation(silent, highAccuracy = false)
+            val success = refreshCurrentLocation(silent, highAccuracy = true)
             refreshLog("refresh_selected_current_location_done: success=$success, elapsed=${elapsedSince(startMs)}ms, ${city.refreshSummary()}")
             success
         }
     }
 
     /**
-     * 刷新定位城市天气。用户可见刷新优先走可信缓存坐标，完整定位改由后台校准负责。
+     * 刷新定位城市天气：更新天气前先更新位置，仅信号不佳时降级使用上次位置。
      */
     private suspend fun refreshCurrentLocation(
         silent: Boolean = false,
-        highAccuracy: Boolean = false
+        highAccuracy: Boolean = true
     ): Boolean {
         val startMs = android.os.SystemClock.elapsedRealtime()
         refreshLog("refresh_current_location_start: silent=$silent, highAccuracy=$highAccuracy")
         transientError.value = null
-        val result = if (highAccuracy) {
-            refreshWeatherUseCase.refreshWithLocation(highAccuracy = true)
-        } else {
-            refreshWeatherUseCase.refreshCurrentLocationFast()
-        }
+        val result = refreshWeatherUseCase.refreshWithLocation(highAccuracy = highAccuracy)
         val success = result is SyncResult.Success
         refreshLog("refresh_current_location_done: success=$success, elapsed=${elapsedSince(startMs)}ms, result=${result::class.simpleName}")
-        if (success && !highAccuracy) {
-            scheduleLocationCalibration("refreshCurrentLocation")
+
+        // 刷新后立刻同步本地城市列表，确保 UI 能够立刻显示最新地名与坐标
+        val freshCities = manageCityUseCase.getCities()
+        _savedCities.value = freshCities
+        val currentLocCity = freshCities.find { it.isCurrentLocation }
+        if (currentLocCity != null && (selectedCityId.value == null || selectedCityId.value == "current_location")) {
+            navigation.selectCity(currentLocCity.id)
         }
+
         if (!success && !silent) {
             val errorMsg = (result as? SyncResult.Error)?.message ?: "获取天气数据失败，请稍后重试"
             val city = _savedCities.value.find { it.isCurrentLocation }

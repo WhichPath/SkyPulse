@@ -132,22 +132,21 @@ class LocationManager @Inject constructor(
         val normalizedName = name.takeIf { it.isNotBlank() } ?: return
         if (latitude == 0.0 || longitude == 0.0) return
 
+        val isGenericOrEmpty = normalizedName == UNKNOWN_LOCATION ||
+            normalizedName == LOCATING_NAME ||
+            normalizedName == "当前位置" ||
+            normalizedName.isBlank()
+
         val displayName: String
-        if (isReliableName) {
-            // 高德 SDK 返回了有效的城市/区/街道字段，视为可靠结果，更新缓存
+        if (!isGenericOrEmpty) {
             displayName = normalizedName
             saveLastGoodName(normalizedName)
-            locI("save_cached_location: reliable, display=${displayName.safeLogValue()}")
+            locI("save_cached_location: valid_name, display=${displayName.safeLogValue()}")
         } else {
-            // 高德 SDK 返回全 null，逆地理编码结果可能不完整，沿用上一次正常名称
+            // 地名为未知位置/当前位置/定位中等，沿用上一次正常名称
             val lastGood = getLastGoodName()
-            if (lastGood != null) {
-                displayName = lastGood
-                locI("save_cached_location: unreliable, reused_last_good=${displayName.safeLogValue()}, raw=${normalizedName.safeLogValue()}")
-            } else {
-                displayName = normalizedName
-                locI("save_cached_location: unreliable, no_last_good, fallback_raw=${displayName.safeLogValue()}")
-            }
+            displayName = lastGood ?: normalizedName
+            locI("save_cached_location: generic_name, reused_last_good=${displayName.safeLogValue()}")
         }
 
         cachePrefs.edit()
@@ -297,9 +296,9 @@ class LocationManager @Inject constructor(
                 return CachedLocation(latitude = lat, longitude = lon, name = name, time = time, accuracy = accuracy, isReliableName = isReliableName)
             }
 
-            // 3. 常规微小防抖动
-            if (!isCacheExpired && dist < 200f && (accuracy >= cached.accuracy || accuracy > 100f)) {
-                Log.i(TAG, "防跳变机制触发：新位置距离上次缓存仅 ${dist}米（< 200m），复用旧坐标与地名: (${cached.latitude}, ${cached.longitude}) - ${cached.name}")
+            // 3. 常规微小防抖动（同地名且位置微小漂移时复用旧坐标，避免天气频繁重查；地名变更时不拦截）
+            if (!isCacheExpired && dist < 200f && name == cached.name && (accuracy >= cached.accuracy || accuracy > 100f)) {
+                Log.i(TAG, "防跳变机制触发：同地名且新位置距离上次缓存仅 ${dist}米（< 200m），复用旧坐标与地名: (${cached.latitude}, ${cached.longitude}) - ${cached.name}")
                 return cached
             }
         }

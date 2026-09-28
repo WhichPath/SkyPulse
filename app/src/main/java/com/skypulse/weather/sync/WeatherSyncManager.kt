@@ -171,39 +171,36 @@ class WeatherSyncManager @Inject constructor(
      * 解析定位 → 更新当前城市坐标/名称 → 获取天气 → 写入 Room。
      * 用于主应用的定位城市刷新（前台）。
      */
-    suspend fun refreshWeatherWithLocation(highAccuracy: Boolean = false): SyncResult = withContext(Dispatchers.IO) {
+    /**
+     * 完整的定位 + 天气刷新流程。
+     * 每次更新天气前都先请求最新位置，解析成功后写入 Room，使用最新坐标刷新天气；
+     * 仅当定位信号不佳/超时/失败时，才降级使用上次位置（缓存或已有记录）刷新天气。
+     */
+    suspend fun refreshWeatherWithLocation(
+        highAccuracy: Boolean = true,
+        force: Boolean = true,
+        timeoutMs: Long? = null
+    ): SyncResult = withContext(Dispatchers.IO) {
         val waitStartMs = android.os.SystemClock.elapsedRealtime()
-        locI("location_mutex_wait_start: highAccuracy=$highAccuracy")
+        locI("refresh_with_location_mutex_wait_start: highAccuracy=$highAccuracy, force=$force")
         locationMutex.withLock {
             val startMs = android.os.SystemClock.elapsedRealtime()
-            locI("location_mutex_acquired: wait=${elapsedSince(waitStartMs)}ms, highAccuracy=$highAccuracy")
+            locI("refresh_with_location_mutex_acquired: wait=${elapsedSince(waitStartMs)}ms, highAccuracy=$highAccuracy")
             val hasLocationPermission = locationManager.hasLocationPermission()
             Log.i(TAG, "refreshWeatherWithLocation: hasPermission=$hasLocationPermission, highAccuracy=$highAccuracy")
             locI("refresh_with_location_start: hasPermission=$hasLocationPermission, highAccuracy=$highAccuracy")
 
-            // 加锁后再次读取 Room 中定位城市信息做新鲜度校验（双重检查）
-            val currentBeforeLocation = getCurrentLocationCity()
-            if (
-                !highAccuracy &&
-                currentBeforeLocation != null &&
-                !currentBeforeLocation.isUnresolvedCurrentLocation() &&
-                isFreshEnough(currentBeforeLocation.id)
-            ) {
-                Log.i(TAG, "refreshWeatherWithLocation: current_location 120秒内已刷新，跳过")
-                val cached = repository.getWeatherFromCache(currentBeforeLocation.id)
-                locI("refresh_with_location_fresh_skip: elapsed=${elapsedSince(startMs)}ms, hasCache=${cached != null}")
-                return@withLock if (cached != null) SyncResult.Success(cached) else SyncResult.RateLimited
-            }
-
             val locateStartMs = android.os.SystemClock.elapsedRealtime()
             val location = if (!hasLocationPermission) {
-                Log.i(TAG, "无定位权限，IP定位已剔除，直接跳过定位")
+                Log.i(TAG, "无定位权限，直接使用上次位置")
                 locW("refresh_with_location_no_permission: elapsed=${elapsedSince(startMs)}ms")
                 null
             } else {
                 locationRequestCoordinator.requestLocation(
                     caller = LocationRequestCoordinator.Caller.FOREGROUND_REFRESH,
-                    highAccuracy = highAccuracy
+                    highAccuracy = highAccuracy,
+                    force = force,
+                    timeoutMillis = timeoutMs
                 )
             }
             locI("refresh_with_location_locate_done: elapsed=${elapsedSince(locateStartMs)}ms, result=${location?.let { "lat=${it.latitude}, lon=${it.longitude}, accuracy=${it.accuracy}m, name=${it.name}" } ?: "null"}")
@@ -215,7 +212,7 @@ class WeatherSyncManager @Inject constructor(
                 val locationName = location.name
                 Log.i(TAG, "定位成功: lon=$lon, lat=$lat, name=$locationName, isReliableName=${location.isReliableName}")
                 locI("refresh_with_location_location_success: elapsed=${elapsedSince(startMs)}ms, lon=$lon, lat=$lat, accuracy=${location.accuracy}m, name=$locationName, isReliableName=${location.isReliableName}")
-                val currentCity = if (locationName == UNKNOWN_LOCATION) {
+                val currentCity = if (locationName == UNKNOWN_LOCATION || locationName.isBlank()) {
                     Log.w(TAG, "定位成功但地址为空，保留旧城市名, lon=$lon, lat=$lat")
                     var oldName = locationManager.getCachedLocation()?.name
                         ?: getCurrentLocationCity()?.name
@@ -226,9 +223,7 @@ class WeatherSyncManager @Inject constructor(
                     locationManager.saveCachedLocation(oldName, lon, lat, location.time, location.accuracy, isReliableName = true)
                     upsertCurrentLocationCity(oldName, lon, lat)
                 } else {
-                    // saveCachedLocation 内部会在 isReliableName=false 时沿用上一次正常名称
                     locationManager.saveCachedLocation(locationName, lon, lat, location.time, location.accuracy, location.isReliableName)
-                    // 读回实际保存的名称（可能已被替换为 lastGoodName），保证 Room 一致
                     val savedName = locationManager.getCachedLocation()?.name ?: locationName
                     upsertCurrentLocationCity(savedName, lon, lat)
                 }
@@ -239,9 +234,10 @@ class WeatherSyncManager @Inject constructor(
                 return@withLock result
             }
 
+            // 定位信号不好或失败：降级使用上次位置（缓存或已有记录）
             val cachedLoc = locationManager.getCachedLocation()
-            Log.i(TAG, "定位失败, cachedLocation=${cachedLoc?.name}")
-            locW("refresh_with_location_locate_failed: elapsed=${elapsedSince(startMs)}ms, cached=${cachedLoc?.name}")
+            Log.i(TAG, "定位未返回或信号不好，使用上次位置: cachedLocation=${cachedLoc?.name}")
+            locW("refresh_with_location_locate_fallback_last: elapsed=${elapsedSince(startMs)}ms, cached=${cachedLoc?.name}")
             if (cachedLoc != null) {
                 val currentCity = upsertCurrentLocationCity(
                     cachedLoc.name,
@@ -257,7 +253,14 @@ class WeatherSyncManager @Inject constructor(
                 return@withLock result
             }
 
-            Log.w(TAG, "refreshWeatherWithLocation: 定位和缓存均失败，不写入默认北京天气")
+            val savedCity = getCurrentLocationCity()
+            if (savedCity != null && !savedCity.isUnresolvedCurrentLocation()) {
+                val result = doRefreshWeather(savedCity.id, savedCity.longitude, savedCity.latitude)
+                locI("refresh_with_location_saved_city_complete: elapsed=${elapsedSince(startMs)}ms, result=${result::class.simpleName}")
+                return@withLock result
+            }
+
+            Log.w(TAG, "refreshWeatherWithLocation: 定位和上次位置均不存在")
             locW("refresh_with_location_failed_no_cache: elapsed=${elapsedSince(startMs)}ms")
             SyncResult.LocationFailed
         }
@@ -265,11 +268,11 @@ class WeatherSyncManager @Inject constructor(
 
     /**
      * 下拉刷新专用的定位 + 天气刷新入口。
-     * 1. 强制检测当前定位（超时 6s，忽略缓存和失败退避）
+     * 1. 强制更新当前定位（超时 7s，忽略缓存和失败退避）
      * 2. 定位成功 -> 更新数据库城市名/经纬度 -> 使用最新经纬度请求天气
-     * 3. 定位信号不佳（超时/失败/无权限） -> 标记信号不佳，降级使用已有缓存坐标请求天气
+     * 3. 定位信号不佳（超时/失败/无权限） -> 标记信号不佳，降级使用已有上次位置请求天气
      */
-    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 6000L): ManualRefreshResult = withContext(Dispatchers.IO) {
+    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 7000L): ManualRefreshResult = withContext(Dispatchers.IO) {
         val waitStartMs = android.os.SystemClock.elapsedRealtime()
         locI("manual_refresh_location_wait_start")
         locationMutex.withLock {
@@ -296,7 +299,7 @@ class WeatherSyncManager @Inject constructor(
                 val locationName = location.name
                 locI("manual_refresh_location_success: elapsed=${elapsedSince(startMs)}ms, lon=$lon, lat=$lat, accuracy=${location.accuracy}m, name=$locationName")
 
-                val currentCity = if (locationName == UNKNOWN_LOCATION) {
+                val currentCity = if (locationName == UNKNOWN_LOCATION || locationName.isBlank()) {
                     var oldName = locationManager.getCachedLocation()?.name
                         ?: getCurrentLocationCity()?.name
                         ?: "当前位置"
@@ -324,7 +327,7 @@ class WeatherSyncManager @Inject constructor(
                 }
             }
 
-            // 定位信号不佳 / 失败 / 超时
+            // 定位信号不佳 / 失败 / 超时：降级使用上次位置更新天气
             locW("manual_refresh_location_poor_signal: elapsed=${elapsedSince(startMs)}ms")
             val cachedLoc = locationManager.getCachedLocation()
             val weather = if (cachedLoc != null) {
@@ -350,27 +353,10 @@ class WeatherSyncManager @Inject constructor(
     }
 
     /**
-     * 首页快路径：不做阻塞式定位，优先用已确认的当前定位城市坐标或定位缓存刷新天气。
-     * 准确性由后台 calibrateCurrentLocation() 持续校准。
+     * 更新当前位置天气：统一走“先更新位置、信号不好才用上次位置”。
      */
     suspend fun refreshCurrentLocationFast(): SyncResult = withContext(Dispatchers.IO) {
-        val startMs = android.os.SystemClock.elapsedRealtime()
-        locI("current_location_fast_start")
-        val currentCity = getCurrentLocationCity()
-        if (currentCity != null && !currentCity.isUnresolvedCurrentLocation()) {
-            locI("current_location_fast_city_coords: elapsed=${elapsedSince(startMs)}ms, cityId=${currentCity.id}, lon=${currentCity.longitude}, lat=${currentCity.latitude}")
-            return@withContext doRefreshWeather(currentCity.id, currentCity.longitude, currentCity.latitude)
-        }
-
-        val cached = locationManager.getCachedLocation()
-        if (cached != null) {
-            val city = upsertCurrentLocationCity(cached.name, cached.longitude, cached.latitude)
-            locI("current_location_fast_cached_coords: elapsed=${elapsedSince(startMs)}ms, cityId=${city.id}, lon=${cached.longitude}, lat=${cached.latitude}, name=${cached.name}")
-            return@withContext doRefreshWeather(city.id, cached.longitude, cached.latitude)
-        }
-
-        locW("current_location_fast_no_trusted_coords: elapsed=${elapsedSince(startMs)}ms")
-        refreshWeatherWithLocation(highAccuracy = false)
+        refreshWeatherWithLocation(highAccuracy = false, force = true)
     }
 
     /**
