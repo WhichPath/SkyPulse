@@ -31,6 +31,8 @@ import com.skypulse.weather.model.WeatherResponse
 import com.skypulse.weather.model.WeatherResult
 import com.skypulse.weather.model.Wind
 import com.skypulse.weather.model.sortedByPublishTimeDescending
+import com.skypulse.weather.util.AqiCalculator
+import com.skypulse.weather.util.WeatherUtils
 import java.util.TimeZone
 
 /**
@@ -68,8 +70,8 @@ object QWeatherMapper {
 
         val realtime = mapRealtimeV1(now, air)
         val minutelyForecast = mapMinutely(minutely)
-        val hourlyForecast = mapHourlyV1(hourly)
         val dailyForecast = mapDailyV1(daily)
+        val hourlyForecast = mapHourlyV1(hourly, dailyForecast?.astro)
         val alert = mapWarning(warning)
 
         return WeatherResponse(
@@ -137,36 +139,56 @@ object QWeatherMapper {
     private fun mapAirQuality(air: QWeatherAirResponse?): AirQuality? {
         if (air == null) return null
         val indexes = air.indexes
-        if (indexes.isNullOrEmpty()) return null
         val pollutants = air.pollutants ?: emptyList()
-
-        val usEpa = indexes.firstOrNull { it.code == "us-epa" }
-        // 和风无中国国标 AQI，优先用 qaqi，其次取任意非 us-epa 索引兜底
-        val chnIndex = indexes.firstOrNull { it.code == "qaqi" }
-            ?: indexes.firstOrNull { it.code != "us-epa" }
+        if (indexes.isNullOrEmpty() && pollutants.isEmpty()) return null
 
         fun pollutantValue(code: String): Double? =
             pollutants.firstOrNull { it.code == code }?.concentration?.value
 
+        val pm25 = pollutantValue("pm2p5")
+        val pm10 = pollutantValue("pm10")
+        val o3 = pollutantValue("o3")
+        val so2 = pollutantValue("so2")
+        val no2 = pollutantValue("no2")
+        val co = pollutantValue("co")
+
+        // 优先使用本地美国 EPA 标准算法基于基础污染物浓度计算 AQI
+        val localAqi = AqiCalculator.calculate(
+            pm25 = pm25,
+            pm10 = pm10,
+            o3 = o3,
+            no2 = no2,
+            so2 = so2,
+            co = co
+        )
+
+        val usEpa = indexes?.firstOrNull { it.code == "us-epa" }
+        val chnIndex = indexes?.firstOrNull { it.code == "qaqi" }
+            ?: indexes?.firstOrNull { it.code != "us-epa" }
+
+        val aqiValue = localAqi?.aqi?.toDouble() ?: usEpa?.aqi ?: chnIndex?.aqi
+        val category = localAqi?.category ?: usEpa?.category ?: chnIndex?.category
+        val primary = localAqi?.primaryPollutant ?: (chnIndex ?: usEpa)?.primaryPollutant?.name
+
         return AirQuality(
-            pm25 = pollutantValue("pm2p5"),
-            pm10 = pollutantValue("pm10"),
-            o3 = pollutantValue("o3"),
-            so2 = pollutantValue("so2"),
-            no2 = pollutantValue("no2"),
-            co = pollutantValue("co"),
-            aqi = AirQualityIndex(
-                chn = chnIndex?.aqi ?: usEpa?.aqi,
-                usa = usEpa?.aqi
-            ),
-            description = AirQualityDescription(
-                chn = chnIndex?.category ?: usEpa?.category,
-                usa = usEpa?.category
-            ),
-            primaryPollutant = (chnIndex ?: usEpa)?.primaryPollutant?.name,
-            healthEffect = (chnIndex ?: usEpa)?.health?.effect,
-            healthAdviceGeneral = (chnIndex ?: usEpa)?.health?.advice?.generalPopulation,
-            healthAdviceSensitive = (chnIndex ?: usEpa)?.health?.advice?.sensitivePopulation
+            pm25 = pm25,
+            pm10 = pm10,
+            o3 = o3,
+            so2 = so2,
+            no2 = no2,
+            co = co,
+            aqi = if (aqiValue != null) AirQualityIndex(
+                chn = aqiValue,
+                usa = aqiValue
+            ) else null,
+            description = if (category != null) AirQualityDescription(
+                chn = category,
+                usa = category
+            ) else null,
+            primaryPollutant = primary,
+            healthEffect = null,
+            healthAdviceGeneral = null,
+            healthAdviceSensitive = null
         )
     }
 
@@ -191,7 +213,10 @@ object QWeatherMapper {
 
     // ============ Hourly (逐小时, v1 API) ============
 
-    private fun mapHourlyV1(hourly: QWeatherV1HourlyResponse?): HourlyForecast? {
+    private fun mapHourlyV1(
+        hourly: QWeatherV1HourlyResponse?,
+        astro: List<DailyAstro>? = null
+    ): HourlyForecast? {
         val items = hourly?.hours ?: return null
         if (items.isEmpty()) return null
 
@@ -238,7 +263,11 @@ object QWeatherMapper {
                 HourlyValue(datetime = it.forecastTime, value = it.cloudCover)
             },
             skycon = items.map {
-                HourlySkycon(datetime = it.forecastTime, value = iconToSkycon(it.condition?.code))
+                val isDay = WeatherUtils.isHourlyDay(it.forecastTime, astro)
+                HourlySkycon(
+                    datetime = it.forecastTime,
+                    value = iconToSkycon(it.condition?.code, isDay)
+                )
             },
             pressure = items.map {
                 HourlyValue(datetime = it.forecastTime, value = it.pressure?.value?.times(100.0))
@@ -342,7 +371,7 @@ object QWeatherMapper {
             },
             skycon_20h_32h = items.map {
                 val date = it.forecastStartTime?.substringBefore("T")
-                DailySkycon(date = date, value = iconToSkycon(it.nighttime?.condition?.code))
+                DailySkycon(date = date, value = iconToSkycon(it.nighttime?.condition?.code, isDay = false))
             },
             air_quality = null,
             life_index = DailyLifeIndex(
@@ -466,6 +495,15 @@ object QWeatherMapper {
             // 其他
             "900", "901" -> "CLEAR_DAY"
             else -> null
+        }
+    }
+
+    fun iconToSkycon(icon: String?, isDay: Boolean): String? {
+        val baseSkycon = iconToSkycon(icon) ?: return null
+        return when (baseSkycon) {
+            "CLEAR_DAY", "CLEAR_NIGHT" -> if (isDay) "CLEAR_DAY" else "CLEAR_NIGHT"
+            "PARTLY_CLOUDY_DAY", "PARTLY_CLOUDY_NIGHT" -> if (isDay) "PARTLY_CLOUDY_DAY" else "PARTLY_CLOUDY_NIGHT"
+            else -> baseSkycon
         }
     }
 }

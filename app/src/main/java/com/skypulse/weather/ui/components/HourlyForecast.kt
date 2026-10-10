@@ -21,6 +21,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.skypulse.weather.model.DailyAstro
 import com.skypulse.weather.model.HourlyForecast
 import com.skypulse.weather.model.HourlyWind
 import com.skypulse.weather.ui.theme.*
@@ -123,6 +124,7 @@ private val ParamTagShape = RoundedCornerShape(4.dp)
 @Composable
 fun HourlyForecastCard(
     hourly: HourlyForecast?,
+    astro: List<DailyAstro>? = null,
     showAqi: Boolean = true,
     showUv: Boolean = true,
     showWind: Boolean = true,
@@ -161,6 +163,7 @@ fun HourlyForecastCard(
 
             HourlyTemperatureChart(
                 hourlyData = data,
+                astro = astro,
                 showAqi = showAqi,
                 showUv = showUv,
                 showWind = showWind,
@@ -173,6 +176,7 @@ fun HourlyForecastCard(
 @Composable
 private fun HourlyTemperatureChart(
     hourlyData: HourlyForecast,
+    astro: List<DailyAstro>? = null,
     showAqi: Boolean = true,
     showUv: Boolean = true,
     showWind: Boolean = true,
@@ -472,7 +476,8 @@ private fun HourlyTemperatureChart(
                 val leftX = if (i == 0) 0f else (points[i - 1].x + points[i].x) / 2f
                 val rightX = if (i == itemCount - 1) size.width else (points[i].x + points[i + 1].x) / 2f
                 val centerX = (leftX + rightX) / 2f
-                val weatherInfo = WeatherUtils.getWeatherInfo(skycon)
+                val isDay = WeatherUtils.isHourlyDay(skycons?.getOrNull(i)?.datetime, astro)
+                val weatherInfo = WeatherUtils.getWeatherInfo(skycon, isDay)
                 val weatherResult = textMeasurer.measure(AnnotatedString(weatherInfo.description), style = labelStyle)
                 val isPrecip = skycon.contains("RAIN") || skycon.contains("STORM") || skycon.contains("SNOW")
                 val prob = probValues[i]
@@ -494,7 +499,8 @@ private fun HourlyTemperatureChart(
         // Icons Row
         Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
             skycons?.forEach { skycon ->
-                val info = WeatherUtils.getWeatherInfo(skycon.value)
+                val isDay = WeatherUtils.isHourlyDay(skycon.datetime, astro)
+                val info = WeatherUtils.getWeatherInfo(skycon.value, isDay)
                 Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
                     WeatherIcon(iconType = info.icon, size = 36.dp, animated = false)
                 }

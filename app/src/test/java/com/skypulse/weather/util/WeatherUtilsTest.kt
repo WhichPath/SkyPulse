@@ -225,6 +225,58 @@ class WeatherUtilsTest {
         assertFalse(WeatherUtils.isCurrentlyDay(null, calendarAt("2026-07-05", 23, 0)))
     }
 
+    // ============ isHourlyDay ============
+
+    @Test
+    fun `isHourlyDay correctly determines day and night by sunset and sunrise`() {
+        val astro = listOf(
+            DailyAstro(
+                date = "2026-10-10",
+                sunrise = AstroTime("06:15"),
+                sunset = AstroTime("18:30")
+            )
+        )
+
+        // 6:00 is before sunrise (06:15) -> night
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T06:00+08:00", astro))
+        // 7:00 is after sunrise -> day
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T07:00+08:00", astro))
+        // 18:00 is before sunset (18:30) -> day
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T18:00+08:00", astro))
+        // 19:00 is after sunset (18:30) -> night
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T19:00+08:00", astro))
+    }
+
+    @Test
+    fun `isHourlyDay handles exact on the hour sunrise and sunset correctly`() {
+        val astro = listOf(
+            DailyAstro(
+                date = "2026-10-10",
+                sunrise = AstroTime("06:00"),
+                sunset = AstroTime("18:00")
+            )
+        )
+
+        // 6:00 exactly on sunrise -> day (即将日出/天亮)
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T06:00+08:00", astro))
+        // 17:00 -> day
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T17:00+08:00", astro))
+        // 18:00 exactly on sunset -> night (即将日落/入夜)
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T18:00+08:00", astro))
+        // 19:00 -> night
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T19:00+08:00", astro))
+    }
+
+    @Test
+    fun `isHourlyDay falls back to fixed window when astro is missing`() {
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T06:00+08:00", astro = null))
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T12:00+08:00", astro = null))
+        assertTrue(WeatherUtils.isHourlyDay("2026-10-10T17:00+08:00", astro = null))
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T18:00+08:00", astro = null))
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T23:00+08:00", astro = null))
+        assertFalse(WeatherUtils.isHourlyDay("2026-10-10T05:00+08:00", astro = null))
+    }
+
     // ============ getWeatherInfo ============
 
     @Test
@@ -319,6 +371,29 @@ class WeatherUtilsTest {
         assertEquals("多云", night.description)
         assertEquals("partly-cloudy-night", night.icon)
         assertFalse(night.isDay)
+    }
+
+    @Test
+    fun `getWeatherInfo respects explicit isDay parameter`() {
+        val clearNight = WeatherUtils.getWeatherInfo("CLEAR_DAY", isDay = false)
+        assertEquals("晴", clearNight.description)
+        assertEquals("clear-night", clearNight.icon)
+        assertFalse(clearNight.isDay)
+
+        val partlyCloudyNight = WeatherUtils.getWeatherInfo("PARTLY_CLOUDY_DAY", isDay = false)
+        assertEquals("多云", partlyCloudyNight.description)
+        assertEquals("partly-cloudy-night", partlyCloudyNight.icon)
+        assertFalse(partlyCloudyNight.isDay)
+
+        val clearDay = WeatherUtils.getWeatherInfo("CLEAR_NIGHT", isDay = true)
+        assertEquals("晴", clearDay.description)
+        assertEquals("clear-day", clearDay.icon)
+        assertTrue(clearDay.isDay)
+
+        val partlyCloudyDay = WeatherUtils.getWeatherInfo("PARTLY_CLOUDY_NIGHT", isDay = true)
+        assertEquals("多云", partlyCloudyDay.description)
+        assertEquals("partly-cloudy-day", partlyCloudyDay.icon)
+        assertTrue(partlyCloudyDay.isDay)
     }
 
     @Test

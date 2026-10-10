@@ -145,38 +145,6 @@ fun AirQualityDetailCard(
                     PollutantCell(item, Modifier.weight(1f))
                 }
             }
-
-            // ---- 健康建议 ----
-            val hasHealth = !airQuality.healthEffect.isNullOrBlank() ||
-                !airQuality.healthAdviceGeneral.isNullOrBlank() ||
-                !airQuality.healthAdviceSensitive.isNullOrBlank()
-
-            if (hasHealth) {
-                Spacer(modifier = Modifier.height(12.dp))
-                if (!airQuality.healthEffect.isNullOrBlank()) {
-                    Text(
-                        text = airQuality.healthEffect,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
-                if (!airQuality.healthAdviceGeneral.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "一般人群：${airQuality.healthAdviceGeneral}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextTertiary
-                    )
-                }
-                if (!airQuality.healthAdviceSensitive.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "敏感人群：${airQuality.healthAdviceSensitive}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextTertiary
-                    )
-                }
-            }
         }
     }
 }

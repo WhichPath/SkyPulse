@@ -82,7 +82,7 @@ object WeatherWidgetUpdater {
             val hourly = weather?.result?.hourly
             val skycon = realtime?.skycon
             val isDay = WeatherUtils.isCurrentlyDay(daily)
-            val info = WeatherUtils.getWeatherInfo(skycon)
+            val info = WeatherUtils.getWeatherInfo(skycon, isDay)
             val tempText = WeatherUtils.formatTemperature(realtime?.temperature)
             val cityText = shortenLocation(cityName ?: "--")
 
@@ -107,8 +107,12 @@ object WeatherWidgetUpdater {
             val skycon2h = getHourlySkycon(hourlySkycons, h2Index)
 
             // Get weather info for each hour
-            val info1h = WeatherUtils.getWeatherInfo(skycon1h)
-            val info2h = WeatherUtils.getWeatherInfo(skycon2h)
+            val h1Item = hourlySkycons?.getOrNull(h1Index)
+            val h2Item = hourlySkycons?.getOrNull(h2Index)
+            val isDay1h = WeatherUtils.isHourlyDay(h1Item?.datetime, daily?.astro)
+            val isDay2h = WeatherUtils.isHourlyDay(h2Item?.datetime, daily?.astro)
+            val info1h = WeatherUtils.getWeatherInfo(skycon1h, isDay1h)
+            val info2h = WeatherUtils.getWeatherInfo(skycon2h, isDay2h)
 
             // Format times
             val timeNow = "\u73b0\u5728"
@@ -575,7 +579,7 @@ object WeatherWidgetUpdater {
             val cityText = shortenLocation(cityName ?: "--")
 
             // Get weather info (contains icon name and description)
-            val weatherInfo = WeatherUtils.getWeatherInfo(skycon)
+            val weatherInfo = WeatherUtils.getWeatherInfo(skycon, isDay)
             val weatherIcon = weatherInfo.icon
             val weatherDesc = weatherInfo.description
 
@@ -815,10 +819,11 @@ object WeatherWidgetUpdater {
             val realtime = weather?.result?.realtime
             val daily = weather?.result?.daily
             val skycon = realtime?.skycon
+            val isDay = WeatherUtils.isCurrentlyDay(daily)
             val cityText = shortenLocation(cityName ?: "--")
 
             // Get weather info
-            val weatherInfo = WeatherUtils.getWeatherInfo(skycon)
+            val weatherInfo = WeatherUtils.getWeatherInfo(skycon, isDay)
             val weatherIcon = weatherInfo.icon
             val weatherDesc = weatherInfo.description
 

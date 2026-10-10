@@ -1,4 +1,4 @@
-﻿package com.skypulse.weather.ui.screen
+package com.skypulse.weather.ui.screen
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
@@ -727,6 +727,7 @@ private fun WeatherContentBody(
 
             HourlyForecastCard(
                 hourly = result?.hourly,
+                astro = result?.daily?.astro,
                 showAqi = isPremium && settings.showHourlyAqi,
                 showUv = isPremium && settings.showHourlyUv,
                 showWind = isPremium && settings.showHourlyWind,

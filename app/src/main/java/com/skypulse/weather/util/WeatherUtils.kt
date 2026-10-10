@@ -104,13 +104,14 @@ object WeatherUtils {
     @Suppress("UNUSED_PARAMETER")
     fun getPrecipitationIconColor(skycon: String?, isDay: Boolean): Color = Color.White
 
-    fun getWeatherInfo(skycon: String?, hour: Int = 12): WeatherInfo {
-        val isDay = hour in 6..18
+    fun getWeatherInfo(skycon: String?, isDay: Boolean): WeatherInfo {
         return when (skycon) {
-            "CLEAR_DAY" -> WeatherInfo("晴", "clear-day", true)
-            "CLEAR_NIGHT" -> WeatherInfo("晴", "clear-night", false)
-            "PARTLY_CLOUDY_DAY" -> WeatherInfo("多云", "partly-cloudy-day", true)
-            "PARTLY_CLOUDY_NIGHT" -> WeatherInfo("多云", "partly-cloudy-night", false)
+            "CLEAR_DAY", "CLEAR_NIGHT", "CLEAR" -> {
+                WeatherInfo("晴", if (isDay) "clear-day" else "clear-night", isDay)
+            }
+            "PARTLY_CLOUDY_DAY", "PARTLY_CLOUDY_NIGHT", "PARTLY_CLOUDY" -> {
+                WeatherInfo("多云", if (isDay) "partly-cloudy-day" else "partly-cloudy-night", isDay)
+            }
             "CLOUDY" -> WeatherInfo("阴", "overcast", isDay)
             "LIGHT_HAZE" -> WeatherInfo("轻度霾", "haze", isDay)
             "MODERATE_HAZE" -> WeatherInfo("中度霾", "haze", isDay)
@@ -131,6 +132,15 @@ object WeatherUtils {
             "THUNDER_SHOWER" -> WeatherInfo("雷阵雨", "thunderstorms-rain", isDay)
             else -> WeatherInfo("未知", "overcast", isDay)
         }
+    }
+
+    fun getWeatherInfo(skycon: String?, hour: Int = 12): WeatherInfo {
+        val isDay = when (skycon) {
+            "CLEAR_NIGHT", "PARTLY_CLOUDY_NIGHT" -> false
+            "CLEAR_DAY", "PARTLY_CLOUDY_DAY" -> true
+            else -> hour in 6 until 18
+        }
+        return getWeatherInfo(skycon, isDay)
     }
 
     fun getWeatherGradient(skycon: String?, isDay: Boolean = true): List<Color> {
@@ -269,15 +279,63 @@ object WeatherUtils {
 
     fun extractHour(datetime: String?): Int {
         if (datetime == null) return -1
-        return try {
-            val date = hourFormat.get()!!.parse(datetime) ?: return -1
-            val cal = Calendar.getInstance()
-            cal.time = date
-            cal.get(Calendar.HOUR_OF_DAY)
-        } catch (e: Exception) {
+        val parsed = try {
+            val date = hourFormat.get()!!.parse(datetime)
+            if (date != null) {
+                val cal = Calendar.getInstance()
+                cal.time = date
+                cal.get(Calendar.HOUR_OF_DAY)
+            } else -1
+        } catch (_: Exception) {
             -1
         }
+        if (parsed in 0..23) return parsed
+
+        // Fallback: regex matching "HH:mm" after 'T' or space, or at start
+        val match = Regex("[T ](\\d{1,2}):").find(datetime) ?: Regex("^(\\d{1,2}):").find(datetime)
+        return match?.groupValues?.getOrNull(1)?.toIntOrNull()?.takeIf { it in 0..23 } ?: -1
     }
+
+    /**
+     * 判断逐小时预报中的特定时间点是否属于日间。
+     *
+     * 规则：
+     * 1. 根据当天的日落/日出时间确定（优先匹配 astro 中同日期的记录，无则回退首条有效 astro）。
+     * 2. 以该小时整点为判断依据（分钟归零）。
+     * 3. 在日出至日落之间为日间版；在日落后为夜间版。
+     * 4. 如果日出或日落正好是整点，以即将发生的为准：
+     *    - 例如 18:00 日落，处于即将日落/入夜情况，判定为夜间版（[sunrise, sunset) 左闭右开）；
+     *    - 6:00 整日出，处于即将日出/天亮情况，判定为日间版（包含 sunrise 点）。
+     * 5. 若无有效天文数据，回退至 6:00..17:59 为日间（hour in 6 until 18）。
+     */
+    fun isHourlyDay(
+        datetime: String?,
+        astro: List<DailyAstro>?
+    ): Boolean {
+        val hour = extractHour(datetime)
+        if (hour < 0) return true
+
+        val dateText = datetime?.substringBefore("T")?.substringBefore(" ")?.take(10)
+        val candidate = if (!dateText.isNullOrEmpty() && !astro.isNullOrEmpty()) {
+            astro.firstOrNull { it.date?.take(10) == dateText }
+        } else null
+            ?: astro?.firstOrNull { parseTimeMinutes(it.sunrise?.time) != null && parseTimeMinutes(it.sunset?.time) != null }
+
+        val sunrise = parseTimeMinutes(candidate?.sunrise?.time)
+        val sunset = parseTimeMinutes(candidate?.sunset?.time)
+
+        if (sunrise != null && sunset != null && sunrise < sunset) {
+            val hourMinute = hour * 60
+            return hourMinute in sunrise until sunset
+        }
+
+        return hour in 6 until 18
+    }
+
+    fun isHourlyDay(
+        datetime: String?,
+        daily: DailyForecast?
+    ): Boolean = isHourlyDay(datetime, daily?.astro)
 
     fun formatWeekday(dateStr: String?): String {
         return try {
