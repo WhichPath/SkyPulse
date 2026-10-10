@@ -31,7 +31,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skypulse.weather.model.RealtimeWeather
@@ -297,22 +300,7 @@ fun CurrentWeather(
     LaunchedEffect(skipAnimation) { if (skipAnimation) visible = true }
 
     val aqiValue = realtime?.air_quality?.aqi?.usa?.toInt() ?: realtime?.air_quality?.aqi?.chn?.toInt()
-    val aqiDesc = realtime?.air_quality?.description?.usa ?: aqiValue?.let {
-        when {
-            it <= 50 -> "优"
-            it <= 100 -> "中等"
-            it <= 150 -> "轻度不健康"
-            it <= 200 -> "不健康"
-            it <= 300 -> "重度不健康"
-            else -> "危险"
-        }
-    }
-    // "优"(Good)不显示等级，其他情况显示
-    val aqiText = when {
-        aqiValue != null && aqiValue <= 50 -> "空气 $aqiValue"
-        aqiValue != null && aqiDesc != null -> "空气 $aqiDesc $aqiValue"
-        else -> "空气 --"
-    }
+    val aqiValueText = aqiValue?.toString() ?: "--"
     val aqiColor = aqiValue?.let {
         when {
             it <= 50 -> Color(0xFF43A047)
@@ -323,6 +311,16 @@ fun CurrentWeather(
             else -> Color(0xFFA1887F)
         }
     } ?: TextSecondary
+    val aqiAnnotatedText = remember(aqiValueText, aqiColor) {
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = TextSecondary)) {
+                append("空气 ")
+            }
+            withStyle(SpanStyle(color = aqiColor)) {
+                append(aqiValueText)
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -367,9 +365,8 @@ fun CurrentWeather(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = aqiText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = aqiColor
+                    text = aqiAnnotatedText,
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }

@@ -1,4 +1,4 @@
-﻿package com.skypulse.weather.ui.components
+package com.skypulse.weather.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -26,10 +26,9 @@ import com.skypulse.weather.ui.theme.PrecipBarTop
 import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
-import kotlin.math.pow
 import com.skypulse.weather.ui.screen.LocalSkipCardAnimation
 
-private const val BAR_COUNT = 48
+private const val BAR_COUNT = 24
 private const val CHART_HEIGHT_DP = 60f
 
 @Composable
@@ -41,9 +40,9 @@ fun MinutelyPrecipitationCard(
     if (raw.isNullOrEmpty()) return
     if (raw.all { it == 0.0 }) return
 
-    // Sample 120 entries down to 48 bins
-    // Convert mm/min → mm/h (API returns mm/min, scale expects mm/h)
-    val sampled = remember(raw) { sampleToBins(raw, BAR_COUNT).map { it * 25.0 } }
+    // 和风 /v7/minutely/5m 提供未来 2 小时共 24 个 5 分钟数据点
+    // 将 5 分钟累计降水量 (mm) 乘以 12 (60/5) 转换为小时降水率 (mm/h)
+    val sampled = remember(raw) { sampleToBins(raw, BAR_COUNT).map { it * 12.0 } }
     if (sampled.all { it == 0.0 }) return
 
     val skipAnimation = LocalSkipCardAnimation.current
@@ -114,21 +113,17 @@ private fun MinutelyBarChart(
 
                     for (i in 0 until barCount) {
                         val value = data[i]
-                        // Scale aligned with Chinese meteorological standards:
-                        // Light(0-2.5)→0-38%, Moderate(2.5-8)→38-70%, Heavy(8-16)→70-90%, Torrential(16+)→90-100%
+                        // 依据我国气象小时降水量标准(mm/h)平滑映射：
+                        // 小雨(0-2.5mm/h) → 0-35%, 中雨(2.5-8mm/h) → 35-65%,
+                        // 大雨(8-16mm/h) → 65-85%, 暴雨(16-30mm/h+) → 85-100%
                         val fillRatio = when {
                             value <= 0.0 -> 0f
-                            value <= 0.1 -> (value / 0.1 * 0.03f).toFloat()
-                            value <= 0.3 -> (0.03f + (value - 0.1) / 0.2 * 0.05f).toFloat()
-                            value <= 0.5 -> (0.08f + (value - 0.3) / 0.2 * 0.07f).toFloat()
-                            value <= 1.0 -> (0.15f + (value - 0.5) / 0.5 * 0.07f).toFloat()
-                            value <= 2.0 -> (0.22f + (value - 1.0) / 1.0 * 0.10f).toFloat()
-                            value <= 2.5 -> (0.32f + (value - 2.0) / 0.5 * 0.06f).toFloat()
-                            value <= 8.0 -> (0.38f + (value - 2.5) / 5.5 * 0.32f).toFloat()
-                            value <= 16.0 -> (0.70f + (value - 8.0) / 8.0 * 0.20f).toFloat()
-                            else -> (0.90f + (value - 16.0) / 14.0 * 0.10f).coerceIn(0.90, 1.0).toFloat()
+                            value <= 2.5 -> (value / 2.5 * 0.35f).toFloat()
+                            value <= 8.0 -> (0.35f + (value - 2.5) / 5.5 * 0.30f).toFloat()
+                            value <= 16.0 -> (0.65f + (value - 8.0) / 8.0 * 0.20f).toFloat()
+                            else -> (0.85f + (value - 16.0) / 14.0 * 0.15f).coerceIn(0.85, 1.0).toFloat()
                         }
-                        val visualRatio = if (fillRatio > 0f) fillRatio.pow(0.70f) else 0f
+                        val visualRatio = if (fillRatio > 0f) fillRatio.coerceAtLeast(0.04f) else 0f
                         val left = i * step
                         val fillH = chartH * visualRatio
                         val fillTop = chartH - fillH

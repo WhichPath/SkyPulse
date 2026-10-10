@@ -469,16 +469,20 @@ object QWeatherMapper {
             "101", "102", "103" -> "PARTLY_CLOUDY_DAY"
             "151", "152", "153" -> "PARTLY_CLOUDY_NIGHT"
             "104" -> "CLOUDY"
+            // 阵雨
+            "300", "350" -> "SHOWER_RAIN"
             // 雨
-            "300", "350", "305", "309", "313", "314" -> "LIGHT_RAIN"
+            "305", "309", "313", "314" -> "LIGHT_RAIN"
             "301", "351", "306", "315" -> "MODERATE_RAIN"
             "307", "316" -> "HEAVY_RAIN"
             "308", "310", "311", "312", "317", "318" -> "STORM_RAIN"
             "399" -> "MODERATE_RAIN"
             // 雷阵雨
             "302", "303", "304" -> "THUNDER_SHOWER"
+            // 阵雪
+            "407", "457" -> "SHOWER_SNOW"
             // 雪
-            "400", "407", "408", "457" -> "LIGHT_SNOW"
+            "400", "408" -> "LIGHT_SNOW"
             "401", "409", "499" -> "MODERATE_SNOW"
             "402", "410" -> "HEAVY_SNOW"
             "403" -> "STORM_SNOW"

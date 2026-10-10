@@ -297,10 +297,49 @@ class WeatherUtilsTest {
 
     @Test
     fun `getWeatherInfo returns correct info for CLOUDY`() {
-        val info = WeatherUtils.getWeatherInfo("CLOUDY", hour = 12)
-        assertEquals("阴", info.description)
-        assertEquals("overcast", info.icon)
-        assertTrue(info.isDay)
+        val dayInfo = WeatherUtils.getWeatherInfo("CLOUDY", hour = 12)
+        assertEquals("阴", dayInfo.description)
+        assertEquals("overcast-day", dayInfo.icon)
+        assertTrue(dayInfo.isDay)
+
+        val nightInfo = WeatherUtils.getWeatherInfo("CLOUDY", hour = 22)
+        assertEquals("阴", nightInfo.description)
+        assertEquals("overcast-night", nightInfo.icon)
+        assertFalse(nightInfo.isDay)
+    }
+
+    @Test
+    fun `getWeatherInfo returns correct info for SHOWER_RAIN and SHOWER_SNOW`() {
+        val rainDay = WeatherUtils.getWeatherInfo("SHOWER_RAIN", hour = 12)
+        assertEquals("阵雨", rainDay.description)
+        assertEquals("partly-cloudy-day-rain", rainDay.icon)
+
+        val rainNight = WeatherUtils.getWeatherInfo("SHOWER_RAIN", hour = 22)
+        assertEquals("阵雨", rainNight.description)
+        assertEquals("partly-cloudy-night-rain", rainNight.icon)
+
+        val snowDay = WeatherUtils.getWeatherInfo("SHOWER_SNOW", hour = 12)
+        assertEquals("阵雪", snowDay.description)
+        assertEquals("partly-cloudy-day-snow", snowDay.icon)
+
+        val snowNight = WeatherUtils.getWeatherInfo("SHOWER_SNOW", hour = 22)
+        assertEquals("阵雪", snowNight.description)
+        assertEquals("partly-cloudy-night-snow", snowNight.icon)
+    }
+
+    @Test
+    fun `getWeatherInfo returns correct info for SLEET and THUNDER_SHOWER`() {
+        val sleetInfo = WeatherUtils.getWeatherInfo("SLEET")
+        assertEquals("雨夹雪", sleetInfo.description)
+        assertEquals("sleet", sleetInfo.icon)
+
+        val thunderDay = WeatherUtils.getWeatherInfo("THUNDER_SHOWER", hour = 12)
+        assertEquals("雷阵雨", thunderDay.description)
+        assertEquals("thunderstorms-day-rain", thunderDay.icon)
+
+        val thunderNight = WeatherUtils.getWeatherInfo("THUNDER_SHOWER", hour = 22)
+        assertEquals("雷阵雨", thunderNight.description)
+        assertEquals("thunderstorms-night-rain", thunderNight.icon)
     }
 
     @Test
@@ -340,9 +379,9 @@ class WeatherUtilsTest {
 
     @Test
     fun `getWeatherInfo returns unknown for unrecognized skycon`() {
-        val info = WeatherUtils.getWeatherInfo("UNKNOWN_WEATHER")
+        val info = WeatherUtils.getWeatherInfo("UNKNOWN_WEATHER", hour = 12)
         assertEquals("未知", info.description)
-        assertEquals("overcast", info.icon)
+        assertEquals("overcast-day", info.icon)
     }
 
     @Test
