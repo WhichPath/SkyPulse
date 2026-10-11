@@ -19,12 +19,12 @@ import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
 import com.skypulse.weather.ui.theme.TextTertiary
 
-// ============ WBGT 国际运动风险五色旗阶 ============
-val WbgtColorGreen = Color(0xFF4CAF50)     // 绿旗 (<21.0 ℃) 低风险
-val WbgtColorYellow = Color(0xFFFFD54F)    // 黄旗 (21.0-25.0 ℃) 注意
-val WbgtColorOrange = Color(0xFFFF9800)    // 橙旗 (25.0-28.0 ℃) 严密警戒
-val WbgtColorRed = Color(0xFFEF5350)       // 红旗 (28.0-31.0 ℃) 危险
-val WbgtColorBlack = Color(0xFF90A4AE)     // 黑旗 (≥31.0 ℃) 极度危险
+// ============ WBGT 国际运动风险五色旗阶 (全应用统一高对比度色阶) ============
+val WbgtColorGreen = SemanticColorGood          // 绿旗 (<21.0 ℃) 低风险 - 亮翠绿
+val WbgtColorYellow = SemanticColorModerate     // 黄旗 (21.0-25.0 ℃) 注意 - 亮黄
+val WbgtColorOrange = SemanticColorLight        // 橙旗 (25.0-28.0 ℃) 严密警戒 - 鲜橙
+val WbgtColorRed = SemanticColorUnhealthy       // 红旗 (28.0-31.0 ℃) 危险 - 亮红
+val WbgtColorBlack = SemanticColorHazardous     // 黑旗 (≥31.0 ℃) 极度危险 - 钛银白
 
 data class WbgtLevelDesc(
     val band: String,

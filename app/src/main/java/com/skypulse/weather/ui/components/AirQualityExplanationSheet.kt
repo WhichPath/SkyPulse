@@ -35,13 +35,14 @@ import com.skypulse.weather.ui.theme.TextSecondary
 import com.skypulse.weather.ui.theme.TextTertiary
 import com.skypulse.weather.util.AqhiCalculator
 
-// ============ AQI / AQHI 语义色阶 ============
-private val LevelColorGood = Color(0xFF43A047)       // 优 / 低 (≤50 / 1-3)
-private val LevelColorModerate = Color(0xFFFFD54F)   // 中等 / 中 (51-100 / 4-6)
-private val LevelColorLight = Color(0xFFFFB74D)      // 轻度不健康 / 高 (101-150 / 7)
-private val LevelColorUnhealthy = Color(0xFFE57373)  // 不健康 / 甚高 (151-200 / 8-10)
-private val LevelColorVeryUnhealthy = Color(0xFFCE93D8) // 重度不健康 / 严重 (201-300 / 10+)
-private val LevelColorHazardous = Color(0xFFA1887F)  // 危险 (301+)
+// ============ AQI / AQHI 语义色阶 (高对比度磨砂通透配色) ============
+internal val SemanticColorGood = Color(0xFF4ADE80)          // 优 / 低 (≤50 / 1-3) - 亮翠绿
+internal val SemanticColorModerate = Color(0xFFFACC15)      // 中等 / 中 (51-100 / 4-6) - 亮黄
+internal val SemanticColorLight = Color(0xFFFB923C)         // 轻度不健康 / 高 (101-150 / 7) - 鲜橙
+internal val SemanticColorUnhealthy = Color(0xFFF87171)     // 不健康 / 甚高 (151-200 / 8-10) - 亮红
+internal val SemanticColorVeryUnhealthy = Color(0xFFC084FC) // 重度不健康 / 严重 (201-300 / 10+) - 鲜紫
+internal val SemanticColorHazardous = Color(0xFFCBD5E1)     // 危险 / 黑旗 (301+ / ≥31.0℃) - 钛银白
+
 
 private data class AqiLevelDesc(
     val range: String,
@@ -61,37 +62,37 @@ private val AQI_LEVELS = listOf(
     AqiLevelDesc(
         range = "0 – 50",
         name = "优 (Good)",
-        color = LevelColorGood,
+        color = SemanticColorGood,
         description = "空气质量令人满意，基本无空气污染风险。所有人均可正常进行日常户外活动。"
     ),
     AqiLevelDesc(
         range = "51 – 100",
         name = "中等 (Moderate)",
-        color = LevelColorModerate,
+        color = SemanticColorModerate,
         description = "空气质量可接受。极少数对特定污染物异常敏感的人群，可能出现轻微呼吸道不适。"
     ),
     AqiLevelDesc(
         range = "101 – 150",
         name = "轻度不健康 (Unhealthy for Sensitive Groups)",
-        color = LevelColorLight,
+        color = SemanticColorLight,
         description = "敏感人群（儿童、老年人及心肺疾病患者）可能出现较明显症状；一般健康公众通常不受显著影响。"
     ),
     AqiLevelDesc(
         range = "151 – 200",
         name = "不健康 (Unhealthy)",
-        color = LevelColorUnhealthy,
+        color = SemanticColorUnhealthy,
         description = "任何人都可能开始受到健康影响。敏感人群可能遭受较严重损害，应减少长时间或剧烈户外运动。"
     ),
     AqiLevelDesc(
         range = "201 – 300",
         name = "重度不健康 (Very Unhealthy)",
-        color = LevelColorVeryUnhealthy,
+        color = SemanticColorVeryUnhealthy,
         description = "健康警报：全体公众健康受损风险明显增加。所有人均应避免长时间户外停留，敏感人群应留在室内。"
     ),
     AqiLevelDesc(
         range = "301 – 500",
         name = "危险 (Hazardous)",
-        color = LevelColorHazardous,
+        color = SemanticColorHazardous,
         description = "紧急健康警告：所有人均可能受到严重健康损害。全体公众应避免所有户外体力活动，紧闭门窗。"
     )
 )
@@ -100,31 +101,31 @@ private val AQHI_LEVELS = listOf(
     AqhiLevelDesc(
         band = "1 – 3 级",
         name = "低 (Low)",
-        color = LevelColorGood,
+        color = SemanticColorGood,
         description = "短期健康风险低。一般市民及敏感人群（儿童、长者、心脑呼吸道患者）均可正常开展日常户外活动。"
     ),
     AqhiLevelDesc(
         band = "4 – 6 级",
         name = "中 (Moderate)",
-        color = LevelColorModerate,
+        color = SemanticColorModerate,
         description = "短期健康风险中等。一般市民可如常活动；极少数对空气污染特别敏感的人士若出现不适，应考虑减少户外体力消耗。"
     ),
     AqhiLevelDesc(
         band = "7 级",
         name = "高 (High)",
-        color = LevelColorLight,
+        color = SemanticColorLight,
         description = "短期健康风险高。易受影响人群（儿童、长者及慢性病患者）应减少户外剧烈运动；一般公众若感不适亦应减少消耗。"
     ),
     AqhiLevelDesc(
         band = "8 – 10 级",
         name = "甚高 (Very High)",
-        color = LevelColorUnhealthy,
+        color = SemanticColorUnhealthy,
         description = "短期健康风险甚高。易受影响人群应将户外活动减至最低并留在室内；一般市民应大幅减少户外体力消耗。"
     ),
     AqhiLevelDesc(
         band = "10+ 级",
         name = "严重 (Serious)",
-        color = LevelColorVeryUnhealthy,
+        color = SemanticColorVeryUnhealthy,
         description = "短期健康风险严重。易受影响人群应避免所有户外活动；一般市民应避免一切户外体力消耗，留在室内并开启净化设施。"
     )
 )
@@ -175,7 +176,7 @@ fun ExplanationModalOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.12f))
+                .background(Color.Black.copy(alpha = 0.22f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -367,13 +368,14 @@ internal fun LevelItemRow(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.16f))
-            .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.22f))
+            .border(1.dp, color.copy(alpha = 0.50f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp)
     } else {
         Modifier
             .fillMaxWidth()
-            .background(Color.Transparent)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.04f))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     }
 

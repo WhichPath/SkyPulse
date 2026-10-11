@@ -25,13 +25,13 @@ import com.skypulse.weather.ui.theme.TextTertiary
 import com.skypulse.weather.util.AqhiCalculator
 import com.skypulse.weather.util.AqiCalculator
 
-// ============ AQI 色阶 (与 HourlyForecast 保持一致) ============
-private val AqiColorExcellent = Color(0xFF43A047)  // 优 ≤50
-private val AqiColorGood = Color(0xFFFFD54F)        // 良 51-100
-private val AqiColorLight = Color(0xFFFFB74D)       // 轻度 101-150
-private val AqiColorModerate = Color(0xFFE57373)    // 中度 151-200
-private val AqiColorHeavy = Color(0xFFCE93D8)       // 重度 201-300
-private val AqiColorSevere = Color(0xFFA1887F)      // 严重 300+
+// ============ AQI 色阶 (与全应用统一高对比度色阶保持一致) ============
+private val AqiColorExcellent = SemanticColorGood          // 优 ≤50 - 亮翠绿
+private val AqiColorGood = SemanticColorModerate           // 良 51-100 - 亮黄
+private val AqiColorLight = SemanticColorLight             // 轻度 101-150 - 鲜橙
+private val AqiColorModerate = SemanticColorUnhealthy      // 中度 151-200 - 亮红
+private val AqiColorHeavy = SemanticColorVeryUnhealthy     // 重度 201-300 - 鲜紫
+private val AqiColorSevere = SemanticColorHazardous        // 严重 300+ - 钛银白
 
 private fun aqiColor(aqi: Int): Color = when {
     aqi <= 50 -> AqiColorExcellent

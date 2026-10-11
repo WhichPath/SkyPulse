@@ -189,7 +189,7 @@ private fun DetailSquareCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
             verticalArrangement = Arrangement.Center
         ) {
             LucideIcon(
@@ -206,7 +206,9 @@ private fun DetailSquareCard(
                     fontSize = 12.sp
                 ),
                 color = TextSecondary,
-                maxLines = 1
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(4.dp))
             if (unit.isNotBlank() || error.isNotBlank()) {
