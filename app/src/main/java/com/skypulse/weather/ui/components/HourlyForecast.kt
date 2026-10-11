@@ -103,12 +103,33 @@ private fun uvColor(uvIndex: String?, isBrightBg: Boolean = true): Color {
     }
 }
 
-private fun windLabel(wind: HourlyWind?): String {
-    if (wind == null) return ""
-    val dir = WeatherUtils.formatWindDirection(wind.direction)
-    val level = WeatherUtils.formatWindSpeed(wind.speed)
-    if (dir.isEmpty() && level == "--") return ""
-    return "$dir${level}级"
+/**
+ * 气象风向流向箭头 (尖端指向风吹向的方向，气象学标准流向)
+ * direction: 气象来向角度 (0°为北风，90°为东风，180°为南风，270°为西风)
+ */
+@Composable
+private fun WindDirectionArrow(
+    direction: Double?,
+    modifier: Modifier = Modifier,
+    color: Color = TextSecondary
+) {
+    if (direction == null) return
+    val rotation = ((direction + 180.0) % 360.0).toFloat()
+
+    Canvas(modifier = modifier.size(9.dp)) {
+        val w = size.width
+        val h = size.height
+        rotate(degrees = rotation, pivot = Offset(w / 2f, h / 2f)) {
+            val path = Path().apply {
+                moveTo(w / 2f, 0f)          // 箭头尖端向上 (0°)
+                lineTo(w * 0.88f, h)        // 右下翼
+                lineTo(w / 2f, h * 0.72f)   // 中心内凹
+                lineTo(w * 0.12f, h)        // 左下翼
+                close()
+            }
+            drawPath(path = path, color = color)
+        }
+    }
 }
 
 private fun gustLabel(speed: Double?): String {
@@ -596,21 +617,33 @@ private fun HourlyTemperatureChart(
             Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
                 temperatures.forEachIndexed { index, _ ->
                     val wind = winds?.getOrNull(index)
-                    val label = windLabel(wind)
+                    val level = WeatherUtils.formatWindSpeed(wind?.speed)
                     Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                        if (label.isNotEmpty()) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                color = TextSecondary,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
+                        if (level != "--") {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
                                 modifier = Modifier
                                     .width(tagWidth)
                                     .clip(ParamTagShape)
                                     .background(Color.White.copy(alpha = 0.25f))
-                                    .padding(vertical = 1.dp)
-                            )
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                if (wind?.direction != null && level != "0") {
+                                    WindDirectionArrow(
+                                        direction = wind.direction,
+                                        modifier = Modifier.size(9.dp),
+                                        color = TextSecondary
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                }
+                                Text(
+                                    text = "${level}级",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                    color = TextSecondary,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }

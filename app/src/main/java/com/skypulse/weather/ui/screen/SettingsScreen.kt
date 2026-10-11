@@ -286,7 +286,7 @@ fun SettingsScreen(
                     )
                     IosDivider()
                     ToggleItem(
-                        title = "日出日落",
+                        title = "日出日落与月相",
                         checked = settings.showCardSunriseSunset,
                         onCheckedChange = onShowCardSunriseSunsetChange,
                         locked = !isPremium,

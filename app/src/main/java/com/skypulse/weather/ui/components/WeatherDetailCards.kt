@@ -12,8 +12,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skypulse.weather.model.RealtimeWeather
+import androidx.compose.runtime.remember
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
+import com.skypulse.weather.util.WbgtCalculator
 import com.skypulse.weather.util.WeatherUtils
 
 private data class DetailItem(
@@ -26,9 +28,24 @@ private data class DetailItem(
 @Composable
 fun WeatherDetailCards(
     realtime: RealtimeWeather?,
+    location: List<Double>? = null,
     modifier: Modifier = Modifier
 ) {
-    val feelsLike = WeatherUtils.formatTemperature(realtime?.apparent_temperature)
+    val wbgtResult = remember(realtime, location) {
+        WbgtCalculator.calculate(
+            temperature = realtime?.temperature,
+            humidity = realtime?.humidity,
+            windSpeedKmh = realtime?.wind?.speed,
+            pressurePa = realtime?.pressure,
+            cloudCover = realtime?.cloudrate,
+            latitude = location?.getOrNull(1),
+            longitude = location?.getOrNull(0)
+        )
+    }
+
+    val wbgtValue = if (wbgtResult != null) "${"%.1f".format(wbgtResult.wbgt)}°" else "--"
+    val wbgtUnit = if (wbgtResult != null) "±${"%.1f".format(wbgtResult.uncertainty)}°" else ""
+
     val windSpeedLevel = WeatherUtils.formatWindSpeed(realtime?.wind?.speed)
     val windDir = WeatherUtils.formatWindDirection(realtime?.wind?.direction)
     val humidity = WeatherUtils.formatHumidity(realtime?.humidity)
@@ -38,23 +55,31 @@ fun WeatherDetailCards(
 
     val pressureRaw = realtime?.pressure
     val pressureValue = if (pressureRaw != null) "${(pressureRaw / 100).toInt()}" else "--"
-    val pressureUnit = "\u767e\u5e15"
+    val pressureUnit = "百帕"
 
     val visRaw = realtime?.visibility
     val visValue = if (visRaw != null) {
         if (visRaw >= 1000) "${"%.1f".format(visRaw / 1000)}" else "${visRaw.toInt()}"
     } else "--"
-    val visUnit = "\u5343\u7c73"
+    val visUnit = "千米"
 
-    val windLevelNum = windSpeedLevel.replace("\u7ea7", "")
+    val windLevelNum = windSpeedLevel.replace("级", "")
+    val windLevel = windLevelNum.toIntOrNull()
+    val gustLevel = WeatherUtils.formatWindSpeed(realtime?.wind?.gust).replace("级", "").toIntOrNull()
+
+    val windUnit = if (gustLevel != null && windLevel != null && gustLevel > windLevel) {
+        "级 (阵风${gustLevel}级)"
+    } else {
+        "级"
+    }
 
     val items = listOf(
-        DetailItem("\u7d2b\u5916\u7ebf", uvIndex, uvDesc, "sun"),
-        DetailItem("\u4f53\u611f\u6e29\u5ea6", feelsLike, "", "thermometer"),
-        DetailItem("\u6e7f\u5ea6", humidity, "", "droplet"),
-        DetailItem(windDir, windLevelNum, "\u7ea7", "wind"),
-        DetailItem("\u6c14\u538b", pressureValue, pressureUnit, "gauge"),
-        DetailItem("\u80fd\u89c1\u5ea6", visValue, visUnit, "eye")
+        DetailItem("紫外线", uvIndex, uvDesc, "sun"),
+        DetailItem("湿球黑球", wbgtValue, wbgtUnit, "thermometer"),
+        DetailItem("湿度", humidity, "", "droplet"),
+        DetailItem(windDir, windLevelNum, windUnit, "wind"),
+        DetailItem("气压", pressureValue, pressureUnit, "gauge"),
+        DetailItem("能见度", visValue, visUnit, "eye")
     )
 
     Column(
@@ -140,9 +165,10 @@ private fun DetailSquareCard(
                     Text(
                         text = unit,
                         style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 12.sp
+                            fontSize = if (unit.length > 3) 10.sp else 12.sp
                         ),
                         color = TextSecondary,
+                        maxLines = 1,
                         modifier = Modifier.padding(bottom = 2.dp)
                     )
                 }

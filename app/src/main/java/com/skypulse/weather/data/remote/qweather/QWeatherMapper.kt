@@ -113,10 +113,12 @@ object QWeatherMapper {
             dswrf = null,
             wind = Wind(
                 speed = now.wind?.speed?.value?.times(3.6), // m/s -> km/h
-                direction = now.wind?.direction?.degree
+                direction = now.wind?.direction?.degree,
+                gust = now.windGust?.value?.times(3.6) // m/s -> km/h
             ),
             pressure = now.pressure?.value?.times(100.0), // hPa -> Pa
             apparent_temperature = now.feelsLike?.value,
+            dew_point = now.dewPoint?.value ?: calculateDewPoint(now.temperature?.value, now.humidity),
             precipitation = Precipitation(
                 local = PrecipitationLocal(
                     status = "ok",
@@ -132,6 +134,12 @@ object QWeatherMapper {
                 )
             } else null
         )
+    }
+
+    private fun calculateDewPoint(temp: Double?, humidity: Double?): Double? {
+        if (temp == null || humidity == null) return null
+        val rh = humidity * 100.0
+        return temp - ((100.0 - rh) / 5.0)
     }
 
     // ============ Air Quality (空气质量) ============
@@ -294,7 +302,10 @@ object QWeatherMapper {
                 DailyAstro(
                     date = date,
                     sunrise = AstroTime(time = extractTime(it.astro?.sunrise)),
-                    sunset = AstroTime(time = extractTime(it.astro?.sunset))
+                    sunset = AstroTime(time = extractTime(it.astro?.sunset)),
+                    moonrise = AstroTime(time = extractTime(it.astro?.moonrise)),
+                    moonset = AstroTime(time = extractTime(it.astro?.moonset)),
+                    moonPhase = it.astro?.moonPhase
                 )
             },
             precipitation = items.map {

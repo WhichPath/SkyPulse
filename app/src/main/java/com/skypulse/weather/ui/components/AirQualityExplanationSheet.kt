@@ -2,25 +2,28 @@ package com.skypulse.weather.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.skypulse.weather.ui.theme.TextDisabled
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
@@ -122,200 +125,412 @@ private val AQHI_LEVELS = listOf(
 )
 
 /**
- * 美国 EPA AQI 指数详情解释面板
+ * 美国 EPA AQI 指数详情解释浮动居中弹窗
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AqiExplanationSheet(
     currentAqi: Int?,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color(0xFF1C1C1E),
-        contentColor = TextPrimary,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle = {
-            BottomSheetDefaults.DragHandle(color = Color.White.copy(alpha = 0.25f))
-        }
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp)
-        ) {
-            // ---- 标题与标准出处 ----
-            Text(
-                text = "空气质量指数 (AQI)",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "依据美国环保署 (US EPA 40 CFR Part 58) 官方技术规范计算",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextTertiary
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ---- 等级列表 (当前等级半透明高亮，其他背景透明) ----
-            Text(
-                text = "各等级健康标准与防护建议",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            AQI_LEVELS.forEach { level ->
-                val isCurrent = isAqiCurrentLevel(currentAqi, level.range)
-                LevelItemRow(
-                    label = "${level.range}   ${level.name}",
-                    description = level.description,
-                    color = level.color,
-                    isHighlighted = isCurrent
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                .padding(horizontal = 20.dp, vertical = 36.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xF018181C))
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // 阻止内部点击触发外部 dismiss
+                    )
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // ---- 顶部标题与关闭按钮 ----
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "空气质量指数 (AQI)",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "依据美国环保署 (US EPA 40 CFR Part 58) 官方技术规范计算",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        LucideIcon(
+                            name = "x",
+                            contentDescription = "关闭",
+                            tint = TextSecondary,
+                            size = 18.dp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // ---- 等级列表 (当前等级半透明高亮，不显示多余文本) ----
+                Text(
+                    text = "各等级健康标准与防护建议",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                AQI_LEVELS.forEach { level ->
+                    val isCurrent = isAqiCurrentLevel(currentAqi, level.range)
+                    LevelItemRow(
+                        label = "${level.range}   ${level.name}",
+                        description = level.description,
+                        color = level.color,
+                        isHighlighted = isCurrent
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // ---- 算法公式解析 (正规排版数学公式) ----
+                Text(
+                    text = "计算算法与短板原则",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                FormulaCard {
+                    Text(
+                        text = "1. 各污染物分项分指数 (IAQI) 采用分段线性插值",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.25f))
+                            .padding(vertical = 10.dp, horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 15.sp, color = TextPrimary)
+                            Text("p", fontFamily = FontFamily.Serif, fontSize = 10.sp, modifier = Modifier.offset(y = 3.dp), color = TextPrimary)
+                            Text(" = ", fontFamily = FontFamily.Serif, fontSize = 15.sp, color = TextPrimary)
+                            MathFraction(
+                                numerator = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.sp, color = TextPrimary)
+                                        Text("high", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                                        Text(" − ", fontFamily = FontFamily.Serif, fontSize = 13.sp, color = TextPrimary)
+                                        Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.sp, color = TextPrimary)
+                                        Text("low", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                                    }
+                                },
+                                denominator = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("BP", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.sp, color = TextPrimary)
+                                        Text("high", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                                        Text(" − ", fontFamily = FontFamily.Serif, fontSize = 13.sp, color = TextPrimary)
+                                        Text("BP", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.sp, color = TextPrimary)
+                                        Text("low", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                                    }
+                                }
+                            )
+                            Text(" · (", fontFamily = FontFamily.Serif, fontSize = 15.sp, color = TextPrimary)
+                            Text("C", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 15.sp, color = TextPrimary)
+                            Text("p", fontFamily = FontFamily.Serif, fontSize = 10.sp, modifier = Modifier.offset(y = 3.dp), color = TextPrimary)
+                            Text(" − ", fontFamily = FontFamily.Serif, fontSize = 15.sp, color = TextPrimary)
+                            Text("BP", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 15.sp, color = TextPrimary)
+                            Text("low", fontFamily = FontFamily.Serif, fontSize = 10.sp, modifier = Modifier.offset(y = 3.dp), color = TextPrimary)
+                            Text(") + ", fontFamily = FontFamily.Serif, fontSize = 15.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 15.sp, color = TextPrimary)
+                            Text("low", fontFamily = FontFamily.Serif, fontSize = 10.sp, modifier = Modifier.offset(y = 3.dp), color = TextPrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "2. 综合空气质量指数 (木桶短板原则)",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.25f))
+                            .padding(vertical = 8.dp, horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("AQI = max ( ", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("PM2.5", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            Text(", ", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("PM10", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            Text(", ", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("O3", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            Text(", ", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("NO2", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            Text(", ", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("SO2", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            Text(", ", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("I", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 13.5.sp, color = TextPrimary)
+                            Text("CO", fontFamily = FontFamily.Serif, fontSize = 9.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            Text(" )", fontFamily = FontFamily.Serif, fontSize = 13.5.sp, color = TextPrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "* 最终数值由当前分指数最高的一项决定，该项即为首要污染物。",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = TextTertiary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ---- 底部注记 ----
+                Text(
+                    text = "注：美国 EPA 官方规范中，颗粒物（PM2.5/PM10）基准要求为 24 小时平均，臭氧（O3）为 8 小时平均。为向公众提供即时、灵敏的环境质量反馈，本应用实况基于当前实时 1 小时监测浓度进行即时分段插值计算。",
+                    style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
+                    color = TextDisabled
+                )
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ---- 算法公式解析 ----
-            Text(
-                text = "计算算法与短板原则",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            FormulaBox(
-                formulaText = """
-                    1. 各污染物分项分指数 (IAQI) 采用分段线性插值:
-                       Ip = [(I_high - I_low) / (BP_high - BP_low)] × (Cp - BP_low) + I_low
-
-                    2. 综合空气质量指数 (木桶短板原则):
-                       AQI = max(I_PM2.5, I_PM10, I_O3, I_NO2, I_SO2, I_CO)
-                       
-                    * 最终数值由当前分指数最高的一项决定，该项即为首要污染物。
-                """.trimIndent()
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ---- 底部注记 / 更改说明 ----
-            Text(
-                text = "注：美国 EPA 官方规范中，颗粒物（PM2.5/PM10）基准要求为 24 小时平均，臭氧（O3）为 8 小时平均。为向公众提供即时、灵敏的环境质量反馈，本应用实况基于当前实时 1 小时监测浓度进行即时分段插值计算。",
-                style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
-                color = TextDisabled
-            )
         }
     }
 }
 
 /**
- * 香港 EPD AQHI 指数详情解释面板
+ * 香港 EPD AQHI 指数详情解释浮动居中弹窗
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AqhiExplanationSheet(
     currentAqhi: AqhiCalculator.AqhiResult?,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color(0xFF1C1C1E),
-        contentColor = TextPrimary,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle = {
-            BottomSheetDefaults.DragHandle(color = Color.White.copy(alpha = 0.25f))
-        }
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp)
-        ) {
-            // ---- 标题与标准出处 ----
-            Text(
-                text = "空气质素健康指数 (AQHI)",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "依据香港环境保护署 (EPD) 官方健康风险评价算法计算",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextTertiary
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ---- 等级列表 (当前等级半透明高亮，其他背景透明) ----
-            Text(
-                text = "各级别健康风险与公众指引",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            AQHI_LEVELS.forEach { level ->
-                val isCurrent = isAqhiCurrentLevel(currentAqhi, level.band)
-                LevelItemRow(
-                    label = "${level.band}   ${level.name}",
-                    description = level.description,
-                    color = level.color,
-                    isHighlighted = isCurrent
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                .padding(horizontal = 20.dp, vertical = 36.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xF018181C))
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // ---- 顶部标题与关闭按钮 ----
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "空气质素健康指数 (AQHI)",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "依据香港环境保护署 (EPD) 官方健康风险评价算法计算",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        LucideIcon(
+                            name = "x",
+                            contentDescription = "关闭",
+                            tint = TextSecondary,
+                            size = 18.dp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // ---- 等级列表 (当前等级半透明高亮，不显示多余文本) ----
+                Text(
+                    text = "各级别健康风险与公众指引",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                AQHI_LEVELS.forEach { level ->
+                    val isCurrent = isAqhiCurrentLevel(currentAqhi, level.band)
+                    LevelItemRow(
+                        label = "${level.band}   ${level.name}",
+                        description = level.description,
+                        color = level.color,
+                        isHighlighted = isCurrent
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // ---- 算法公式解析 (正规排版数学公式) ----
+                Text(
+                    text = "计算算法与复合风险累加",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                FormulaCard {
+                    Text(
+                        text = "1. 综合超额住院风险增幅 (%AR 复合累加)",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.25f))
+                            .padding(vertical = 8.dp, horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "%AR = %AR(NO₂) + %AR(SO₂) + %AR(O₃) + max(%AR(PM2.5), %AR(PM10))",
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 12.sp,
+                            color = TextPrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "2. 个别污染物健康风险增幅 (C 为浓度，单位 μg/m³)",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.25f))
+                            .padding(vertical = 10.dp, horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("%AR", fontFamily = FontFamily.Serif, fontSize = 14.sp, color = TextPrimary)
+                            Text("i", fontFamily = FontFamily.Serif, fontSize = 10.sp, modifier = Modifier.offset(y = 3.dp), color = TextPrimary)
+                            Text(" = [ ", fontFamily = FontFamily.Serif, fontSize = 14.sp, color = TextPrimary)
+                            Text("e", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 15.sp, color = TextPrimary)
+                            Row(
+                                modifier = Modifier.offset(y = (-5).dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("β", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 10.sp, color = TextPrimary)
+                                Text("i", fontFamily = FontFamily.Serif, fontSize = 8.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                                Text(" · ", fontFamily = FontFamily.Serif, fontSize = 10.sp, color = TextPrimary)
+                                Text("C", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 10.sp, color = TextPrimary)
+                                Text("i", fontFamily = FontFamily.Serif, fontSize = 8.sp, modifier = Modifier.offset(y = 2.dp), color = TextPrimary)
+                            }
+                            Text(" − 1 ] × 100%", fontFamily = FontFamily.Serif, fontSize = 14.sp, color = TextPrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "官方回归系数 β: NO₂=0.000446, SO₂=0.000139, O₃=0.000489, PM10=0.000282, PM2.5=0.000218",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            lineHeight = 15.sp
+                        ),
+                        color = TextTertiary
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "* 最终根据 %AR 对照官方健康风险临界值划分为 1-10 级及 10+ 级。",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = TextTertiary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ---- 底部注记 ----
+                Text(
+                    text = "注：香港环境保护署官方规范中，各污染物浓度基准为 3 小时移动平均值。本应用实况基于当前实时 1 小时监测浓度计算即时超额健康风险增幅（%AR），以便更灵敏、迅速地捕捉并预警突发短时污染。",
+                    style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
+                    color = TextDisabled
+                )
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ---- 算法公式解析 ----
-            Text(
-                text = "计算算法与复合风险累加",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            FormulaBox(
-                formulaText = """
-                    1. 综合超额住院风险增幅 (%AR 累计累加):
-                       %AR = %AR(NO2) + %AR(SO2) + %AR(O3) + max(%AR(PM2.5), %AR(PM10))
-
-                    2. 个别污染物健康风险增幅 (C 为浓度，单位 μg/m³):
-                       %AR(i) = [exp(β_i × C_i) - 1] × 100%
-
-                    3. 官方回归系数 β (流行病学入院风险统计):
-                       β(NO2)  = 0.0004462559
-                       β(SO2)  = 0.0001393235
-                       β(O3)   = 0.0004888034
-                       β(PM10) = 0.0002821751
-                       β(PM2.5)= 0.0002180567
-                       
-                    * 最终根据 %AR 对照官方健康风险临界值划分为 1-10 级及 10+ 级。
-                """.trimIndent()
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ---- 底部注记 / 更改说明 ----
-            Text(
-                text = "注：香港环境保护署官方规范中，各污染物浓度基准为 3 小时移动平均值。本应用实况基于当前实时 1 小时监测浓度计算即时超额健康风险增幅（%AR），以便更灵敏、迅速地捕捉并预警突发短时污染。",
-                style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
-                color = TextDisabled
-            )
         }
     }
 }
@@ -323,6 +538,7 @@ fun AqhiExplanationSheet(
 /**
  * 等级描述项行组件
  * isHighlighted 为 true 时，背景呈现对应等级颜色的半透明高亮模块，未高亮时背景全透明且无边框视觉。
+ * 去除多余的 "• 当前状态" 标签，仅依靠半透明背景区分。
  */
 @Composable
 private fun LevelItemRow(
@@ -346,21 +562,11 @@ private fun LevelItemRow(
     }
 
     Column(modifier = bgModifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                color = color
-            )
-            if (isHighlighted) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "• 当前状态",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = color
-                )
-            }
-        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            color = color
+        )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = description,
@@ -371,26 +577,57 @@ private fun LevelItemRow(
 }
 
 /**
- * 公式展示卡片组件
+ * 公式外层卡片容器
  */
 @Composable
-private fun FormulaBox(formulaText: String) {
-    Box(
+private fun FormulaCard(
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(Color.White.copy(alpha = 0.06f))
-            .padding(12.dp)
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
+            .padding(14.dp),
+        content = content
+    )
+}
+
+/**
+ * 原生数学分数渲染组件（带标准横向分数线）
+ */
+@Composable
+private fun MathFraction(
+    numerator: @Composable () -> Unit,
+    denominator: @Composable () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.width(IntrinsicSize.Max),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = formulaText,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = FontFamily.Monospace,
-                lineHeight = 18.sp,
-                fontSize = 11.sp
-            ),
-            color = TextSecondary
+        Box(
+            modifier = Modifier.padding(horizontal = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            numerator()
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.75f))
         )
+        Spacer(modifier = Modifier.height(2.dp))
+        Box(
+            modifier = Modifier.padding(horizontal = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            denominator()
+        }
     }
 }
 

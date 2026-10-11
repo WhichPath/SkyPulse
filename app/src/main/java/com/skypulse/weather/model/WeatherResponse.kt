@@ -71,6 +71,7 @@ data class RealtimeWeather(
     val wind: Wind? = null,
     val pressure: Double? = null,
     val apparent_temperature: Double? = null,
+    val dew_point: Double? = null,
     val precipitation: Precipitation? = null,
     val air_quality: AirQuality? = null,
     val life_index: LifeIndex? = null
@@ -79,7 +80,8 @@ data class RealtimeWeather(
 @JsonClass(generateAdapter = true)
 data class Wind(
     val speed: Double? = null,
-    val direction: Double? = null
+    val direction: Double? = null,
+    val gust: Double? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -248,7 +250,10 @@ data class DailyForecast(
 data class DailyAstro(
     val date: String? = null,
     val sunrise: AstroTime? = null,
-    val sunset: AstroTime? = null
+    val sunset: AstroTime? = null,
+    val moonrise: AstroTime? = null,
+    val moonset: AstroTime? = null,
+    val moonPhase: String? = null
 )
 
 @JsonClass(generateAdapter = true)

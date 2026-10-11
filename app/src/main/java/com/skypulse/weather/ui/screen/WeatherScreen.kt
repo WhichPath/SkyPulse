@@ -761,6 +761,7 @@ private fun WeatherContentBody(
             if (isPremium && settings.showCardDetail) {
                 WeatherDetailCards(
                     realtime = realtime,
+                    location = state.weather.location,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
@@ -768,6 +769,13 @@ private fun WeatherContentBody(
 
             if (isPremium && settings.showCardSunriseSunset) {
                 SunriseSunsetCard(
+                    astro = result?.daily?.astro,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
+                )
+                Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
+                MoonriseMoonsetCard(
                     astro = result?.daily?.astro,
                     modifier = Modifier
                         .fillMaxWidth()
