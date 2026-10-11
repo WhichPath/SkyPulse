@@ -13,7 +13,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.skypulse.weather.R
-import com.skypulse.weather.repository.MembershipRepository
+import com.skypulse.weather.data.MembershipRepository
 import com.skypulse.weather.repository.CityRepository
 import com.skypulse.weather.repository.WeatherRepository
 import com.skypulse.weather.sync.RefreshPolicy

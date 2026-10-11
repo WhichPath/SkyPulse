@@ -30,7 +30,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skypulse.weather.R
-import com.skypulse.weather.repository.ActivationResult
+import com.skypulse.weather.data.ActivationResult
 import com.skypulse.weather.ui.theme.IosAccentBlue
 import com.skypulse.weather.ui.theme.IosCardBg
 import com.skypulse.weather.ui.theme.IosDividerColor

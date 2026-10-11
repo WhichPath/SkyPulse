@@ -1,4 +1,4 @@
-package com.skypulse.weather.repository
+package com.skypulse.weather.data
 
 import android.annotation.SuppressLint
 import android.content.Context

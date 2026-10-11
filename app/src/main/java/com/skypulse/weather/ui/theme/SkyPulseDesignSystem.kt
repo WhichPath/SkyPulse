@@ -108,7 +108,7 @@ object SkyPulseDesignSystem {
         )
         val springModalExit = spring<Float>(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumHigh
+            stiffness = Spring.StiffnessMedium
         )
 
         // 时间常量（过渡兼容）

@@ -1,7 +1,4 @@
-package com.skypulse.weather.repository
-
-import com.skypulse.weather.data.WeatherSettings
-import com.skypulse.weather.data.ThemeMode
+package com.skypulse.weather.data
 
 import android.content.Context
 import android.content.SharedPreferences

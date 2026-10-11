@@ -2,9 +2,9 @@ package com.skypulse.weather.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import com.skypulse.weather.repository.ActivationResult
-import com.skypulse.weather.repository.MembershipRepository
-import com.skypulse.weather.repository.SettingsRepository
+import com.skypulse.weather.data.ActivationResult
+import com.skypulse.weather.data.MembershipRepository
+import com.skypulse.weather.data.SettingsRepository
 import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.data.WeatherSettings
 import com.skypulse.weather.notification.WeatherNotificationScheduler
