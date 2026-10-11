@@ -135,7 +135,7 @@ fun LocationHeader(
                         ) { phase ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 when (phase) {
-                                    RefreshPhase.Refreshing -> {
+                                    RefreshPhase.Locating -> {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(14.dp),
                                             strokeWidth = 1.5.dp,
@@ -143,7 +143,20 @@ fun LocationHeader(
                                         )
                                         Spacer(modifier = Modifier.width(7.dp))
                                         Text(
-                                            text = "正在更新数据",
+                                            text = "正在获取定位…",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    RefreshPhase.Fetching -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(14.dp),
+                                            strokeWidth = 1.5.dp,
+                                            color = TextSecondary
+                                        )
+                                        Spacer(modifier = Modifier.width(7.dp))
+                                        Text(
+                                            text = "正在获取气象数据…",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = TextSecondary.copy(alpha = 0.6f)
                                         )

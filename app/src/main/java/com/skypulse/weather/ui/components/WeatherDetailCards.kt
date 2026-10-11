@@ -1,18 +1,19 @@
 package com.skypulse.weather.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skypulse.weather.model.RealtimeWeather
-import androidx.compose.runtime.remember
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
 import com.skypulse.weather.util.WbgtCalculator
@@ -22,7 +23,12 @@ private data class DetailItem(
     val label: String,
     val value: String,
     val unit: String,
-    val iconName: String
+    val error: String = "",
+    val iconName: String,
+    val iconTint: Color = TextSecondary,
+    val iconFillColor: Color = Color.Unspecified,
+    val cardBgColor: Color? = null,
+    val onClick: (() -> Unit)? = null
 )
 
 @Composable
@@ -31,6 +37,8 @@ fun WeatherDetailCards(
     location: List<Double>? = null,
     modifier: Modifier = Modifier
 ) {
+    var showWbgtSheet by remember { mutableStateOf(false) }
+
     val wbgtResult = remember(realtime, location) {
         WbgtCalculator.calculate(
             temperature = realtime?.temperature,
@@ -43,8 +51,18 @@ fun WeatherDetailCards(
         )
     }
 
-    val wbgtValue = if (wbgtResult != null) "${"%.1f".format(wbgtResult.wbgt)}°" else "--"
-    val wbgtUnit = if (wbgtResult != null) "±${"%.1f".format(wbgtResult.uncertainty)}°" else ""
+    val wbgtValue = if (wbgtResult != null) "%.1f".format(wbgtResult.wbgt) else "--"
+    val wbgtError = if (wbgtResult != null) "±${"%.1f".format(wbgtResult.uncertainty)}" else ""
+    val wbgtUnit = if (wbgtResult != null) "℃" else ""
+
+    val wbgtRiskColor = when {
+        wbgtResult == null -> null
+        wbgtResult.wbgt < 21.0 -> WbgtColorGreen
+        wbgtResult.wbgt < 25.0 -> WbgtColorYellow
+        wbgtResult.wbgt < 28.0 -> WbgtColorOrange
+        wbgtResult.wbgt < 31.0 -> WbgtColorRed
+        else -> WbgtColorBlack
+    }
 
     val windSpeedLevel = WeatherUtils.formatWindSpeed(realtime?.wind?.speed)
     val windDir = WeatherUtils.formatWindDirection(realtime?.wind?.direction)
@@ -74,12 +92,22 @@ fun WeatherDetailCards(
     }
 
     val items = listOf(
-        DetailItem("紫外线", uvIndex, uvDesc, "sun"),
-        DetailItem("湿球黑球", wbgtValue, wbgtUnit, "thermometer"),
-        DetailItem("湿度", humidity, "", "droplet"),
-        DetailItem(windDir, windLevelNum, windUnit, "wind"),
-        DetailItem("气压", pressureValue, pressureUnit, "gauge"),
-        DetailItem("能见度", visValue, visUnit, "eye")
+        DetailItem("紫外线", uvIndex, uvDesc, iconName = "sun"),
+        DetailItem(
+            label = "湿球黑球温度",
+            value = wbgtValue,
+            unit = wbgtUnit,
+            error = wbgtError,
+            iconName = if (wbgtResult != null) "flag" else "thermometer",
+            iconTint = wbgtRiskColor ?: TextSecondary,
+            iconFillColor = wbgtRiskColor?.copy(alpha = 0.85f) ?: Color.Unspecified,
+            cardBgColor = wbgtRiskColor?.copy(alpha = 0.12f),
+            onClick = { showWbgtSheet = true }
+        ),
+        DetailItem("湿度", humidity, "", iconName = "droplet"),
+        DetailItem(windDir, windLevelNum, windUnit, iconName = "wind"),
+        DetailItem("气压", pressureValue, pressureUnit, iconName = "gauge"),
+        DetailItem("能见度", visValue, visUnit, iconName = "eye")
     )
 
     Column(
@@ -94,9 +122,14 @@ fun WeatherDetailCards(
             items.take(3).forEach { item ->
                 DetailSquareCard(
                     iconName = item.iconName,
+                    iconTint = item.iconTint,
+                    iconFillColor = item.iconFillColor,
+                    cardBgColor = item.cardBgColor,
                     label = item.label,
                     value = item.value,
+                    error = item.error,
                     unit = item.unit,
+                    onClick = item.onClick,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -109,13 +142,26 @@ fun WeatherDetailCards(
             items.drop(3).forEach { item ->
                 DetailSquareCard(
                     iconName = item.iconName,
+                    iconTint = item.iconTint,
+                    iconFillColor = item.iconFillColor,
+                    cardBgColor = item.cardBgColor,
                     label = item.label,
                     value = item.value,
+                    error = item.error,
                     unit = item.unit,
+                    onClick = item.onClick,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
+    }
+
+    if (showWbgtSheet) {
+        WbgtExplanationSheet(
+            currentWbgt = wbgtResult?.wbgt,
+            currentUncertainty = wbgtResult?.uncertainty,
+            onDismiss = { showWbgtSheet = false }
+        )
     }
 }
 
@@ -125,11 +171,29 @@ private fun DetailSquareCard(
     label: String,
     value: String,
     unit: String = "",
+    error: String = "",
+    iconTint: Color = TextSecondary,
+    iconFillColor: Color = Color.Unspecified,
+    cardBgColor: Color? = null,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val cardModifier = if (onClick != null) {
+        modifier.aspectRatio(1f).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)
+    } else {
+        modifier.aspectRatio(1f)
+    }
+
     GlassCard(
-        modifier = modifier.aspectRatio(1f)
+        modifier = cardModifier
     ) {
+        if (cardBgColor != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(cardBgColor)
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -139,17 +203,21 @@ private fun DetailSquareCard(
             LucideIcon(
                 name = iconName,
                 contentDescription = label,
-                tint = TextSecondary,
+                tint = iconTint,
+                fillColor = iconFillColor,
                 size = 24.dp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = if (label.length > 4) 10.5.sp else 12.sp
+                ),
+                color = TextSecondary,
+                maxLines = 1
             )
             Spacer(modifier = Modifier.height(4.dp))
-            if (unit.isNotBlank()) {
+            if (unit.isNotBlank() || error.isNotBlank()) {
                 Row(
                     verticalAlignment = Alignment.Bottom,
                     modifier = Modifier.fillMaxWidth()
@@ -161,16 +229,40 @@ private fun DetailSquareCard(
                         ),
                         color = TextPrimary,
                     )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = unit,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = if (unit.length > 3) 10.sp else 12.sp
-                        ),
-                        color = TextSecondary,
-                        maxLines = 1,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
+                    if (error.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = 10.sp
+                            ),
+                            color = TextSecondary,
+                            maxLines = 1,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    if (unit.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = unit,
+                            style = if (error.isNotBlank()) {
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                MaterialTheme.typography.labelMedium.copy(
+                                    fontSize = when {
+                                        unit.length > 5 -> 9.5.sp
+                                        unit.length > 3 -> 10.5.sp
+                                        else -> 12.sp
+                                    }
+                                )
+                            },
+                            color = if (error.isNotBlank()) TextPrimary else TextSecondary,
+                            maxLines = 1,
+                            modifier = if (error.isNotBlank()) Modifier else Modifier.padding(bottom = 2.dp)
+                        )
+                    }
                 }
             } else {
                 Text(

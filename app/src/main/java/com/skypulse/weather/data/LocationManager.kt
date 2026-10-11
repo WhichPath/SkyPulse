@@ -551,18 +551,11 @@ class LocationManager @Inject constructor(
         val cached = getCachedLocation()
         if (!forceRefresh && cached != null && cached.name.isNotBlank() && cached.name != "未知位置") {
             val dist = distanceBetween(lat, lon, cached.latitude, cached.longitude)
-            val timeDiff = System.currentTimeMillis() - cached.time
-
-            val cacheLimit = when {
-                dist < 35f -> 3 * 60 * 1000L
-                accuracy > 200f && dist < 120f -> 5 * 60 * 1000L
-                else -> 60 * 1000L
-            }
-            val isCacheExpired = timeDiff > cacheLimit
-
-            if (!isCacheExpired && dist < 120f) {
-                Log.i(TAG, "reverseGeocode: 距离上次缓存位置仅为 ${dist}米且未过期，复用缓存位置名称: ${cached.name}")
-                locI("reverse_geocode_cache_hit: elapsed=${elapsedSince(startMs)}ms, dist=${dist}m, age=${timeDiff}ms, result=${cached.name.safeLogValue()}")
+            // 和风天气最高预报格点分辨率为 1km (1000米)。
+            // 距离上次反查位置位移在 1000 米以内时，视为同一格点与商圈区域，直接复用已有地名，避免频繁调用高德逆地理 API。
+            if (dist < 1000f) {
+                Log.i(TAG, "reverseGeocode: 距离上次缓存位置仅为 ${dist}米（<1000m 和风天气网格阈值），复用缓存位置名称: ${cached.name}")
+                locI("reverse_geocode_cache_hit_1km: elapsed=${elapsedSince(startMs)}ms, dist=${dist}m, result=${cached.name.safeLogValue()}")
                 return@withContext cached.name
             }
         }

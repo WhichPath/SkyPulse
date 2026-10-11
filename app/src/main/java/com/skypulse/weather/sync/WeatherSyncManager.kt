@@ -179,7 +179,8 @@ class WeatherSyncManager @Inject constructor(
     suspend fun refreshWeatherWithLocation(
         highAccuracy: Boolean = true,
         force: Boolean = true,
-        timeoutMs: Long? = null
+        timeoutMs: Long? = null,
+        onFetchingWeather: (() -> Unit)? = null
     ): SyncResult = withContext(Dispatchers.IO) {
         val waitStartMs = android.os.SystemClock.elapsedRealtime()
         locI("refresh_with_location_mutex_wait_start: highAccuracy=$highAccuracy, force=$force")
@@ -229,6 +230,7 @@ class WeatherSyncManager @Inject constructor(
                 }
 
                 Log.i(TAG, "开始获取天气: cityId=${currentCity.id}, name=${currentCity.name}")
+                onFetchingWeather?.invoke()
                 val result = doRefreshWeather(currentCity.id, lon, lat)
                 locI("refresh_with_location_complete: elapsed=${elapsedSince(startMs)}ms, result=${result::class.simpleName}")
                 return@withLock result
@@ -244,6 +246,7 @@ class WeatherSyncManager @Inject constructor(
                     cachedLoc.longitude,
                     cachedLoc.latitude
                 )
+                onFetchingWeather?.invoke()
                 val result = doRefreshWeather(
                     currentCity.id,
                     cachedLoc.longitude,
@@ -272,7 +275,10 @@ class WeatherSyncManager @Inject constructor(
      * 2. 定位成功 -> 更新数据库城市名/经纬度 -> 使用最新经纬度请求天气
      * 3. 定位信号不佳（超时/失败/无权限） -> 标记信号不佳，降级使用已有上次位置请求天气
      */
-    suspend fun refreshCurrentLocationManual(timeoutMs: Long = 7000L): ManualRefreshResult = withContext(Dispatchers.IO) {
+    suspend fun refreshCurrentLocationManual(
+        timeoutMs: Long = 7000L,
+        onFetchingWeather: (() -> Unit)? = null
+    ): ManualRefreshResult = withContext(Dispatchers.IO) {
         val waitStartMs = android.os.SystemClock.elapsedRealtime()
         locI("manual_refresh_location_wait_start")
         locationMutex.withLock {
@@ -314,6 +320,7 @@ class WeatherSyncManager @Inject constructor(
                     upsertCurrentLocationCity(savedName, lon, lat)
                 }
 
+                onFetchingWeather?.invoke()
                 val weatherResult = doRefreshWeather(currentCity.id, lon, lat)
                 return@withLock when (weatherResult) {
                     is SyncResult.Success -> ManualRefreshResult.Success(weatherResult.weather, currentCity.name)
@@ -336,6 +343,7 @@ class WeatherSyncManager @Inject constructor(
                     cachedLoc.longitude,
                     cachedLoc.latitude
                 )
+                onFetchingWeather?.invoke()
                 val result = doRefreshWeather(currentCity.id, cachedLoc.longitude, cachedLoc.latitude)
                 result.getOrNull() ?: repository.getWeatherFromCache(currentCity.id)
             } else {

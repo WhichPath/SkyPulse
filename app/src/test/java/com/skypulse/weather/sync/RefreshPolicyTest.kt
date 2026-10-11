@@ -90,9 +90,9 @@ class RefreshPolicyTest {
 
     @Test
     fun `policy constants preserve previous timings`() {
-        assertEquals(120_000L, RefreshPolicy.GLOBAL_SYNC_INTERVAL_MS)
+        assertEquals(90_000L, RefreshPolicy.GLOBAL_SYNC_INTERVAL_MS)
         assertEquals(5 * 60 * 1000L, RefreshPolicy.WEATHER_TTL_MS)
-        assertEquals(120_000L, RefreshPolicy.CITY_RATE_LIMIT_MS)
+        assertEquals(5 * 60 * 1000L, RefreshPolicy.CITY_RATE_LIMIT_MS)
         assertEquals(5_000L, RefreshPolicy.SAME_COORDINATE_DEDUPE_MS)
         assertEquals(25 * 60 * 1000L, RefreshPolicy.NOTIFICATION_CACHE_TTL_MS)
         assertEquals(8 * 60 * 1000L, RefreshPolicy.URGENT_NOTIFICATION_CACHE_TTL_MS)

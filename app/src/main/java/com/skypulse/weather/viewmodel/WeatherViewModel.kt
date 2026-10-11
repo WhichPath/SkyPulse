@@ -52,7 +52,7 @@ sealed class WeatherUiState {
 }
 
 enum class RefreshPhase {
-    Idle, Refreshing, PoorSignal, Success
+    Idle, Locating, Fetching, PoorSignal, Success
 }
 
 data class CityWeatherData(
@@ -589,6 +589,7 @@ class WeatherViewModel @Inject constructor(
 
     fun fetchWeather() {
         viewModelScope.launch {
+            citiesLoadJob?.join()
             val refreshCity = selectedCityForRefresh()
             refreshLog("fetch_weather_start: selected=${selectedCityId.value}, ${refreshCity.refreshSummary()}")
             if (refreshCity != null && shouldSkipRefresh(refreshCity)) {
@@ -616,12 +617,17 @@ class WeatherViewModel @Inject constructor(
             val refreshCity = selectedCityForRefresh()
             if (!tryBeginUiRefresh("manualRefresh", refreshCity)) return@launch
             _isRefreshing.value = true
-            setRefreshPhase(RefreshPhase.Refreshing, "manualRefresh", refreshCity)
             val startTime = android.os.SystemClock.elapsedRealtime()
             try {
                 if (refreshCity == null || refreshCity.isCurrentLocation) {
+                    setRefreshPhase(RefreshPhase.Locating, "manualRefresh", refreshCity)
                     refreshLog("manual_refresh_current_location_start: ${refreshCity.refreshSummary()}")
-                    val result = refreshWeatherUseCase.refreshCurrentLocationManual(timeoutMs = 7000L)
+                    val result = refreshWeatherUseCase.refreshCurrentLocationManual(
+                        timeoutMs = 7000L,
+                        onFetchingWeather = {
+                            setRefreshPhase(RefreshPhase.Fetching, "manualRefresh", refreshCity)
+                        }
+                    )
                     val elapsed = elapsedSince(startTime)
                     if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
 
@@ -654,14 +660,9 @@ class WeatherViewModel @Inject constructor(
                         }
                     }
                 } else {
-                    val isLimited = shouldSkipRefresh(refreshCity)
-                    if (!isLimited) {
-                        refreshLog("manual_refresh_run: ${refreshCity.refreshSummary()}")
-                        runRefreshWithTimeout(refreshCity, silent = false)
-                    } else {
-                        refreshLog("manual_refresh_skip_limited: ${refreshCity.refreshSummary()}")
-                        Log.d(TAG, "refresh(): skip actual refresh due to rate limiting/fresh cache, but show animation")
-                    }
+                    setRefreshPhase(RefreshPhase.Fetching, "manualRefresh", refreshCity)
+                    refreshLog("manual_refresh_run: ${refreshCity.refreshSummary()}")
+                    runRefreshWithTimeout(refreshCity, silent = false)
 
                     val elapsed = elapsedSince(startTime)
                     if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
@@ -750,7 +751,11 @@ class WeatherViewModel @Inject constructor(
         successDelayMs: Long = 300L
     ) {
         if (!tryBeginUiRefresh(source, city)) return
-        setRefreshPhase(RefreshPhase.Refreshing, source, city)
+        if (city == null || city.isCurrentLocation) {
+            setRefreshPhase(RefreshPhase.Locating, source, city)
+        } else {
+            setRefreshPhase(RefreshPhase.Fetching, source, city)
+        }
         try {
             val startTime = android.os.SystemClock.elapsedRealtime()
             refreshLog("perform_refresh_start: source=$source, ${city.refreshSummary()}")
@@ -823,7 +828,12 @@ class WeatherViewModel @Inject constructor(
         val startMs = android.os.SystemClock.elapsedRealtime()
         refreshLog("refresh_current_location_start: silent=$silent, highAccuracy=$highAccuracy")
         transientError.value = null
-        val result = refreshWeatherUseCase.refreshWithLocation(highAccuracy = highAccuracy)
+        val result = refreshWeatherUseCase.refreshWithLocation(
+            highAccuracy = highAccuracy,
+            onFetchingWeather = {
+                setRefreshPhase(RefreshPhase.Fetching, "refreshCurrentLocation")
+            }
+        )
         val success = result is SyncResult.Success
         refreshLog("refresh_current_location_done: success=$success, elapsed=${elapsedSince(startMs)}ms, result=${result::class.simpleName}")
 
