@@ -520,7 +520,7 @@ class WeatherViewModel @Inject constructor(
             }
             if (!tryBeginUiRefresh("refreshCityAfterSwitch", city)) return@launch
             try {
-                setRefreshPhase(RefreshPhase.Refreshing, "refreshCityAfterSwitch", city)
+                setRefreshPhase(if (city.isCurrentLocation) RefreshPhase.Locating else RefreshPhase.Fetching, "refreshCityAfterSwitch", city)
                 val startTime = android.os.SystemClock.elapsedRealtime()
                 val refreshed = runRefreshWithTimeout(city, silent = true)
                 val elapsed = elapsedSince(startTime)

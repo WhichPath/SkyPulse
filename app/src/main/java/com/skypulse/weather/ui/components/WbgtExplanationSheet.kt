@@ -131,6 +131,7 @@ fun WbgtExplanationSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LucideIcon(
                         name = "flag",
+                        contentDescription = currentLevel.name,
                         tint = currentLevel.color,
                         fillColor = currentLevel.color.copy(alpha = 0.85f),
                         size = 18.dp
