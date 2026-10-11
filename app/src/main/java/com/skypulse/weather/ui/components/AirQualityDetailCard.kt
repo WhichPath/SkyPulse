@@ -14,10 +14,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skypulse.weather.model.AirQuality
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
 import com.skypulse.weather.ui.theme.TextTertiary
-
 import com.skypulse.weather.util.AqhiCalculator
 import com.skypulse.weather.util.AqiCalculator
 
@@ -75,6 +79,9 @@ fun AirQualityDetailCard(
 
     val category = airQuality.description?.usa ?: aqiCategory(aqiValue)
 
+    var showAqiSheet by remember { mutableStateOf(false) }
+    var showAqhiSheet by remember { mutableStateOf(false) }
+
     val aqhi = AqhiCalculator.calculate(
         pm25 = airQuality.pm25,
         pm10 = airQuality.pm10,
@@ -112,31 +119,47 @@ fun AirQualityDetailCard(
                 color = TextPrimary
             )
 
-            // ---- 指标行: AQI 与 AQHI 并列展示 ----
+            // ---- 指标行: AQI 固定宽槽位 + AQHI 左对齐紧随其后 ----
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = buildString {
-                        append("AQI ")
-                        append(aqiValue)
-                        if (!category.isNullOrBlank()) {
-                            append(" ")
-                            append(category)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-                if (aqhi != null) {
+                // AQI 固定 140dp 槽位，点击弹出详细解释面板
+                Box(
+                    modifier = Modifier
+                        .width(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showAqiSheet = true }
+                ) {
                     Text(
-                        text = "AQHI ${aqhi.displayValue} ${aqhi.category}",
+                        text = buildString {
+                            append("AQI ")
+                            append(aqiValue)
+                            if (!category.isNullOrBlank()) {
+                                append(" ")
+                                append(category)
+                            }
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
+                }
+
+                // AQHI 紧随在 AQI 槽位右侧，固定间距 16dp，点击弹出详细解释面板
+                if (aqhi != null) {
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showAqhiSheet = true }
+                    ) {
+                        Text(
+                            text = "AQHI ${aqhi.displayValue} ${aqhi.category}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
                 }
             }
 
@@ -160,6 +183,20 @@ fun AirQualityDetailCard(
                 }
             }
         }
+    }
+
+    if (showAqiSheet) {
+        AqiExplanationSheet(
+            currentAqi = aqiValue,
+            onDismiss = { showAqiSheet = false }
+        )
+    }
+
+    if (showAqhiSheet && aqhi != null) {
+        AqhiExplanationSheet(
+            currentAqhi = aqhi,
+            onDismiss = { showAqhiSheet = false }
+        )
     }
 }
 
