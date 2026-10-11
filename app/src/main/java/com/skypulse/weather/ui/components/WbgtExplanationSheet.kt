@@ -95,7 +95,7 @@ fun WbgtExplanationContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(currentLevel.color.copy(alpha = 0.14f))
+                .background(currentLevel.color.copy(alpha = 0.24f))
                 .border(1.dp, currentLevel.color.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

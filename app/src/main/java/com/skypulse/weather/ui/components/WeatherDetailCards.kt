@@ -101,7 +101,7 @@ fun WeatherDetailCards(
             iconName = if (wbgtResult != null) "flag" else "thermometer",
             iconTint = wbgtRiskColor ?: TextSecondary,
             iconFillColor = wbgtRiskColor?.copy(alpha = 0.85f) ?: Color.Unspecified,
-            cardBgColor = wbgtRiskColor?.copy(alpha = 0.12f),
+            cardBgColor = wbgtRiskColor?.copy(alpha = 0.26f),
             onClick = { explanationController.showWbgt(wbgtResult?.wbgt, wbgtResult?.uncertainty) }
         ),
         DetailItem("湿度", humidity, "", iconName = "droplet"),

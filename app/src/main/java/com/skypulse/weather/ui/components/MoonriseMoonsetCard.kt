@@ -225,24 +225,30 @@ private fun getMoonPhaseInfo(rawPhase: String?): MoonPhaseInfo {
     if (rawPhase.isNullOrBlank()) {
         return MoonPhaseInfo("满月", "moon-full")
     }
-    val normalized = rawPhase.trim().lowercase(Locale.US)
+    val clean = rawPhase.trim().lowercase(Locale.US).replace("-", " ").replace("_", " ")
     return when {
-        normalized.contains("new") || normalized == "新月" ->
+        clean.contains("new") || clean.contains("新月") || clean.contains("朔") ->
             MoonPhaseInfo("新月", "moon-new")
-        normalized.contains("waxing crescent") || normalized.contains("娥眉") || normalized.contains("蛾眉") ->
+        (clean.contains("waxing") && clean.contains("crescent")) || clean.contains("娥眉") || clean.contains("蛾眉") || clean.contains("峨眉") ->
             MoonPhaseInfo("峨眉月", "moon-waxing-crescent")
-        normalized.contains("first quarter") || normalized.contains("上弦") ->
+        clean.contains("first quarter") || clean.contains("上弦") ->
             MoonPhaseInfo("上弦月", "moon-first-quarter")
-        normalized.contains("waxing gibbous") || normalized.contains("盈凸") ->
+        (clean.contains("waxing") && clean.contains("gibbous")) || clean.contains("盈凸") ->
             MoonPhaseInfo("盈凸月", "moon-waxing-gibbous")
-        normalized.contains("full") || normalized == "满月" ->
+        clean.contains("full") || clean.contains("满月") || clean.contains("望") ->
             MoonPhaseInfo("满月", "moon-full")
-        normalized.contains("waning gibbous") || normalized.contains("亏凸") ->
+        (clean.contains("waning") && clean.contains("gibbous")) || clean.contains("亏凸") ->
             MoonPhaseInfo("亏凸月", "moon-waning-gibbous")
-        normalized.contains("last quarter") || normalized.contains("third quarter") || normalized.contains("下弦") ->
+        clean.contains("last quarter") || clean.contains("third quarter") || clean.contains("下弦") ->
             MoonPhaseInfo("下弦月", "moon-last-quarter")
-        normalized.contains("waning crescent") || normalized.contains("残月") ->
+        (clean.contains("waning") && clean.contains("crescent")) || clean.contains("残月") ->
             MoonPhaseInfo("残月", "moon-waning-crescent")
+        clean.contains("crescent") ->
+            MoonPhaseInfo("峨眉月", "moon-waxing-crescent")
+        clean.contains("gibbous") ->
+            MoonPhaseInfo("盈凸月", "moon-waxing-gibbous")
+        clean.contains("quarter") ->
+            MoonPhaseInfo("弦月", "moon-first-quarter")
         else -> {
             MoonPhaseInfo(rawPhase, "moon-full")
         }

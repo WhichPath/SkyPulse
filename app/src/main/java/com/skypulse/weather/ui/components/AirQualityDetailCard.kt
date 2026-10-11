@@ -117,16 +117,16 @@ fun AirQualityDetailCard(
                 color = TextPrimary
             )
 
-            // ---- 指标行: AQI 固定宽槽位 + AQHI 左对齐紧随其后 ----
+            // ---- 指标行: AQI 宽槽位 (防换行) + AQHI 左对齐紧随其后 ----
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // AQI 固定 140dp 槽位，点击弹出详细解释面板
+                // AQI 槽位增大至 168dp，避免最大评级组合（如 "AQI 300 重度不健康"）在紧凑屏幕上截断换行
                 Box(
                     modifier = Modifier
-                        .width(140.dp)
+                        .widthIn(min = 168.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { explanationController.showAqi(aqiValue) }
                 ) {
@@ -139,14 +139,16 @@ fun AirQualityDetailCard(
                                 append(category)
                             }
                         },
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                        maxLines = 1,
+                        softWrap = false,
                         color = TextSecondary
                     )
                 }
 
-                // AQHI 紧随在 AQI 槽位右侧，固定间距 16dp，点击弹出详细解释面板
+                // AQHI 紧随在 AQI 槽位右侧，点击弹出详细解释面板
                 if (aqhi != null) {
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -154,7 +156,9 @@ fun AirQualityDetailCard(
                     ) {
                         Text(
                             text = "AQHI ${aqhi.displayValue} ${aqhi.category}",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            maxLines = 1,
+                            softWrap = false,
                             color = TextSecondary
                         )
                     }
@@ -189,10 +193,11 @@ private fun PollutantCell(
     item: PollutantItem,
     modifier: Modifier = Modifier
 ) {
+    // 提升背景对比度（减少透明度/提高 alpha），保证在各种天气背景下均清晰可辨，同时保持毛玻璃质感
     val backgroundColor = if (item.iaqi != null) {
-        aqiColor(item.iaqi).copy(alpha = 0.16f)
+        aqiColor(item.iaqi).copy(alpha = 0.28f)
     } else {
-        Color.White.copy(alpha = 0.08f)
+        Color.White.copy(alpha = 0.16f)
     }
 
     Box(

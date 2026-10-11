@@ -57,8 +57,8 @@ android {
         applicationId = "com.skypulse.weather"
         minSdk = 26
         targetSdk = 35
-        versionCode = 997
-        versionName = "3.5.2"
+        versionCode = 998
+        versionName = "3.5.3"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -163,7 +163,7 @@ dependencies {
     ksp(libs.hilt.work.compiler)
 
     // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
 
     // Room
     implementation(libs.room.runtime)
