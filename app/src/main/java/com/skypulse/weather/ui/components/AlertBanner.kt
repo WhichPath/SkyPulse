@@ -1,4 +1,4 @@
-package com.skypulse.weather.ui.screen
+package com.skypulse.weather.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -19,7 +19,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.skypulse.weather.ui.components.LucideIcon
+import androidx.compose.animation.core.spring
+import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import com.skypulse.weather.ui.theme.TextSecondary
+import com.skypulse.weather.ui.theme.alertLevelColor
 import kotlinx.coroutines.delay
 
 internal data class AlertItem(val title: String, val level: String?)
@@ -111,13 +114,13 @@ internal fun AlertBanner(alerts: List<AlertItem>, onClick: (Int) -> Unit = {}) {
                     targetState = safeAlertIndex,
                     transitionSpec = {
                         slideInVertically(
-                            animationSpec = tween(400, easing = FastOutSlowInEasing)
+                            animationSpec = spring(dampingRatio = 0.86f, stiffness = 420f)
                         ) { height -> height } + fadeIn(
-                            animationSpec = tween(300)
+                            animationSpec = SkyPulseDesignSystem.Motion.springEffects
                         ) togetherWith slideOutVertically(
-                            animationSpec = tween(400, easing = FastOutSlowInEasing)
+                            animationSpec = spring(dampingRatio = 0.90f, stiffness = 460f)
                         ) { height -> -height } + fadeOut(
-                            animationSpec = tween(250)
+                            animationSpec = SkyPulseDesignSystem.Motion.springEffects
                         )
                     },
                     contentKey = { it },

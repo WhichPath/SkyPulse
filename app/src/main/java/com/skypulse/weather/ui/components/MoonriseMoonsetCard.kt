@@ -47,6 +47,7 @@ fun MoonriseMoonsetCard(
     val moonriseTime = todayAstro?.moonrise?.time ?: "--:--"
     val moonsetTime = todayAstro?.moonset?.time ?: "--:--"
     val moonPhase = todayAstro?.moonPhase
+    val phaseInfo = getMoonPhaseInfo(moonPhase)
     val progress = calculateMoonProgress(moonriseTime, moonsetTime)
 
     GlassCard(modifier = modifier) {
@@ -55,20 +56,20 @@ fun MoonriseMoonsetCard(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 14.dp)
         ) {
-            // 顶部栏: 月升标签、居中文相名称、月落标签
+            // 顶部栏: 月升标签 (带向上箭头)、居中文相名称 (中文)、月落标签 (带向下箭头)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 左侧: 月升
+                // 左侧: 月升 (moonrise)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     LucideIcon(
-                        name = "moon",
-                        contentDescription = null,
+                        name = "moonrise",
+                        contentDescription = "月升",
                         tint = TextSecondary,
                         size = 20.dp
                     )
@@ -79,16 +80,14 @@ fun MoonriseMoonsetCard(
                     )
                 }
 
-                // 居中: 月相文字 (如 "盈凸月")
-                if (!moonPhase.isNullOrBlank()) {
-                    Text(
-                        text = moonPhase,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.5.sp),
-                        color = TextSecondary
-                    )
-                }
+                // 居中: 月相文字 (标准中文，如 "峨眉月", "满月", "盈凸月")
+                Text(
+                    text = phaseInfo.chineseName,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.5.sp),
+                    color = TextSecondary
+                )
 
-                // 右侧: 月落
+                // 右侧: 月落 (moonset)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -99,8 +98,8 @@ fun MoonriseMoonsetCard(
                         color = TextSecondary
                     )
                     LucideIcon(
-                        name = "moon",
-                        contentDescription = null,
+                        name = "moonset",
+                        contentDescription = "月落",
                         tint = TextSecondary,
                         size = 20.dp
                     )
@@ -109,7 +108,7 @@ fun MoonriseMoonsetCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 水平进度条与极简月相图标指示器
+            // 水平进度条与随月相形态动态变换的月亮图标指示器
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -117,6 +116,7 @@ fun MoonriseMoonsetCard(
             ) {
                 HorizontalMoonProgress(
                     progress = progress,
+                    moonIcon = phaseInfo.iconName,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(20.dp)
@@ -154,15 +154,18 @@ fun MoonriseMoonsetCard(
 @Composable
 private fun HorizontalMoonProgress(
     progress: Float,
+    moonIcon: String,
     modifier: Modifier = Modifier
 ) {
     val clampedProgress = progress.coerceIn(0f, 1f)
     val context = LocalContext.current
     val density = LocalDensity.current
-    val iconSizePx = remember(density) { with(density) { 18.dp.roundToPx() } }
-    val iconBitmap = remember(context, iconSizePx) {
-        LucideSvgRenderer.renderBitmap(context, "moon", iconSizePx, "#FFFFFF")
+    val iconSizePx = remember(density) { with(density) { 20.dp.roundToPx() } }
+    val iconBitmap = remember(context, moonIcon, iconSizePx) {
+        WeatherSvgRenderer.renderBitmap(context, moonIcon, iconSizePx)
             ?.asImageBitmap()
+            ?: LucideSvgRenderer.renderBitmap(context, "moon", iconSizePx, "#FFFFFF")
+                ?.asImageBitmap()
     }
 
     Canvas(modifier = modifier) {
@@ -172,7 +175,7 @@ private fun HorizontalMoonProgress(
         val barWidth = size.width
         val indicatorX = barWidth * clampedProgress
 
-        val gapRadius = 14.dp.toPx()
+        val gapRadius = 15.dp.toPx()
         val leftLineEnd = (indicatorX - gapRadius).coerceAtLeast(0f)
         val rightLineStart = (indicatorX + gapRadius).coerceAtMost(barWidth)
 
@@ -199,19 +202,49 @@ private fun HorizontalMoonProgress(
         // 外层微光光晕 (极简发光)
         drawCircle(
             color = Color.White.copy(alpha = 0.15f),
-            radius = iconSizePx * 0.7f,
+            radius = iconSizePx * 0.65f,
             center = Offset(indicatorX, barY)
         )
 
-        // 绘制矢量月亮图标
+        // 绘制矢量月相图标 (保留 Meteocons 月相原生细腻光泽与形态)
         if (iconBitmap != null) {
             val iconOffset = Offset(indicatorX - iconSizePx / 2, barY - iconSizePx / 2)
             translate(left = iconOffset.x, top = iconOffset.y) {
-                drawImage(
-                    image = iconBitmap,
-                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White)
-                )
+                drawImage(image = iconBitmap)
             }
+        }
+    }
+}
+
+data class MoonPhaseInfo(
+    val chineseName: String,
+    val iconName: String
+)
+
+private fun getMoonPhaseInfo(rawPhase: String?): MoonPhaseInfo {
+    if (rawPhase.isNullOrBlank()) {
+        return MoonPhaseInfo("满月", "moon-full")
+    }
+    val normalized = rawPhase.trim().lowercase(Locale.US)
+    return when {
+        normalized.contains("new") || normalized == "新月" ->
+            MoonPhaseInfo("新月", "moon-new")
+        normalized.contains("waxing crescent") || normalized.contains("娥眉") || normalized.contains("蛾眉") ->
+            MoonPhaseInfo("峨眉月", "moon-waxing-crescent")
+        normalized.contains("first quarter") || normalized.contains("上弦") ->
+            MoonPhaseInfo("上弦月", "moon-first-quarter")
+        normalized.contains("waxing gibbous") || normalized.contains("盈凸") ->
+            MoonPhaseInfo("盈凸月", "moon-waxing-gibbous")
+        normalized.contains("full") || normalized == "满月" ->
+            MoonPhaseInfo("满月", "moon-full")
+        normalized.contains("waning gibbous") || normalized.contains("亏凸") ->
+            MoonPhaseInfo("亏凸月", "moon-waning-gibbous")
+        normalized.contains("last quarter") || normalized.contains("third quarter") || normalized.contains("下弦") ->
+            MoonPhaseInfo("下弦月", "moon-last-quarter")
+        normalized.contains("waning crescent") || normalized.contains("残月") ->
+            MoonPhaseInfo("残月", "moon-waning-crescent")
+        else -> {
+            MoonPhaseInfo(rawPhase, "moon-full")
         }
     }
 }

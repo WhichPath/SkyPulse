@@ -67,114 +67,123 @@ val WBGT_LEVELS = listOf(
 )
 
 /**
- * 湿球黑球温度 (WBGT) 详情解释浮动居中弹窗
+ * 湿球黑球温度 (WBGT) 详情内容组件
  */
+@Composable
+fun WbgtExplanationContent(
+    currentWbgt: Double?,
+    currentUncertainty: Double?
+) {
+    // ---- 顶部标题 ----
+    Text(
+        text = "湿球黑球温度 (WBGT)",
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = TextPrimary
+    )
+    Spacer(modifier = Modifier.height(3.dp))
+    Text(
+        text = "依据 ACSM (美国运动医学会) 与日本环境省 / JSPO 运动热安全指引",
+        style = MaterialTheme.typography.bodySmall,
+        color = TextTertiary
+    )
+
+    // ---- 当前计算值概览卡片 (若有) ----
+    if (currentWbgt != null) {
+        Spacer(modifier = Modifier.height(14.dp))
+        val currentLevel = getWbgtLevel(currentWbgt)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(currentLevel.color.copy(alpha = 0.14f))
+                .border(1.dp, currentLevel.color.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "%.1f".format(currentWbgt),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary
+                )
+                if (currentUncertainty != null) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "±${"%.1f".format(currentUncertainty)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = "℃",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = TextPrimary,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LucideIcon(
+                    name = "flag",
+                    contentDescription = currentLevel.name,
+                    tint = currentLevel.color,
+                    fillColor = currentLevel.color.copy(alpha = 0.85f),
+                    size = 18.dp
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = currentLevel.name,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = currentLevel.color
+                )
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    // ---- 各等级运动指导列表 ----
+    Text(
+        text = "各等级运动安全与防护指引",
+        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        color = TextSecondary
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+
+    WBGT_LEVELS.forEach { level ->
+        val isCurrent = isWbgtCurrentLevel(currentWbgt, level)
+        LevelItemRow(
+            label = "${level.band}   ${level.name}",
+            description = level.description,
+            color = level.color,
+            isHighlighted = isCurrent
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // ---- 底部注记 ----
+    Text(
+        text = "注：人体热耐受受个体差异、热习服程度（是否适应高温）、衣着透气度与饮水状况显著影响。在 WBGT 达到 28 ℃ 以上时，请务必严加防范劳力性热射病，切勿盲目进行高强度耐力活动。",
+        style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
+        color = TextDisabled
+    )
+}
+
 @Composable
 fun WbgtExplanationSheet(
     currentWbgt: Double?,
     currentUncertainty: Double?,
     onDismiss: () -> Unit
 ) {
-    ExplanationDialog(onDismiss = onDismiss) {
-        // ---- 顶部标题 ----
-        Text(
-            text = "湿球黑球温度 (WBGT)",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = "依据 ACSM (美国运动医学会) 与日本环境省 / JSPO 运动热安全指引",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextTertiary
-        )
-
-        // ---- 当前计算值概览卡片 (若有) ----
-        if (currentWbgt != null) {
-            Spacer(modifier = Modifier.height(14.dp))
-            val currentLevel = getWbgtLevel(currentWbgt)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(currentLevel.color.copy(alpha = 0.14f))
-                    .border(1.dp, currentLevel.color.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = "%.1f".format(currentWbgt),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = TextPrimary
-                    )
-                    if (currentUncertainty != null) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "±${"%.1f".format(currentUncertainty)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "℃",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = TextPrimary,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    LucideIcon(
-                        name = "flag",
-                        contentDescription = currentLevel.name,
-                        tint = currentLevel.color,
-                        fillColor = currentLevel.color.copy(alpha = 0.85f),
-                        size = 18.dp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = currentLevel.name,
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = currentLevel.color
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ---- 各等级运动指导列表 ----
-        Text(
-            text = "各等级运动安全与防护指引",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        WBGT_LEVELS.forEach { level ->
-            val isCurrent = isWbgtCurrentLevel(currentWbgt, level)
-            LevelItemRow(
-                label = "${level.band}   ${level.name}",
-                description = level.description,
-                color = level.color,
-                isHighlighted = isCurrent
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ---- 底部注记 ----
-        Text(
-            text = "注：人体热耐受受个体差异、热习服程度（是否适应高温）、衣着透气度与饮水状况显著影响。在 WBGT 达到 28 ℃ 以上时，请务必严加防范劳力性热射病，切勿盲目进行高强度耐力活动。",
-            style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
-            color = TextDisabled
-        )
-    }
+    ExplanationModalOverlay(
+        active = ActiveExplanation.Wbgt(currentWbgt, currentUncertainty),
+        onDismiss = onDismiss
+    )
 }
 
 private fun getWbgtLevel(wbgt: Double): WbgtLevelDesc {

@@ -37,7 +37,7 @@ fun WeatherDetailCards(
     location: List<Double>? = null,
     modifier: Modifier = Modifier
 ) {
-    var showWbgtSheet by remember { mutableStateOf(false) }
+    val explanationController = LocalExplanationController.current
 
     val wbgtResult = remember(realtime, location) {
         WbgtCalculator.calculate(
@@ -102,7 +102,7 @@ fun WeatherDetailCards(
             iconTint = wbgtRiskColor ?: TextSecondary,
             iconFillColor = wbgtRiskColor?.copy(alpha = 0.85f) ?: Color.Unspecified,
             cardBgColor = wbgtRiskColor?.copy(alpha = 0.12f),
-            onClick = { showWbgtSheet = true }
+            onClick = { explanationController.showWbgt(wbgtResult?.wbgt, wbgtResult?.uncertainty) }
         ),
         DetailItem("湿度", humidity, "", iconName = "droplet"),
         DetailItem(windDir, windLevelNum, windUnit, iconName = "wind"),
@@ -154,14 +154,6 @@ fun WeatherDetailCards(
                 )
             }
         }
-    }
-
-    if (showWbgtSheet) {
-        WbgtExplanationSheet(
-            currentWbgt = wbgtResult?.wbgt,
-            currentUncertainty = wbgtResult?.uncertainty,
-            onDismiss = { showWbgtSheet = false }
-        )
     }
 }
 

@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.skypulse.weather.BuildConfig
-import com.skypulse.weather.data.ActivationResult
+import com.skypulse.weather.repository.ActivationResult
 import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.data.WeatherSettings
 import com.skypulse.weather.ui.components.MembershipDialog

@@ -14,7 +14,7 @@ import com.skypulse.weather.ui.components.WeatherSvgRenderer
 import com.skypulse.weather.util.FileLogger
 import androidx.compose.ui.graphics.toArgb
 import com.skypulse.weather.util.WeatherUtils
-import com.skypulse.weather.data.MembershipRepository
+import com.skypulse.weather.repository.MembershipRepository
 import java.text.SimpleDateFormat
 import java.util.*
 

@@ -78,9 +78,7 @@ fun AirQualityDetailCard(
     if (aqiValue == null) return
 
     val category = airQuality.description?.usa ?: aqiCategory(aqiValue)
-
-    var showAqiSheet by remember { mutableStateOf(false) }
-    var showAqhiSheet by remember { mutableStateOf(false) }
+    val explanationController = LocalExplanationController.current
 
     val aqhi = AqhiCalculator.calculate(
         pm25 = airQuality.pm25,
@@ -130,7 +128,7 @@ fun AirQualityDetailCard(
                     modifier = Modifier
                         .width(140.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { showAqiSheet = true }
+                        .clickable { explanationController.showAqi(aqiValue) }
                 ) {
                     Text(
                         text = buildString {
@@ -152,7 +150,7 @@ fun AirQualityDetailCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { showAqhiSheet = true }
+                            .clickable { explanationController.showAqhi(aqhi) }
                     ) {
                         Text(
                             text = "AQHI ${aqhi.displayValue} ${aqhi.category}",
@@ -183,20 +181,6 @@ fun AirQualityDetailCard(
                 }
             }
         }
-    }
-
-    if (showAqiSheet) {
-        AqiExplanationSheet(
-            currentAqi = aqiValue,
-            onDismiss = { showAqiSheet = false }
-        )
-    }
-
-    if (showAqhiSheet && aqhi != null) {
-        AqhiExplanationSheet(
-            currentAqhi = aqhi,
-            onDismiss = { showAqhiSheet = false }
-        )
     }
 }
 

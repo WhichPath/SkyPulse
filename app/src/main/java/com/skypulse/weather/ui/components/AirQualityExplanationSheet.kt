@@ -1,11 +1,13 @@
 package com.skypulse.weather.ui.components
 
-import android.app.Activity
-import android.content.ContextWrapper
-import android.os.Build
-import android.view.View
-import android.view.Window
-import android.view.WindowManager
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,21 +19,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
 import com.skypulse.weather.ui.theme.TextDisabled
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
@@ -132,67 +129,81 @@ private val AQHI_LEVELS = listOf(
     )
 )
 
+sealed interface ActiveExplanation {
+    data class Aqi(val aqi: Int?) : ActiveExplanation
+    data class Aqhi(val aqhi: AqhiCalculator.AqhiResult?) : ActiveExplanation
+    data class Wbgt(val wbgt: Double?, val uncertainty: Double?) : ActiveExplanation
+}
+
+interface ExplanationController {
+    fun showAqi(aqi: Int?)
+    fun showAqhi(aqhi: AqhiCalculator.AqhiResult?)
+    fun showWbgt(wbgt: Double?, uncertainty: Double?)
+    fun dismiss()
+}
+
+val LocalExplanationController = staticCompositionLocalOf<ExplanationController> {
+    object : ExplanationController {
+        override fun showAqi(aqi: Int?) {}
+        override fun showAqhi(aqhi: AqhiCalculator.AqhiResult?) {}
+        override fun showWbgt(wbgt: Double?, uncertainty: Double?) {}
+        override fun dismiss() {}
+    }
+}
+
 /**
- * 统一样式的浮动玻璃质感详情弹窗
- * - 左右对称、上下对称留白居中悬浮（左右间距 26dp，上下间距 56dp，严格居中对齐）
- * - 磨砂半透明深色毛玻璃材质，柔和微高光边框，通透透出底层背景
- * - Android 12+ 开启窗口背景高斯模糊 (FLAG_BLUR_BEHIND)，使主屏背景文字与内容虚化聚焦
- * - 点击非面板区域（留白处）直接退出，无冗余关闭按钮
+ * 统一样式的浮动玻璃质感详情弹窗 Overlay
+ * - 位于同一 Compose 渲染树，背景由父容器应用真正的硬件高斯模糊 (Modifier.blur)
+ * - 左右对称 (26dp)、上下在安全显示区域内对称居中 (36dp)，彻底杜绝贴底问题
+ * - 采用 70%~80% 半透明深色毛玻璃材质，柔和微高光边框，通透透出底层模糊效果
+ * - 点击遮罩留白处直接退出，支持原生 Back 返回手势
  */
 @Composable
-internal fun ExplanationDialog(
-    onDismiss: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
+fun ExplanationModalOverlay(
+    active: ActiveExplanation?,
+    onDismiss: () -> Unit
 ) {
-    val view = LocalView.current
-    val density = LocalDensity.current
-
-    DisposableEffect(view) {
-        val window = findDialogWindow(view)
-        if (window != null) {
-            // 降低暗度遮罩，使背景高斯模糊更通透纯净
-            window.setDimAmount(0.32f)
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-            // Android 12+ (API 31+) 开启系统级窗口背景高斯模糊（虚化主页文字与背景）
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                window.attributes = window.attributes.apply {
-                    blurBehindRadius = with(density) { 24.dp.roundToPx() }
-                }
-            }
-        }
-        onDispose { }
+    if (active != null) {
+        BackHandler { onDismiss() }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    AnimatedVisibility(
+        visible = active != null,
+        enter = fadeIn(SkyPulseDesignSystem.Motion.springEffects) +
+            scaleIn(
+                initialScale = 0.90f,
+                animationSpec = SkyPulseDesignSystem.Motion.springModalEnter
+            ),
+        exit = fadeOut(SkyPulseDesignSystem.Motion.springEffects) +
+            scaleOut(
+                targetScale = 0.95f,
+                animationSpec = SkyPulseDesignSystem.Motion.springModalExit
+            )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.35f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onDismiss
                 )
-                .padding(horizontal = 26.dp, vertical = 56.dp),
+                .padding(
+                    horizontal = SkyPulseDesignSystem.Spacing.modalHorizontalMargin,
+                    vertical = SkyPulseDesignSystem.Spacing.modalVerticalMargin
+                ),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xBF181E2B),
-                                Color(0xA6121622)
+                                Color(0xB81A202C),
+                                Color(0x99121622)
                             )
                         )
                     )
@@ -200,11 +211,11 @@ internal fun ExplanationDialog(
                         width = 1.dp,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.22f),
+                                Color.White.copy(alpha = 0.30f),
                                 Color.White.copy(alpha = 0.08f)
                             )
                         ),
-                        shape = RoundedCornerShape(24.dp)
+                        shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -212,144 +223,133 @@ internal fun ExplanationDialog(
                         onClick = {} // 阻止内部点击触发外部 dismiss
                     )
                     .padding(horizontal = 20.dp, vertical = 22.dp)
-                    .verticalScroll(rememberScrollState()),
-                content = content
-            )
+                    .verticalScroll(rememberScrollState())
+            ) {
+                when (active) {
+                    is ActiveExplanation.Aqi -> AqiExplanationContent(active.aqi)
+                    is ActiveExplanation.Aqhi -> AqhiExplanationContent(active.aqhi)
+                    is ActiveExplanation.Wbgt -> WbgtExplanationContent(active.wbgt, active.uncertainty)
+                    null -> {}
+                }
+            }
         }
     }
-}
-
-private fun findDialogWindow(view: View): Window? {
-    var current: Any? = view
-    while (current is View) {
-        val parent = current.parent
-        if (parent is DialogWindowProvider) {
-            return parent.window
-        }
-        current = parent
-    }
-    var context = view.context
-    while (context is ContextWrapper) {
-        if (context is Activity) {
-            return context.window
-        }
-        context = context.baseContext
-    }
-    return null
 }
 
 /**
- * 美国 EPA AQI 指数详情解释浮动居中弹窗
+ * 美国 EPA AQI 指数详情内容组件
  */
+@Composable
+fun AqiExplanationContent(currentAqi: Int?) {
+    Text(
+        text = "空气质量指数 (AQI)",
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = TextPrimary
+    )
+    Spacer(modifier = Modifier.height(3.dp))
+    Text(
+        text = "依据美国环保署 (US EPA 40 CFR Part 58) 官方技术规范计算",
+        style = MaterialTheme.typography.bodySmall,
+        color = TextTertiary
+    )
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Text(
+        text = "各等级健康标准与防护建议",
+        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        color = TextSecondary
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+
+    AQI_LEVELS.forEach { level ->
+        val isCurrent = isAqiCurrentLevel(currentAqi, level.range)
+        LevelItemRow(
+            label = "${level.range}   ${level.name}",
+            description = level.description,
+            color = level.color,
+            isHighlighted = isCurrent
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = "注：美国 EPA 官方规范中，颗粒物（PM2.5/PM10）基准要求为 24 小时平均，臭氧（O3）为 8 小时平均。为向公众提供即时、灵敏的环境质量反馈，本应用实况基于当前实时 1 小时监测浓度进行即时分段插值计算。",
+        style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
+        color = TextDisabled
+    )
+}
+
+/**
+ * 香港 EPD AQHI 指数详情内容组件
+ */
+@Composable
+fun AqhiExplanationContent(currentAqhi: AqhiCalculator.AqhiResult?) {
+    Text(
+        text = "空气质素健康指数 (AQHI)",
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = TextPrimary
+    )
+    Spacer(modifier = Modifier.height(3.dp))
+    Text(
+        text = "依据香港环境保护署 (EPD) 官方健康风险评价算法计算",
+        style = MaterialTheme.typography.bodySmall,
+        color = TextTertiary
+    )
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Text(
+        text = "各级别健康风险与公众指引",
+        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        color = TextSecondary
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+
+    AQHI_LEVELS.forEach { level ->
+        val isCurrent = isAqhiCurrentLevel(currentAqhi, level.band)
+        LevelItemRow(
+            label = "${level.band}   ${level.name}",
+            description = level.description,
+            color = level.color,
+            isHighlighted = isCurrent
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = "注：香港环境保护署官方规范中，各污染物浓度基准为 3 小时移动平均值。本应用实况基于当前实时 1 小时监测浓度计算即时超额健康风险增幅（%AR），以便更灵敏、迅速地捕捉并预警突发短时污染。",
+        style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
+        color = TextDisabled
+    )
+}
+
 @Composable
 fun AqiExplanationSheet(
     currentAqi: Int?,
     onDismiss: () -> Unit
 ) {
-    ExplanationDialog(onDismiss = onDismiss) {
-        // ---- 顶部标题（无关闭按钮，点击非面板留白区域退出） ----
-        Text(
-            text = "空气质量指数 (AQI)",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = "依据美国环保署 (US EPA 40 CFR Part 58) 官方技术规范计算",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextTertiary
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ---- 等级列表 (当前等级半透明高亮，不显示多余文本) ----
-        Text(
-            text = "各等级健康标准与防护建议",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        AQI_LEVELS.forEach { level ->
-            val isCurrent = isAqiCurrentLevel(currentAqi, level.range)
-            LevelItemRow(
-                label = "${level.range}   ${level.name}",
-                description = level.description,
-                color = level.color,
-                isHighlighted = isCurrent
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ---- 底部注记 ----
-        Text(
-            text = "注：美国 EPA 官方规范中，颗粒物（PM2.5/PM10）基准要求为 24 小时平均，臭氧（O3）为 8 小时平均。为向公众提供即时、灵敏的环境质量反馈，本应用实况基于当前实时 1 小时监测浓度进行即时分段插值计算。",
-            style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
-            color = TextDisabled
-        )
-    }
+    ExplanationModalOverlay(
+        active = ActiveExplanation.Aqi(currentAqi),
+        onDismiss = onDismiss
+    )
 }
 
-/**
- * 香港 EPD AQHI 指数详情解释浮动居中弹窗
- */
 @Composable
 fun AqhiExplanationSheet(
     currentAqhi: AqhiCalculator.AqhiResult?,
     onDismiss: () -> Unit
 ) {
-    ExplanationDialog(onDismiss = onDismiss) {
-        // ---- 顶部标题 ----
-        Text(
-            text = "空气质素健康指数 (AQHI)",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = "依据香港环境保护署 (EPD) 官方健康风险评价算法计算",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextTertiary
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ---- 等级列表 (当前等级半透明高亮，不显示多余文本) ----
-        Text(
-            text = "各级别健康风险与公众指引",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        AQHI_LEVELS.forEach { level ->
-            val isCurrent = isAqhiCurrentLevel(currentAqhi, level.band)
-            LevelItemRow(
-                label = "${level.band}   ${level.name}",
-                description = level.description,
-                color = level.color,
-                isHighlighted = isCurrent
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ---- 底部注记 ----
-        Text(
-            text = "注：香港环境保护署官方规范中，各污染物浓度基准为 3 小时移动平均值。本应用实况基于当前实时 1 小时监测浓度计算即时超额健康风险增幅（%AR），以便更灵敏、迅速地捕捉并预警突发短时污染。",
-            style = MaterialTheme.typography.labelSmall.copy(lineHeight = 16.sp),
-            color = TextDisabled
-        )
-    }
+    ExplanationModalOverlay(
+        active = ActiveExplanation.Aqhi(currentAqhi),
+        onDismiss = onDismiss
+    )
 }
 
-/**
- * 等级描述项行组件
- * isHighlighted 为 true 时，背景呈现对应等级颜色的半透明高亮模块，未高亮时背景全透明且无边框视觉。
- */
 @Composable
 internal fun LevelItemRow(
     label: String,

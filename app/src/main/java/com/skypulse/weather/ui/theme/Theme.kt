@@ -47,6 +47,14 @@ fun SetLightStatusBarEffect(lightStatusBar: Boolean) {
     }
 }
 
+val SkyPulseShapes = androidx.compose.material3.Shapes(
+    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.extraSmall),
+    small = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.small),
+    medium = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.medium),
+    large = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.large),
+    extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
+)
+
 @Composable
 fun SkyPulseTheme(
     content: @Composable () -> Unit
@@ -67,6 +75,7 @@ fun SkyPulseTheme(
     MaterialTheme(
         colorScheme = DarkColorScheme,
         typography = Typography,
+        shapes = SkyPulseShapes,
         content = content
     )
 }

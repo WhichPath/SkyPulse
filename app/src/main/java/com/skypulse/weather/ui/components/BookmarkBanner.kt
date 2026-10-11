@@ -1,4 +1,4 @@
-package com.skypulse.weather.ui.screen
+package com.skypulse.weather.ui.components
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape

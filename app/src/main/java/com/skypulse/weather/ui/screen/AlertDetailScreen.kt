@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.skypulse.weather.model.AlertContent
 import com.skypulse.weather.model.sortedByPublishTimeDescending
 import com.skypulse.weather.ui.theme.LocalSecondaryPageTheme
+import com.skypulse.weather.ui.theme.alertLevelColor
 
 
 @Composable

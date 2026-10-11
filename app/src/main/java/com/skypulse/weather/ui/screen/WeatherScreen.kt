@@ -6,6 +6,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -50,6 +52,7 @@ import com.skypulse.weather.data.WeatherSettings
 import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.domain.CitySelectionPolicy
 import com.skypulse.weather.model.sortedByPublishTimeDescending
+import com.skypulse.weather.util.AqhiCalculator
 import com.skypulse.weather.util.WeatherUtils
 import com.skypulse.weather.util.skyGradientColorStops
 import com.skypulse.weather.ui.components.*
@@ -269,14 +272,48 @@ fun WeatherScreen(
                         deviceId = settingsViewModel.getDeviceId()
                     )
                 }
-                WeatherBackground(skycon = skycon, daily = daily, wind = wind) {
+
+                var activeExplanation by remember { mutableStateOf<ActiveExplanation?>(null) }
+                val explanationController = remember {
+                    object : ExplanationController {
+                        override fun showAqi(aqi: Int?) {
+                            activeExplanation = ActiveExplanation.Aqi(aqi)
+                        }
+                        override fun showAqhi(aqhi: AqhiCalculator.AqhiResult?) {
+                            activeExplanation = ActiveExplanation.Aqhi(aqhi)
+                        }
+                        override fun showWbgt(wbgt: Double?, uncertainty: Double?) {
+                            activeExplanation = ActiveExplanation.Wbgt(wbgt, uncertainty)
+                        }
+                        override fun dismiss() {
+                            activeExplanation = null
+                        }
+                    }
+                }
+
+                val blurRadius by animateDpAsState(
+                    targetValue = if (activeExplanation != null) 20.dp else 0.dp,
+                    animationSpec = SkyPulseDesignSystem.Motion.springEffectsDp,
+                    label = "explanation_blur"
+                )
+
+                CompositionLocalProvider(
+                    LocalExplanationController provides explanationController
+                ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        when (val state = uiState) {
-                            is WeatherUiState.Loading -> {
-                                LoadingShimmer(
-                                    modifier = Modifier.fillMaxSize().statusBarsPadding()
-                                )
-                            }
+                        WeatherBackground(
+                            skycon = skycon,
+                            daily = daily,
+                            wind = wind,
+                            modifier = if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                when (val state = uiState) {
+                                    is WeatherUiState.Loading -> {
+                                        LoadingShimmer(
+                                            modifier = Modifier.fillMaxSize().statusBarsPadding()
+                                        )
+                                    }
                             is WeatherUiState.Success -> {
                                 val pagerState = rememberPagerState(
                                     initialPage = currentCityIndex,
@@ -449,6 +486,12 @@ fun WeatherScreen(
                                 }
                             }
                         }
+
+                        // 浮动毛玻璃详情面板 Overlay (同层渲染，底层完美硬件高斯模糊)
+                        ExplanationModalOverlay(
+                            active = activeExplanation,
+                            onDismiss = { activeExplanation = null }
+                        )
                     }
                 }
             }
@@ -529,18 +572,18 @@ private fun dampedPullOffsetPx(
 
 private fun AnimatedContentTransitionScope<AppScreen>.skyPulseScreenTransition(): ContentTransform {
     // 台风路径是持续重绘的 WebView 全屏地图：过渡动画中的缩放/位移会强制 WebView
-    // 走分层合成，且动画期间页面仍在重绘，极易掉帧。这里仅用淡入淡出，接近浏览器体验。
+    // 走分层合成，且动画期间页面仍在重绘，极易掉帧。这里仅用物理弹簧淡入淡出，接近浏览器体验。
     if (initialState == AppScreen.RadarMap || targetState == AppScreen.RadarMap) {
-        return (fadeIn(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)) togetherWith
-            fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))) using
+        return (fadeIn(animationSpec = SkyPulseDesignSystem.Motion.springEffects) togetherWith
+            fadeOut(animationSpec = SkyPulseDesignSystem.Motion.springEffects)) using
             SizeTransform(clip = false)
     }
     val direction = if (targetState.screenOrder >= initialState.screenOrder) 1 else -1
-    val enterSpec = tween<IntOffset>(durationMillis = 300, easing = FastOutSlowInEasing)
-    val exitSpec = tween<IntOffset>(durationMillis = 260, easing = FastOutSlowInEasing)
-    val fadeInSpec = tween<Float>(durationMillis = 220, delayMillis = 40, easing = FastOutSlowInEasing)
-    val fadeOutSpec = tween<Float>(durationMillis = 140, easing = FastOutSlowInEasing)
-    val scaleSpec = tween<Float>(durationMillis = 300, easing = FastOutSlowInEasing)
+    val enterSpec = SkyPulseDesignSystem.Motion.springSpatialIntOffset
+    val exitSpec = SkyPulseDesignSystem.Motion.springSpatialExit
+    val fadeInSpec = SkyPulseDesignSystem.Motion.springEffects
+    val fadeOutSpec = SkyPulseDesignSystem.Motion.springEffects
+    val scaleSpec = SkyPulseDesignSystem.Motion.springSpatialExpressive
 
     return (slideInHorizontally(animationSpec = enterSpec) { width -> direction * width / 8 } +
         fadeIn(animationSpec = fadeInSpec) +

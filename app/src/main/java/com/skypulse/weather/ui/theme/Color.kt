@@ -173,3 +173,24 @@ val IosSwitchOff = Color(0xFFE5E5EA)
 
 // ============ Accent Colors ============
 val PrecipitationBlue = Color(0xFF29B6F6)
+
+// ============ Alert Level Color Mapping ============
+fun alertLevelColor(
+    level: String?,
+    title: String? = null,
+    fallback: Color = AlertYellow,
+    whiteAlert: Color = Color.Black
+): Color {
+    val signal = listOfNotNull(level, title)
+        .joinToString(separator = " ")
+        .lowercase()
+
+    return when {
+        signal.contains("红") || signal.contains("red") -> AlertRed
+        signal.contains("橙") || signal.contains("orange") -> AlertOrange
+        signal.contains("黄") || signal.contains("yellow") -> AlertYellow
+        signal.contains("蓝") || signal.contains("blue") -> AlertBlue
+        signal.contains("白") || signal.contains("white") -> whiteAlert
+        else -> fallback
+    }
+}
