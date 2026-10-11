@@ -69,4 +69,25 @@ class AqiCalculatorTest {
         assertTrue(result!!.aqi in 101..150)
         assertEquals("O₃", result.primaryPollutant)
     }
+
+    @Test
+    fun `calculate individual sub-indices correctly populates map and helpers`() {
+        val result = AqiCalculator.calculate(
+            pm25 = 15.0,
+            pm10 = 50.0,
+            o3 = 40.0
+        )
+        assertNotNull(result)
+        assertEquals(3, result!!.individualAqi.size)
+        assertTrue(result.individualAqi.containsKey("PM2.5"))
+        assertTrue(result.individualAqi.containsKey("PM10"))
+        assertTrue(result.individualAqi.containsKey("O₃"))
+
+        val pm25Aqi = AqiCalculator.calculatePm25Aqi(15.0)
+        val pm10Aqi = AqiCalculator.calculatePm10Aqi(50.0)
+        assertNotNull(pm25Aqi)
+        assertNotNull(pm10Aqi)
+        assertEquals(pm25Aqi, result.individualAqi["PM2.5"])
+        assertEquals(pm10Aqi, result.individualAqi["PM10"])
+    }
 }

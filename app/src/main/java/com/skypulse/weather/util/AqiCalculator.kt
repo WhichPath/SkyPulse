@@ -16,7 +16,8 @@ object AqiCalculator {
     data class AqiResult(
         val aqi: Int,
         val category: String,
-        val primaryPollutant: String?
+        val primaryPollutant: String?,
+        val individualAqi: Map<String, Int> = emptyMap()
     )
 
     private data class Breakpoint(
@@ -169,8 +170,49 @@ object AqiCalculator {
         return AqiResult(
             aqi = maxAqi,
             category = getCategory(maxAqi),
-            primaryPollutant = primary
+            primaryPollutant = primary,
+            individualAqi = subIndices.toMap()
         )
+    }
+
+    fun calculatePm25Aqi(pm25: Double?): Int? {
+        if (pm25 == null) return null
+        val truncated = kotlin.math.floor(pm25 * 10) / 10.0
+        return computeSubIndex(truncated, PM25_BREAKPOINTS)
+    }
+
+    fun calculatePm10Aqi(pm10: Double?): Int? {
+        if (pm10 == null) return null
+        val truncated = kotlin.math.floor(pm10)
+        return computeSubIndex(truncated, PM10_BREAKPOINTS)
+    }
+
+    fun calculateO3Aqi(o3: Double?): Int? {
+        if (o3 == null) return null
+        val ppb = when {
+            o3 > 1.0 -> kotlin.math.floor(o3 / 1.963)
+            o3 > 0.0 -> kotlin.math.floor(o3 * 1000)
+            else -> 0.0
+        }
+        return computeSubIndex(ppb, O3_BREAKPOINTS)
+    }
+
+    fun calculateCoAqi(co: Double?): Int? {
+        if (co == null) return null
+        val ppm = kotlin.math.floor((co * 0.873) * 10) / 10.0
+        return computeSubIndex(ppm, CO_BREAKPOINTS)
+    }
+
+    fun calculateSo2Aqi(so2: Double?): Int? {
+        if (so2 == null) return null
+        val ppb = kotlin.math.floor(so2 * 0.382)
+        return computeSubIndex(ppb, SO2_BREAKPOINTS)
+    }
+
+    fun calculateNo2Aqi(no2: Double?): Int? {
+        if (no2 == null) return null
+        val ppb = kotlin.math.floor(no2 * 0.531)
+        return computeSubIndex(ppb, NO2_BREAKPOINTS)
     }
 
     fun getCategory(aqi: Int): String = when {

@@ -18,6 +18,9 @@ import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
 import com.skypulse.weather.ui.theme.TextTertiary
 
+import com.skypulse.weather.util.AqhiCalculator
+import com.skypulse.weather.util.AqiCalculator
+
 // ============ AQI 色阶 (与 HourlyForecast 保持一致) ============
 private val AqiColorExcellent = Color(0xFF43A047)  // 优 ≤50
 private val AqiColorGood = Color(0xFFFFD54F)        // 良 51-100
@@ -48,7 +51,8 @@ private fun aqiCategory(aqi: Int): String = when {
 private data class PollutantItem(
     val label: String,
     val value: Double?,
-    val unit: String
+    val unit: String,
+    val iaqi: Int? = null
 )
 
 private fun formatPollutantValue(value: Double?): String {
@@ -70,16 +74,29 @@ fun AirQualityDetailCard(
     if (aqiValue == null) return
 
     val category = airQuality.description?.usa ?: aqiCategory(aqiValue)
-    // "优"(Good)不显示等级
-    val showCategory = aqiValue > 50 && category != null
+
+    val aqhi = AqhiCalculator.calculate(
+        pm25 = airQuality.pm25,
+        pm10 = airQuality.pm10,
+        o3 = airQuality.o3,
+        no2 = airQuality.no2,
+        so2 = airQuality.so2
+    )
+
+    val pm25Iaqi = AqiCalculator.calculatePm25Aqi(airQuality.pm25)
+    val pm10Iaqi = AqiCalculator.calculatePm10Aqi(airQuality.pm10)
+    val o3Iaqi = AqiCalculator.calculateO3Aqi(airQuality.o3)
+    val so2Iaqi = AqiCalculator.calculateSo2Aqi(airQuality.so2)
+    val no2Iaqi = AqiCalculator.calculateNo2Aqi(airQuality.no2)
+    val coIaqi = AqiCalculator.calculateCoAqi(airQuality.co)
 
     val pollutants = listOf(
-        PollutantItem("PM2.5", airQuality.pm25, "μg/m³"),
-        PollutantItem("PM10", airQuality.pm10, "μg/m³"),
-        PollutantItem("O₃", airQuality.o3, "ppb"),
-        PollutantItem("SO₂", airQuality.so2, "ppb"),
-        PollutantItem("NO₂", airQuality.no2, "ppb"),
-        PollutantItem("CO", airQuality.co, "ppm")
+        PollutantItem("PM2.5", airQuality.pm25, "μg/m³", pm25Iaqi),
+        PollutantItem("PM10", airQuality.pm10, "μg/m³", pm10Iaqi),
+        PollutantItem("O₃", airQuality.o3, "ppb", o3Iaqi),
+        PollutantItem("SO₂", airQuality.so2, "ppb", so2Iaqi),
+        PollutantItem("NO₂", airQuality.no2, "ppb", no2Iaqi),
+        PollutantItem("CO", airQuality.co, "ppm", coIaqi)
     )
 
     GlassCard(modifier = modifier) {
@@ -88,42 +105,39 @@ fun AirQualityDetailCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // ---- 标题行: "空气质量" + AQI 数值( + 等级) ----
+            // ---- 标题行: "空气质量" ----
+            Text(
+                text = "空气质量",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                color = TextPrimary
+            )
+
+            // ---- 指标行: AQI 与 AQHI 并列展示 ----
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "空气质量",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                    color = TextPrimary
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "$aqiValue",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = TextPrimary
-                    )
-                    if (showCategory) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = category,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
-
-            // ---- 首要污染物 ----
-            if (!airQuality.primaryPollutant.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "首要污染物  ${airQuality.primaryPollutant}",
+                    text = buildString {
+                        append("AQI ")
+                        append(aqiValue)
+                        if (!category.isNullOrBlank()) {
+                            append(" ")
+                            append(category)
+                        }
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextTertiary
+                    color = TextSecondary
                 )
+                if (aqhi != null) {
+                    Text(
+                        text = "AQHI ${aqhi.displayValue} ${aqhi.category}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
             }
 
             // ---- 污染物浓度网格 ----
@@ -154,10 +168,16 @@ private fun PollutantCell(
     item: PollutantItem,
     modifier: Modifier = Modifier
 ) {
+    val backgroundColor = if (item.iaqi != null) {
+        aqiColor(item.iaqi).copy(alpha = 0.16f)
+    } else {
+        Color.White.copy(alpha = 0.08f)
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(backgroundColor)
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Column {

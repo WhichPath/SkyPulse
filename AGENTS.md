@@ -25,7 +25,21 @@
 - **天气预报**: `/weather/v1/current/{lat}/{lon}`（实况，v1，含 uvIndex）、`/weather/v1/daily/{lat}/{lon}`（逐日，v1，最多 10 天）、`/weather/v1/hourly/{lat}/{lon}`（逐小时，v1，含真实逐小时 uvIndex）
 - **分钟降水**: `/v7/minutely/5m`（未来 2 小时分钟级降水，和风无 v1 版本，保留 v7）
 - **天气预警**: `/weatheralert/v1/current/{lat}/{lon}`
-- **空气质量**: `/airquality/v1/current/{lat}/{lon}`
+- **空气质量**: `/airquality/v1/current/{lat}/{lon}`（官方 v1 接口，返回 indexes 综合指数、pollutants 污染物浓度与各分指数 subIndexes）
+  - **污染物单位确切规范 (concentration.unit)**:
+    - `pm2p5` (PM2.5): `μg/m3`
+    - `pm10` (PM10): `μg/m3`
+    - `no2` (NO2): `ppb`
+    - `o3` (O3): `ppb`
+    - `so2` (SO2): `ppb`
+    - `co` (CO): `ppm`
+    *(注: 每个污染物对象同时包含 `subIndexes` 数组，内置该污染物在对应标准下的分指数 IAQI)*
+  - **新一代健康指数储备 - 香港 AQHI (空气质素健康指数)**:
+    - 官方公开标准: 香港环境保护署 (EPD) 官方算法
+    - 计算公式: `%AR = %AR(NO2) + %AR(SO2) + %AR(O3) + max(%AR(PM2.5), %AR(PM10))`
+    - 各污染物风险增幅: `%AR = [exp(β * C) - 1] * 100%` (浓度 C 官方基准单位为 `μg/m3`)
+    - 官方回归系数 β: NO2=`0.0004462559`, SO2=`0.0001393235`, O3=`0.0004888034`, PM10=`0.0002821751`, PM2.5=`0.0002180567`
+    - 气体 ppb 转 μg/m3 系数: O3 ≈ 1.96, NO2 ≈ 1.88, SO2 ≈ 2.62
 - **GeoAPI**: `/geo/v2/city/lookup`（城市搜索，用户输入城市名时触发）
 - **天文（部分）**: 日出日落数据从 v1 逐日预报响应的 `astro` 中提取，映射到 `DailyAstro`，无需单独请求。v1 实况、逐小时、逐日均含 UV 数据（实况为实时值，逐小时为逐小时值，逐日为 `uvIndexMax` 当日最大值）
 
