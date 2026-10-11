@@ -486,15 +486,17 @@ fun WeatherScreen(
                                 }
                             }
                         }
-
-                        // 浮动毛玻璃详情面板 Overlay (同层渲染，底层完美硬件高斯模糊)
-                        ExplanationModalOverlay(
-                            active = activeExplanation,
-                            onDismiss = { activeExplanation = null }
-                        )
                     }
                 }
+
+                // 浮动毛玻璃详情面板 Overlay (同层渲染，底层完美硬件高斯模糊)
+                ExplanationModalOverlay(
+                    active = activeExplanation,
+                    onDismiss = { activeExplanation = null }
+                )
             }
+        }
+    }
 
             AppScreen.Settings -> {
                 SettingsScreen(
