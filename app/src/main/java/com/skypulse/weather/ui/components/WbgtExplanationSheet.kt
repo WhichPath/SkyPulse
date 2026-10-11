@@ -87,62 +87,6 @@ fun WbgtExplanationContent(
         color = TextTertiary
     )
 
-    // ---- 当前计算值概览卡片 (若有) ----
-    if (currentWbgt != null) {
-        Spacer(modifier = Modifier.height(14.dp))
-        val currentLevel = getWbgtLevel(currentWbgt)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(currentLevel.color.copy(alpha = 0.24f))
-                .border(1.dp, currentLevel.color.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = "%.1f".format(currentWbgt),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary
-                )
-                if (currentUncertainty != null) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "±${"%.1f".format(currentUncertainty)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(
-                    text = "℃",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = TextPrimary,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LucideIcon(
-                    name = "flag",
-                    contentDescription = currentLevel.name,
-                    tint = currentLevel.color,
-                    fillColor = currentLevel.color.copy(alpha = 0.85f),
-                    size = 18.dp
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = currentLevel.name,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = currentLevel.color
-                )
-            }
-        }
-    }
-
     Spacer(modifier = Modifier.height(18.dp))
 
     // ---- 各等级运动指导列表 ----

@@ -203,7 +203,7 @@ private fun DetailSquareCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = if (label.length > 4) 10.5.sp else 12.sp
+                    fontSize = 12.sp
                 ),
                 color = TextSecondary,
                 maxLines = 1

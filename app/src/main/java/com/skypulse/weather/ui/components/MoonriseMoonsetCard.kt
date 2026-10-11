@@ -83,8 +83,11 @@ fun MoonriseMoonsetCard(
                 // 居中: 月相文字 (标准中文，如 "峨眉月", "满月", "盈凸月")
                 Text(
                     text = phaseInfo.chineseName,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.5.sp),
-                    color = TextSecondary
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = TextPrimary
                 )
 
                 // 右侧: 月落 (moonset)
@@ -112,14 +115,14 @@ fun MoonriseMoonsetCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(20.dp)
+                    .height(24.dp)
             ) {
                 HorizontalMoonProgress(
                     progress = progress,
                     moonIcon = phaseInfo.iconName,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(20.dp)
+                        .height(24.dp)
                 )
             }
 
@@ -160,7 +163,7 @@ private fun HorizontalMoonProgress(
     val clampedProgress = progress.coerceIn(0f, 1f)
     val context = LocalContext.current
     val density = LocalDensity.current
-    val iconSizePx = remember(density) { with(density) { 20.dp.roundToPx() } }
+    val iconSizePx = remember(density) { with(density) { 26.dp.roundToPx() } }
     val iconBitmap = remember(context, moonIcon, iconSizePx) {
         WeatherSvgRenderer.renderBitmap(context, moonIcon, iconSizePx)
             ?.asImageBitmap()
@@ -175,7 +178,7 @@ private fun HorizontalMoonProgress(
         val barWidth = size.width
         val indicatorX = barWidth * clampedProgress
 
-        val gapRadius = 15.dp.toPx()
+        val gapRadius = 16.5.dp.toPx()
         val leftLineEnd = (indicatorX - gapRadius).coerceAtLeast(0f)
         val rightLineStart = (indicatorX + gapRadius).coerceAtMost(barWidth)
 
@@ -202,7 +205,7 @@ private fun HorizontalMoonProgress(
         // 外层微光光晕 (极简发光)
         drawCircle(
             color = Color.White.copy(alpha = 0.15f),
-            radius = iconSizePx * 0.65f,
+            radius = iconSizePx * 0.55f,
             center = Offset(indicatorX, barY)
         )
 

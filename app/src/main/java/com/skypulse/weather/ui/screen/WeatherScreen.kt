@@ -292,8 +292,8 @@ fun WeatherScreen(
                 }
 
                 val blurRadius by animateDpAsState(
-                    targetValue = if (activeExplanation != null) 20.dp else 0.dp,
-                    animationSpec = SkyPulseDesignSystem.Motion.springEffectsDp,
+                    targetValue = if (activeExplanation != null) 24.dp else 0.dp,
+                    animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
                     label = "explanation_blur"
                 )
 

@@ -169,21 +169,13 @@ fun ExplanationModalOverlay(
 
     AnimatedVisibility(
         visible = active != null,
-        enter = fadeIn(SkyPulseDesignSystem.Motion.springEffects) +
-            scaleIn(
-                initialScale = 0.90f,
-                animationSpec = SkyPulseDesignSystem.Motion.springModalEnter
-            ),
-        exit = fadeOut(SkyPulseDesignSystem.Motion.springEffects) +
-            scaleOut(
-                targetScale = 0.95f,
-                animationSpec = SkyPulseDesignSystem.Motion.springModalExit
-            )
+        enter = fadeIn(animationSpec = tween(durationMillis = 260)),
+        exit = fadeOut(animationSpec = tween(durationMillis = 200))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.35f))
+                .background(Color.Black.copy(alpha = 0.12f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -195,41 +187,55 @@ fun ExplanationModalOverlay(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xB81A202C),
-                                Color(0x99121622)
+            AnimatedVisibility(
+                visible = active != null,
+                enter = fadeIn(animationSpec = tween(durationMillis = 260)) +
+                    scaleIn(
+                        initialScale = 0.95f,
+                        animationSpec = tween(durationMillis = 260)
+                    ),
+                exit = fadeOut(animationSpec = tween(durationMillis = 200)) +
+                    scaleOut(
+                        targetScale = 0.97f,
+                        animationSpec = tween(durationMillis = 200)
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.18f),
+                                    Color.White.copy(alpha = 0.10f)
+                                )
                             )
                         )
-                    )
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.30f),
-                                Color.White.copy(alpha = 0.08f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {} // 阻止内部点击触发外部 dismiss
-                    )
-                    .padding(horizontal = 20.dp, vertical = 22.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                when (active) {
-                    is ActiveExplanation.Aqi -> AqiExplanationContent(active.aqi)
-                    is ActiveExplanation.Aqhi -> AqhiExplanationContent(active.aqhi)
-                    is ActiveExplanation.Wbgt -> WbgtExplanationContent(active.wbgt, active.uncertainty)
-                    null -> {}
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.40f),
+                                    Color.White.copy(alpha = 0.12f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {} // 阻止内部点击触发外部 dismiss
+                        )
+                        .padding(horizontal = 20.dp, vertical = 22.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    when (active) {
+                        is ActiveExplanation.Aqi -> AqiExplanationContent(active.aqi)
+                        is ActiveExplanation.Aqhi -> AqhiExplanationContent(active.aqhi)
+                        is ActiveExplanation.Wbgt -> WbgtExplanationContent(active.wbgt, active.uncertainty)
+                        null -> {}
+                    }
                 }
             }
         }
