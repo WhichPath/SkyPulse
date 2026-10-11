@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -165,61 +164,6 @@ fun WbgtExplanationSheet(
                 isHighlighted = isCurrent
             )
             Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ---- 物理模型与计算原理 ----
-        Text(
-            text = "物理模型与计算原理",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        FormulaCard {
-            Text(
-                text = "1. 户外直接日射热应激综合平衡方程",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(vertical = 10.dp, horizontal = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "WBGT = 0.7 × Tw + 0.2 × Tg + 0.1 × Ta",
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.5.sp,
-                    color = TextPrimary
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "• Tw：自然湿球温度（综合反映汗液蒸发冷却极限）\n• Tg：150mm 黑球温度（综合吸收太阳直射与环境辐射热）\n• Ta：环境干球气温（遮荫下的真实大气温度）",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
-                color = TextTertiary
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = "2. 端侧物理热平衡求解与不确定度",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "本应用在本地采用 Liljegren 物理辐射平衡迭代算法，联合太阳天顶角、直射/散射辐射估算与对流热交换方程；并结合动态雅可比矩阵分析，实时计算并给出符合国际计量学标准的不确定度 (±℃)。",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                color = TextTertiary
-            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

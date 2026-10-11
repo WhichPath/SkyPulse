@@ -1,5 +1,11 @@
 package com.skypulse.weather.ui.components
 
+import android.app.Activity
+import android.content.ContextWrapper
+import android.os.Build
+import android.view.View
+import android.view.Window
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,22 +14,24 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import com.skypulse.weather.ui.theme.TextDisabled
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
@@ -126,8 +134,9 @@ private val AQHI_LEVELS = listOf(
 
 /**
  * 统一样式的浮动玻璃质感详情弹窗
- * - 左右对称、上下对称留白居中悬浮
- * - 磨砂半透明深色毛玻璃材质，柔和微高光边框
+ * - 左右对称、上下对称留白居中悬浮（左右间距 26dp，上下间距 56dp，严格居中对齐）
+ * - 磨砂半透明深色毛玻璃材质，柔和微高光边框，通透透出底层背景
+ * - Android 12+ 开启窗口背景高斯模糊 (FLAG_BLUR_BEHIND)，使主屏背景文字与内容虚化聚焦
  * - 点击非面板区域（留白处）直接退出，无冗余关闭按钮
  */
 @Composable
@@ -135,9 +144,34 @@ internal fun ExplanationDialog(
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val view = LocalView.current
+    val density = LocalDensity.current
+
+    DisposableEffect(view) {
+        val window = findDialogWindow(view)
+        if (window != null) {
+            // 降低暗度遮罩，使背景高斯模糊更通透纯净
+            window.setDimAmount(0.32f)
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+            // Android 12+ (API 31+) 开启系统级窗口背景高斯模糊（虚化主页文字与背景）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                window.attributes = window.attributes.apply {
+                    blurBehindRadius = with(density) { 24.dp.roundToPx() }
+                }
+            }
+        }
+        onDispose { }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
         Box(
             modifier = Modifier
@@ -147,15 +181,31 @@ internal fun ExplanationDialog(
                     indication = null,
                     onClick = onDismiss
                 )
-                .padding(horizontal = 26.dp, vertical = 42.dp),
+                .padding(horizontal = 26.dp, vertical = 56.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xD9181C26))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xBF181E2B),
+                                Color(0xA6121622)
+                            )
+                        )
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.White.copy(alpha = 0.08f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(24.dp)
+                    )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -167,6 +217,25 @@ internal fun ExplanationDialog(
             )
         }
     }
+}
+
+private fun findDialogWindow(view: View): Window? {
+    var current: Any? = view
+    while (current is View) {
+        val parent = current.parent
+        if (parent is DialogWindowProvider) {
+            return parent.window
+        }
+        current = parent
+    }
+    var context = view.context
+    while (context is ContextWrapper) {
+        if (context is Activity) {
+            return context.window
+        }
+        context = context.baseContext
+    }
+    return null
 }
 
 /**
@@ -210,89 +279,6 @@ fun AqiExplanationSheet(
                 isHighlighted = isCurrent
             )
             Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ---- 算法公式解析 (分步清晰排版) ----
-        Text(
-            text = "计算算法与短板原则",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        FormulaCard {
-            Text(
-                text = "1. 各污染物分项分指数 (IAQI) 分段线性插值",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(vertical = 10.dp, horizontal = 12.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "IAQI = K × (C − BP_low) + I_low",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.5.sp,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(5.dp))
-                    Text(
-                        text = "其中分段斜率 K = (I_high − I_low) / (BP_high − BP_low)",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        color = TextSecondary
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "• C：该污染物的实时监测浓度值\n• [BP_low, BP_high]：浓度限值的高低临界分界点\n• [I_low, I_high]：对应空气质量分指数限值",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
-                color = TextTertiary
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = "2. 综合空气质量指数 (木桶短板原则)",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(vertical = 8.dp, horizontal = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "AQI = max(IAQI_1, IAQI_2, ..., IAQI_n)",
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    color = TextPrimary
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "取 6 种污染物（PM2.5、PM10、O₃、SO₂、NO₂、CO）分指数的最大值，首要污染物决定综合指数。",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                color = TextTertiary
-            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -349,85 +335,6 @@ fun AqhiExplanationSheet(
             Spacer(modifier = Modifier.height(6.dp))
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ---- 算法公式解析 ----
-        Text(
-            text = "计算算法与复合风险累加",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        FormulaCard {
-            Text(
-                text = "1. 综合超额住院风险增幅 (%AR 复合累加)",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(vertical = 8.dp, horizontal = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "%AR = %AR(NO₂) + %AR(SO₂) + %AR(O₃) + max(%AR(PM2.5), %AR(PM10))",
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.5.sp,
-                    color = TextPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "2. 个别污染物健康风险增幅 (C 为浓度，单位 μg/m³)",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(vertical = 8.dp, horizontal = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "%AR_i = [ exp(β_i × C_i) − 1 ] × 100%",
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    color = TextPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "官方回归系数 β: NO₂=0.000446, SO₂=0.000139, O₃=0.000489, PM10=0.000282, PM2.5=0.000218",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    lineHeight = 15.sp
-                ),
-                color = TextTertiary
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "* 最终根据 %AR 对照官方健康风险临界值划分为 1-10 级及 10+ 级。",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = TextTertiary
-            )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         // ---- 底部注记 ----
@@ -477,24 +384,6 @@ internal fun LevelItemRow(
             color = if (isHighlighted) TextPrimary else TextSecondary
         )
     }
-}
-
-/**
- * 公式外层卡片容器
- */
-@Composable
-internal fun FormulaCard(
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
-            .padding(14.dp),
-        content = content
-    )
 }
 
 private fun isAqiCurrentLevel(aqi: Int?, range: String): Boolean {
