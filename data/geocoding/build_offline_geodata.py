@@ -37,6 +37,7 @@ OUTPUT_TOWNSHIPS_ALL = os.path.join(BASE_DIR, "townships_2026.json")
 OUTPUT_TOWNSHIPS_ACTIVE = os.path.join(BASE_DIR, "townships_active.json")
 OUTPUT_UNRESOLVED_JSON = os.path.join(BASE_DIR, "unresolved_townships.json")
 OUTPUT_UNRESOLVED_CSV = os.path.join(BASE_DIR, "unresolved_townships.csv")
+OUTPUT_UNRESOLVED_XINJIANG_CSV = os.path.join(BASE_DIR, "unresolved_townships_xinjiang.csv")
 OUTPUT_STATS = os.path.join(BASE_DIR, "build_stats.json")
 
 # 外部原始数据路径
@@ -448,32 +449,63 @@ def build_townships(gdf_counties):
         json.dump(dict(stats), f, ensure_ascii=False, indent=2)
 
 def generate_unresolved_csv(unresolved_list, county_name_map):
-    """生成简洁、唯一官方名称的未完成乡镇街道 CSV 清单"""
+    """生成包含完整省市县层级与官方名称的未完成乡镇街道 CSV 清单，并单列新疆表"""
     path_l3 = os.path.join(BASE_DIR, "sources", "ok_data_level3.csv")
-    fallback_cnames = {}
+    hierarchy_map = {}
     if os.path.exists(path_l3):
         with open(path_l3, "r", encoding="utf-8-sig") as f:
-            for r in csv.DictReader(f):
+            rows = list(csv.DictReader(f))
+            c_map = {r["id"]: (r["pid"], r["name"]) for r in rows if r.get("deep") == "1"}
+            for r in rows:
                 if r.get("deep") == "2":
                     cid_str = str(r["id"])
-                    fallback_cnames[cid_str] = r["ext_name"]
+                    pid = r["pid"]
+                    cname = r["ext_name"]
+                    city_name = c_map.get(pid, (None, ""))[1]
+                    hierarchy_map[cid_str] = (city_name, cname)
+                elif r.get("deep") == "1":
+                    cid_str = str(r["id"])
+                    if cid_str not in hierarchy_map:
+                        hierarchy_map[cid_str] = (r["name"], r["ext_name"])
+                elif r.get("deep") == "0":
+                    cid_str = str(r["id"])
+                    if cid_str not in hierarchy_map:
+                        hierarchy_map[cid_str] = ("", r["ext_name"])
 
     def sort_key(x):
-        cid = x["county_id"]
-        is_mainland = 0 if not cid.startswith(("71", "81", "82", "99")) else 1
-        return (is_mainland, x["province"], cid, x["ext_id"])
+        cid = str(x["county_id"])
+        is_mainland = 0 if not cid.startswith(("71", "81", "82", "99", "91")) else 1
+        return (is_mainland, x.get("province", ""), cid, x.get("ext_id", ""))
 
     sorted_list = sorted(unresolved_list, key=sort_key)
+    header = ["ext_id", "county_id", "province", "city_name", "county_name", "official_name", "reason"]
+    rows_main = []
+    rows_xj = []
+
+    for x in sorted_list:
+        cid = str(x["county_id"])
+        mapped_city, mapped_county = hierarchy_map.get(cid, ("", county_name_map.get(cid, "")))
+        off_name = x.get("ext_name") or x.get("name", "")
+        reason = x.get("reason", "缺少可信离散驻地坐标")
+        prov = x.get("province", "")
+        row = [x["ext_id"], cid, prov, mapped_city, mapped_county, off_name, reason]
+        if prov == "新疆维吾尔自治区":
+            rows_xj.append(row)
+        else:
+            rows_main.append(row)
+
     with open(OUTPUT_UNRESOLVED_CSV, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["ext_id", "county_id", "province", "county_name", "official_name", "reason"])
-        for x in sorted_list:
-            cid = x["county_id"]
-            cname = county_name_map.get(cid) or fallback_cnames.get(cid, "")
-            off_name = x.get("ext_name") or x.get("name")
-            reason = x.get("reason", "缺少可信离散驻地坐标")
-            writer.writerow([x["ext_id"], cid, x["province"], cname, off_name, reason])
-    print(f"    未完成待补全 CSV 清单已保存: {OUTPUT_UNRESOLVED_CSV} (共 {len(unresolved_list)} 个条目)")
+        writer.writerow(header)
+        writer.writerows(rows_main)
+    print(f"    未完成待补全 CSV 清单已保存: {OUTPUT_UNRESOLVED_CSV} (共 {len(rows_main)} 个条目)")
+
+    with open(OUTPUT_UNRESOLVED_XINJIANG_CSV, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(rows_xj)
+    print(f"    新疆待补全专项清单已保存: {OUTPUT_UNRESOLVED_XINJIANG_CSV} (共 {len(rows_xj)} 个条目)")
+
 
 if __name__ == "__main__":
     if os.path.exists(OUTPUT_COUNTIES):

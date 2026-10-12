@@ -1,12 +1,16 @@
 {
   "adcode_code": 28385,
+  "osm_poly_centroid": 2272,
   "adcode_name_inherit": 4559,
-  "osm_poly_centroid": 2327,
   "gb18306_name": 2088,
-  "osm_point": 1311,
-  "unresolved_pending": 390,
-  "ruiduobao_cun_cluster": 56,
+  "osm_point": 1242,
   "ruiduobao_gson": 46,
+  "ruiduobao_cun_cluster": 56,
+  "gov_record": 15,
+  "osm_admin_seat": 3,
+  "unresolved_pending": 115,
   "xpcc_regiment_osm": 23,
-  "osm_admin_seat": 3
+  "moi_gov_tw": 358,
+  "had_gov_hk": 18,
+  "dsedj_gov_mo": 8
 }

@@ -25,6 +25,8 @@ PATH_TOWNS_ALL = os.path.join(BASE_DIR, "townships_2026.json")
 PATH_TOWNS_ACTIVE = os.path.join(BASE_DIR, "townships_active.json")
 PATH_UNRES_JSON = os.path.join(BASE_DIR, "unresolved_townships.json")
 PATH_UNRES_CSV = os.path.join(BASE_DIR, "unresolved_townships.csv")
+PATH_UNRES_XJ_CSV = os.path.join(BASE_DIR, "unresolved_townships_xinjiang.csv")
+PATH_L3 = os.path.join(BASE_DIR, "sources", "ok_data_level3.csv")
 PATH_STATS = os.path.join(BASE_DIR, "build_stats.json")
 
 # 55 个经过 100% 空间几何复核与多门禁校验的高置信离散驻地点位
@@ -158,19 +160,52 @@ def main():
     with open(PATH_UNRES_JSON, "w", encoding="utf-8") as f:
         json.dump(new_unresolved, f, ensure_ascii=False, indent=2)
 
-    # 4. 保存 unresolved_townships.csv
+    # 4. 保存 unresolved_townships.csv 及 unresolved_townships_xinjiang.csv
+    hierarchy_map = {}
+    if os.path.exists(PATH_L3):
+        with open(PATH_L3, "r", encoding="utf-8-sig") as f:
+            rows = list(csv.DictReader(f))
+            c_map = {r["id"]: (r["pid"], r["name"]) for r in rows if r.get("deep") == "1"}
+            for r in rows:
+                if r.get("deep") == "2":
+                    cid_str = str(r["id"])
+                    pid = r["pid"]
+                    cname = r["ext_name"]
+                    city_name = c_map.get(pid, (None, ""))[1]
+                    hierarchy_map[cid_str] = (city_name, cname)
+                elif r.get("deep") == "1":
+                    cid_str = str(r["id"])
+                    if cid_str not in hierarchy_map:
+                        hierarchy_map[cid_str] = (r["name"], r["ext_name"])
+                elif r.get("deep") == "0":
+                    cid_str = str(r["id"])
+                    if cid_str not in hierarchy_map:
+                        hierarchy_map[cid_str] = ("", r["ext_name"])
+
+    header = ["ext_id", "county_id", "province", "city_name", "county_name", "official_name", "reason"]
+    rows_main = []
+    rows_xj = []
+    for u in sorted(new_unresolved, key=lambda x: (0 if not str(x["county_id"]).startswith(("71", "81", "82", "99", "91")) else 1, x.get("province", ""), str(x["county_id"]), x.get("ext_id", ""))):
+        cid = str(u["county_id"])
+        city, county = hierarchy_map.get(cid, ("", u.get("county_name", "")))
+        off_name = u.get("ext_name") or u.get("name", "")
+        reason = u.get("reason", "缺少可信离散驻地坐标，暂不参与最近邻空间匹配")
+        prov = u.get("province", "")
+        row = [u["ext_id"], cid, prov, city, county, off_name, reason]
+        if prov == "新疆维吾尔自治区":
+            rows_xj.append(row)
+        else:
+            rows_main.append(row)
+
     with open(PATH_UNRES_CSV, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["ext_id", "county_id", "province", "county_name", "official_name", "reason"])
-        for u in sorted(new_unresolved, key=lambda x: (0 if not x["county_id"].startswith(("71", "81", "82", "99")) else 1, x["province"], x["county_id"], x["ext_id"])):
-            writer.writerow([
-                u["ext_id"],
-                u["county_id"],
-                u.get("province", ""),
-                u.get("county_name", ""),
-                u.get("ext_name") or u.get("name", ""),
-                u.get("reason", "缺少可信离散驻地坐标"),
-            ])
+        writer.writerow(header)
+        writer.writerows(rows_main)
+
+    with open(PATH_UNRES_XJ_CSV, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(rows_xj)
 
     # 5. 更新 build_stats.json
     stats = {}
