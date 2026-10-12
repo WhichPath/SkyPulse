@@ -90,4 +90,29 @@ class AqiCalculatorTest {
         assertEquals(pm25Aqi, result.individualAqi["PM2.5"])
         assertEquals(pm10Aqi, result.individualAqi["PM10"])
     }
+
+    @Test
+    fun `calculateO3Aqi correctly distinguishes ppb from ug per cubic meter`() {
+        // 99 ppb 臭氧直接对应美国 EPA 不健康档位 (151..200)
+        val aqiFromPpb = AqiCalculator.calculateO3Aqi(99.0, "ppb")
+        assertNotNull(aqiFromPpb)
+        assertEquals(185, aqiFromPpb)
+
+        // 99 μg/m³ 臭氧约为 50.4 ppb，对应优 (0..50)
+        val aqiFromUgm3 = AqiCalculator.calculateO3Aqi(99.0, "μg/m³")
+        assertNotNull(aqiFromUgm3)
+        assertTrue(aqiFromUgm3!! in 0..50)
+    }
+
+    @Test
+    fun `calculate handles gaseous pollutants with explicit units`() {
+        val resultPpb = AqiCalculator.calculate(
+            o3 = 99.0,
+            o3Unit = "ppb"
+        )
+        assertNotNull(resultPpb)
+        assertEquals(185, resultPpb!!.aqi)
+        assertEquals("不健康", resultPpb.category)
+        assertEquals("O₃", resultPpb.primaryPollutant)
+    }
 }

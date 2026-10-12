@@ -26,14 +26,10 @@
 - **分钟降水**: `/v7/minutely/5m`（未来 2 小时分钟级降水，和风无 v1 版本，保留 v7）
 - **天气预警**: `/weatheralert/v1/current/{lat}/{lon}`
 - **空气质量**: `/airquality/v1/current/{lat}/{lon}`（官方 v1 接口，返回 indexes 综合指数、pollutants 污染物浓度与各分指数 subIndexes）
-  - **污染物单位确切规范 (concentration.unit)**:
-    - `pm2p5` (PM2.5): `μg/m3`
-    - `pm10` (PM10): `μg/m3`
-    - `no2` (NO2): `ppb`
-    - `o3` (O3): `ppb`
-    - `so2` (SO2): `ppb`
-    - `co` (CO): `ppm`
-    *(注: 每个污染物对象同时包含 `subIndexes` 数组，内置该污染物在对应标准下的分指数 IAQI)*
+  - **污染物单位动态规范 (concentration.unit)**:
+    - 接口按站点标准动态返回单位：国内常规站点 PM2.5、PM10、O3、NO2、SO2 为 `μg/m3`，CO 为 `mg/m3`；部分境外站点气态污染物可能为 `ppb`，CO 为 `ppm`
+    - 代码（`QWeatherMapper`、`AqiCalculator`、`AqhiCalculator` 及 UI 卡片）必须动态透传与解析真实单位，杜绝硬编码假定，并在缺少原生 `subIndexes` 时依据实际单位执行精准折算
+    *(注: 每个污染物对象同时包含 `subIndexes` 数组，内置该污染物在对应标准下的分指数 IAQI，代码优先使用官方分指数)*
   - **新一代健康指数储备 - 香港 AQHI (空气质素健康指数)**:
     - 官方公开标准: 香港环境保护署 (EPD) 官方算法
     - 计算公式: `%AR = %AR(NO2) + %AR(SO2) + %AR(O3) + max(%AR(PM2.5), %AR(PM10))`

@@ -153,6 +153,25 @@ object QWeatherMapper {
         fun pollutantValue(code: String): Double? =
             pollutants.firstOrNull { it.code == code }?.concentration?.value
 
+        fun pollutantUnit(code: String, defaultUnit: String): String {
+            val raw = pollutants.firstOrNull { it.code == code }?.concentration?.unit?.trim()
+            return when {
+                raw.isNullOrBlank() -> defaultUnit
+                raw.equals("ug/m3", ignoreCase = true) || raw.equals("μg/m3", ignoreCase = true) -> "μg/m³"
+                raw.equals("mg/m3", ignoreCase = true) || raw.equals("mg/m³", ignoreCase = true) -> "mg/m³"
+                raw.equals("ppb", ignoreCase = true) -> "ppb"
+                raw.equals("ppm", ignoreCase = true) -> "ppm"
+                else -> raw
+            }
+        }
+
+        fun pollutantSubIndex(code: String): Int? {
+            val p = pollutants.firstOrNull { it.code == code } ?: return null
+            val sub = p.subIndexes?.firstOrNull { it.code == "us-epa" }
+                ?: p.subIndexes?.firstOrNull()
+            return sub?.aqi?.toInt()
+        }
+
         val pm25 = pollutantValue("pm2p5")
         val pm10 = pollutantValue("pm10")
         val o3 = pollutantValue("o3")
@@ -160,14 +179,25 @@ object QWeatherMapper {
         val no2 = pollutantValue("no2")
         val co = pollutantValue("co")
 
-        // 优先使用本地美国 EPA 标准算法基于基础污染物浓度计算 AQI
+        val pm25Unit = pollutantUnit("pm2p5", "μg/m³")
+        val pm10Unit = pollutantUnit("pm10", "μg/m³")
+        val o3Unit = pollutantUnit("o3", "μg/m³")
+        val so2Unit = pollutantUnit("so2", "μg/m³")
+        val no2Unit = pollutantUnit("no2", "μg/m³")
+        val coUnit = pollutantUnit("co", "mg/m³")
+
+        // 优先使用本地美国 EPA 标准算法基于基础污染物浓度与实际单位计算 AQI
         val localAqi = AqiCalculator.calculate(
             pm25 = pm25,
             pm10 = pm10,
             o3 = o3,
             no2 = no2,
             so2 = so2,
-            co = co
+            co = co,
+            o3Unit = o3Unit,
+            no2Unit = no2Unit,
+            so2Unit = so2Unit,
+            coUnit = coUnit
         )
 
         val usEpa = indexes?.firstOrNull { it.code == "us-epa" }
@@ -177,6 +207,13 @@ object QWeatherMapper {
         val aqiValue = localAqi?.aqi?.toDouble() ?: usEpa?.aqi ?: chnIndex?.aqi
         val category = localAqi?.category ?: usEpa?.category ?: chnIndex?.category
         val primary = localAqi?.primaryPollutant ?: (chnIndex ?: usEpa)?.primaryPollutant?.name
+
+        val pm25Iaqi = pollutantSubIndex("pm2p5") ?: localAqi?.individualAqi?.get("PM2.5") ?: AqiCalculator.calculatePm25Aqi(pm25)
+        val pm10Iaqi = pollutantSubIndex("pm10") ?: localAqi?.individualAqi?.get("PM10") ?: AqiCalculator.calculatePm10Aqi(pm10)
+        val o3Iaqi = pollutantSubIndex("o3") ?: localAqi?.individualAqi?.get("O₃") ?: AqiCalculator.calculateO3Aqi(o3, o3Unit)
+        val so2Iaqi = pollutantSubIndex("so2") ?: localAqi?.individualAqi?.get("SO₂") ?: AqiCalculator.calculateSo2Aqi(so2, so2Unit)
+        val no2Iaqi = pollutantSubIndex("no2") ?: localAqi?.individualAqi?.get("NO₂") ?: AqiCalculator.calculateNo2Aqi(no2, no2Unit)
+        val coIaqi = pollutantSubIndex("co") ?: localAqi?.individualAqi?.get("CO") ?: AqiCalculator.calculateCoAqi(co, coUnit)
 
         return AirQuality(
             pm25 = pm25,
@@ -196,7 +233,19 @@ object QWeatherMapper {
             primaryPollutant = primary,
             healthEffect = null,
             healthAdviceGeneral = null,
-            healthAdviceSensitive = null
+            healthAdviceSensitive = null,
+            pm25Unit = pm25Unit,
+            pm10Unit = pm10Unit,
+            o3Unit = o3Unit,
+            so2Unit = so2Unit,
+            no2Unit = no2Unit,
+            coUnit = coUnit,
+            pm25Iaqi = pm25Iaqi,
+            pm10Iaqi = pm10Iaqi,
+            o3Iaqi = o3Iaqi,
+            so2Iaqi = so2Iaqi,
+            no2Iaqi = no2Iaqi,
+            coIaqi = coIaqi
         )
     }
 

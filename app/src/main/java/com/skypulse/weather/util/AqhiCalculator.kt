@@ -54,16 +54,19 @@ object AqhiCalculator {
      *
      * @param pm25 PM2.5 浓度 (μg/m³)
      * @param pm10 PM10 浓度 (μg/m³)
-     * @param o3 O3 浓度 (若为 ppb 则乘以 1.96 折算为 μg/m³)
-     * @param no2 NO2 浓度 (若为 ppb 则乘以 1.88 折算为 μg/m³)
-     * @param so2 SO2 浓度 (若为 ppb 则乘以 2.62 折算为 μg/m³)
+     * @param o3 O3 浓度 (若单位为 ppb 则乘以 1.963 折算为 μg/m³；若已是 μg/m³ 则直接使用)
+     * @param no2 NO2 浓度 (若单位为 ppb 则乘以 1.88 折算为 μg/m³；若已是 μg/m³ 则直接使用)
+     * @param so2 SO2 浓度 (若单位为 ppb 则乘以 2.62 折算为 μg/m³；若已是 μg/m³ 则直接使用)
      */
     fun calculate(
         pm25: Double? = null,
         pm10: Double? = null,
         o3: Double? = null,
         no2: Double? = null,
-        so2: Double? = null
+        so2: Double? = null,
+        o3Unit: String? = null,
+        no2Unit: String? = null,
+        so2Unit: String? = null
     ): AqhiResult? {
         if (pm25 == null && pm10 == null && o3 == null && no2 == null && so2 == null) {
             return null
@@ -72,10 +75,24 @@ object AqhiCalculator {
         val cPm25 = pm25?.coerceAtLeast(0.0) ?: 0.0
         val cPm10 = pm10?.coerceAtLeast(0.0) ?: 0.0
 
-        // 统一气体浓度折算为 μg/m³
-        val cO3 = o3?.let { if (it > 0) it * 1.96 else 0.0 } ?: 0.0
-        val cNo2 = no2?.let { if (it > 0) it * 1.88 else 0.0 } ?: 0.0
-        val cSo2 = so2?.let { if (it > 0) it * 2.62 else 0.0 } ?: 0.0
+        // 统一气体浓度折算为 μg/m³：若为 μg/m³ 则直接使用，避免二次乘算
+        val cO3 = o3?.let {
+            if (it <= 0) 0.0
+            else if (isMicrogramsPerCubicMeter(o3Unit)) it
+            else it * 1.963
+        } ?: 0.0
+
+        val cNo2 = no2?.let {
+            if (it <= 0) 0.0
+            else if (isMicrogramsPerCubicMeter(no2Unit)) it
+            else it * 1.88
+        } ?: 0.0
+
+        val cSo2 = so2?.let {
+            if (it <= 0) 0.0
+            else if (isMicrogramsPerCubicMeter(so2Unit)) it
+            else it * 2.62
+        } ?: 0.0
 
         val arPm25 = if (pm25 != null) (exp(BETA_PM25 * cPm25) - 1.0) * 100.0 else 0.0
         val arPm10 = if (pm10 != null) (exp(BETA_PM10 * cPm10) - 1.0) * 100.0 else 0.0
@@ -107,5 +124,11 @@ object AqhiCalculator {
             category = category,
             addedRisk = totalAr
         )
+    }
+
+    private fun isMicrogramsPerCubicMeter(unit: String?): Boolean {
+        if (unit.isNullOrBlank()) return false
+        val u = unit.trim().lowercase()
+        return u == "μg/m3" || u == "ug/m3" || u == "μg/m³"
     }
 }

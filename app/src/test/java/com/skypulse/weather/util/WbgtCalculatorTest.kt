@@ -99,4 +99,19 @@ class WbgtCalculatorTest {
         assertNull(WbgtCalculator.calculate(null, 50.0, 5.0))
         assertNull(WbgtCalculator.calculate(25.0, null, 5.0))
     }
+
+    @Test
+    fun testDefensivePressureAndCloudCoverUnitHandling() {
+        // 当 pressurePa 传入 hPa (1013.25) 与传入 Pa (101325.0) 时应得到相同结果
+        val resPa = WbgtCalculator.calculate(30.0, 50.0, 10.0, pressurePa = 101325.0, cloudCover = 0.5)
+        val resHpa = WbgtCalculator.calculate(30.0, 50.0, 10.0, pressurePa = 1013.25, cloudCover = 0.5)
+        assertNotNull(resPa)
+        assertNotNull(resHpa)
+        assertEquals(resPa!!.wbgt, resHpa!!.wbgt, 0.05)
+
+        // 当 cloudCover 传入百分比 (50.0) 与传入小数 (0.5) 时应得到相同结果
+        val resCcPercent = WbgtCalculator.calculate(30.0, 50.0, 10.0, pressurePa = 101325.0, cloudCover = 50.0)
+        assertNotNull(resCcPercent)
+        assertEquals(resPa.wbgt, resCcPercent!!.wbgt, 0.05)
+    }
 }

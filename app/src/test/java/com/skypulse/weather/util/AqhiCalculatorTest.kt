@@ -71,4 +71,18 @@ class AqhiCalculatorTest {
         assertEquals("严重", result.category)
         assertTrue(result.addedRisk > 19.37)
     }
+
+    @Test
+    fun `calculate avoids multiplying when gas concentration is already in ug per cubic meter`() {
+        val resultUgm3 = AqhiCalculator.calculate(
+            pm25 = 20.0,
+            o3 = 99.0,
+            o3Unit = "μg/m³"
+        )
+        assertNotNull(resultUgm3)
+        // PM2.5 = 20 (ar = 0.437%), O3 = 99 ug/m3 (ar = 4.958%), total = 5.395% -> 低 (index 3)
+        // 若误按 ppb 翻倍 (194 ug/m3)，则 O3 ar = 9.94%，总计 10.38% -> 中 (index 6)
+        assertEquals(3, resultUgm3!!.index)
+        assertEquals("低", resultUgm3.category)
+    }
 }

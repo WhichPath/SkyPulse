@@ -85,23 +85,33 @@ fun AirQualityDetailCard(
         pm10 = airQuality.pm10,
         o3 = airQuality.o3,
         no2 = airQuality.no2,
-        so2 = airQuality.so2
+        so2 = airQuality.so2,
+        o3Unit = airQuality.o3Unit,
+        no2Unit = airQuality.no2Unit,
+        so2Unit = airQuality.so2Unit
     )
 
-    val pm25Iaqi = AqiCalculator.calculatePm25Aqi(airQuality.pm25)
-    val pm10Iaqi = AqiCalculator.calculatePm10Aqi(airQuality.pm10)
-    val o3Iaqi = AqiCalculator.calculateO3Aqi(airQuality.o3)
-    val so2Iaqi = AqiCalculator.calculateSo2Aqi(airQuality.so2)
-    val no2Iaqi = AqiCalculator.calculateNo2Aqi(airQuality.no2)
-    val coIaqi = AqiCalculator.calculateCoAqi(airQuality.co)
+    val pm25Unit = airQuality.pm25Unit ?: "μg/m³"
+    val pm10Unit = airQuality.pm10Unit ?: "μg/m³"
+    val o3Unit = airQuality.o3Unit ?: "μg/m³"
+    val so2Unit = airQuality.so2Unit ?: "μg/m³"
+    val no2Unit = airQuality.no2Unit ?: "μg/m³"
+    val coUnit = airQuality.coUnit ?: "mg/m³"
+
+    val pm25Iaqi = airQuality.pm25Iaqi ?: AqiCalculator.calculatePm25Aqi(airQuality.pm25)
+    val pm10Iaqi = airQuality.pm10Iaqi ?: AqiCalculator.calculatePm10Aqi(airQuality.pm10)
+    val o3Iaqi = airQuality.o3Iaqi ?: AqiCalculator.calculateO3Aqi(airQuality.o3, o3Unit)
+    val so2Iaqi = airQuality.so2Iaqi ?: AqiCalculator.calculateSo2Aqi(airQuality.so2, so2Unit)
+    val no2Iaqi = airQuality.no2Iaqi ?: AqiCalculator.calculateNo2Aqi(airQuality.no2, no2Unit)
+    val coIaqi = airQuality.coIaqi ?: AqiCalculator.calculateCoAqi(airQuality.co, coUnit)
 
     val pollutants = listOf(
-        PollutantItem("PM2.5", airQuality.pm25, "μg/m³", pm25Iaqi),
-        PollutantItem("PM10", airQuality.pm10, "μg/m³", pm10Iaqi),
-        PollutantItem("O₃", airQuality.o3, "ppb", o3Iaqi),
-        PollutantItem("SO₂", airQuality.so2, "ppb", so2Iaqi),
-        PollutantItem("NO₂", airQuality.no2, "ppb", no2Iaqi),
-        PollutantItem("CO", airQuality.co, "ppm", coIaqi)
+        PollutantItem("PM2.5", airQuality.pm25, pm25Unit, pm25Iaqi),
+        PollutantItem("PM10", airQuality.pm10, pm10Unit, pm10Iaqi),
+        PollutantItem("O₃", airQuality.o3, o3Unit, o3Iaqi),
+        PollutantItem("SO₂", airQuality.so2, so2Unit, so2Iaqi),
+        PollutantItem("NO₂", airQuality.no2, no2Unit, no2Iaqi),
+        PollutantItem("CO", airQuality.co, coUnit, coIaqi)
     )
 
     GlassCard(modifier = modifier) {

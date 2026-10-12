@@ -117,7 +117,19 @@ data class AirQuality(
     val primaryPollutant: String? = null,
     val healthEffect: String? = null,
     val healthAdviceGeneral: String? = null,
-    val healthAdviceSensitive: String? = null
+    val healthAdviceSensitive: String? = null,
+    val pm25Unit: String? = null,
+    val pm10Unit: String? = null,
+    val o3Unit: String? = null,
+    val so2Unit: String? = null,
+    val no2Unit: String? = null,
+    val coUnit: String? = null,
+    val pm25Iaqi: Int? = null,
+    val pm10Iaqi: Int? = null,
+    val o3Iaqi: Int? = null,
+    val so2Iaqi: Int? = null,
+    val no2Iaqi: Int? = null,
+    val coIaqi: Int? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -118,13 +118,21 @@ data class QWeatherPollutant(
     val code: String? = null,
     val name: String? = null,
     val fullName: String? = null,
-    val concentration: QWeatherConcentration? = null
+    val concentration: QWeatherConcentration? = null,
+    val subIndexes: List<QWeatherSubIndex>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class QWeatherConcentration(
     val value: Double? = null,
     val unit: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherSubIndex(
+    val code: String? = null,
+    val aqi: Double? = null,
+    val aqiDisplay: String? = null
 )
 
 // ============ GeoAPI (城市搜索, v2 API) ============

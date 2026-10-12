@@ -98,10 +98,10 @@ object AqiCalculator {
      *
      * @param pm25 PM2.5 浓度 (μg/m³)
      * @param pm10 PM10 浓度 (μg/m³)
-     * @param o3 O3 浓度 (若单位为 μg/m³ 则内部按 1 ppb ≈ 1.96 μg/m³ 折算为 ppb)
-     * @param no2 NO2 浓度 (若单位为 μg/m³ 则内部按 1 ppb ≈ 1.88 μg/m³ 折算为 ppb)
-     * @param so2 SO2 浓度 (若单位为 μg/m³ 则内部按 1 ppb ≈ 2.62 μg/m³ 折算为 ppb)
-     * @param co CO 浓度 (若单位为 mg/m³ 则内部按 1 ppm ≈ 1.15 mg/m³ 折算为 ppm)
+     * @param o3 O3 浓度 (若单位为 ppb 则直接使用；若为 μg/m³ 则内部按 1 ppb ≈ 1.963 μg/m³ 折算为 ppb)
+     * @param no2 NO2 浓度 (若单位为 ppb 则直接使用；若为 μg/m³ 则内部按 1 ppb ≈ 1.88 μg/m³ 折算为 ppb)
+     * @param so2 SO2 浓度 (若单位为 ppb 则直接使用；若为 μg/m³ 则内部按 1 ppb ≈ 2.62 μg/m³ 折算为 ppb)
+     * @param co CO 浓度 (若单位为 ppm 则直接使用；若为 mg/m³ 则内部按 1 ppm ≈ 1.145 mg/m³ 折算为 ppm)
      */
     fun calculate(
         pm25: Double? = null,
@@ -109,54 +109,46 @@ object AqiCalculator {
         o3: Double? = null,
         no2: Double? = null,
         so2: Double? = null,
-        co: Double? = null
+        co: Double? = null,
+        o3Unit: String? = null,
+        no2Unit: String? = null,
+        so2Unit: String? = null,
+        coUnit: String? = null
     ): AqiResult? {
         val subIndices = mutableListOf<Pair<String, Int>>()
 
         pm25?.let {
-            val truncated = kotlin.math.floor(it * 10) / 10.0
-            computeSubIndex(truncated, PM25_BREAKPOINTS)?.let { aqi ->
+            calculatePm25Aqi(it)?.let { aqi ->
                 subIndices.add("PM2.5" to aqi)
             }
         }
 
         pm10?.let {
-            val truncated = kotlin.math.floor(it)
-            computeSubIndex(truncated, PM10_BREAKPOINTS)?.let { aqi ->
+            calculatePm10Aqi(it)?.let { aqi ->
                 subIndices.add("PM10" to aqi)
             }
         }
 
         o3?.let {
-            // 若数值大于 1.0 且小于等于 500，通常为 μg/m³，转为 ppb；若小于 1.0 通常为 ppm
-            val ppb = when {
-                it > 1.0 -> kotlin.math.floor(it / 1.963)
-                it > 0.0 -> kotlin.math.floor(it * 1000)
-                else -> 0.0
-            }
-            computeSubIndex(ppb, O3_BREAKPOINTS)?.let { aqi ->
+            calculateO3Aqi(it, o3Unit)?.let { aqi ->
                 subIndices.add("O₃" to aqi)
             }
         }
 
         co?.let {
-            // 若数值大于 0 且小于 50，若单位为 mg/m³ 则转为 ppm: mg/m³ * 24.45 / 28.01
-            val ppm = kotlin.math.floor((it * 0.873) * 10) / 10.0
-            computeSubIndex(ppm, CO_BREAKPOINTS)?.let { aqi ->
+            calculateCoAqi(it, coUnit)?.let { aqi ->
                 subIndices.add("CO" to aqi)
             }
         }
 
         so2?.let {
-            val ppb = kotlin.math.floor(it * 0.382)
-            computeSubIndex(ppb, SO2_BREAKPOINTS)?.let { aqi ->
+            calculateSo2Aqi(it, so2Unit)?.let { aqi ->
                 subIndices.add("SO₂" to aqi)
             }
         }
 
         no2?.let {
-            val ppb = kotlin.math.floor(it * 0.531)
-            computeSubIndex(ppb, NO2_BREAKPOINTS)?.let { aqi ->
+            calculateNo2Aqi(it, no2Unit)?.let { aqi ->
                 subIndices.add("NO₂" to aqi)
             }
         }
@@ -187,31 +179,48 @@ object AqiCalculator {
         return computeSubIndex(truncated, PM10_BREAKPOINTS)
     }
 
-    fun calculateO3Aqi(o3: Double?): Int? {
+    fun calculateO3Aqi(o3: Double?, unit: String? = null): Int? {
         if (o3 == null) return null
-        val ppb = when {
-            o3 > 1.0 -> kotlin.math.floor(o3 / 1.963)
-            o3 > 0.0 -> kotlin.math.floor(o3 * 1000)
-            else -> 0.0
+        val ppb = if (unit?.trim()?.equals("ppb", ignoreCase = true) == true) {
+            o3
+        } else {
+            when {
+                o3 > 1.0 -> kotlin.math.floor(o3 / 1.963)
+                o3 > 0.0 -> kotlin.math.floor(o3 * 1000)
+                else -> 0.0
+            }
         }
         return computeSubIndex(ppb, O3_BREAKPOINTS)
     }
 
-    fun calculateCoAqi(co: Double?): Int? {
+    fun calculateCoAqi(co: Double?, unit: String? = null): Int? {
         if (co == null) return null
-        val ppm = kotlin.math.floor((co * 0.873) * 10) / 10.0
+        val u = unit?.trim()?.lowercase()
+        val ppm = when {
+            u == "ppm" -> co
+            u == "ug/m3" || u == "μg/m3" || u == "μg/m³" -> kotlin.math.floor((co / 1000.0 * 0.873) * 10) / 10.0
+            else -> kotlin.math.floor((co * 0.873) * 10) / 10.0
+        }
         return computeSubIndex(ppm, CO_BREAKPOINTS)
     }
 
-    fun calculateSo2Aqi(so2: Double?): Int? {
+    fun calculateSo2Aqi(so2: Double?, unit: String? = null): Int? {
         if (so2 == null) return null
-        val ppb = kotlin.math.floor(so2 * 0.382)
+        val ppb = if (unit?.trim()?.equals("ppb", ignoreCase = true) == true) {
+            so2
+        } else {
+            kotlin.math.floor(so2 * 0.3817)
+        }
         return computeSubIndex(ppb, SO2_BREAKPOINTS)
     }
 
-    fun calculateNo2Aqi(no2: Double?): Int? {
+    fun calculateNo2Aqi(no2: Double?, unit: String? = null): Int? {
         if (no2 == null) return null
-        val ppb = kotlin.math.floor(no2 * 0.531)
+        val ppb = if (unit?.trim()?.equals("ppb", ignoreCase = true) == true) {
+            no2
+        } else {
+            kotlin.math.floor(no2 * 0.5319)
+        }
         return computeSubIndex(ppb, NO2_BREAKPOINTS)
     }
 

@@ -61,9 +61,17 @@ object WbgtCalculator {
 
         val ta = temperature
         val rh = if (humidity <= 1.0) (humidity * 100.0).coerceIn(1.0, 100.0) else humidity.coerceIn(1.0, 100.0)
-        val p = pressurePa ?: STD_ATM_PRESSURE
+        val p = when {
+            pressurePa == null -> STD_ATM_PRESSURE
+            pressurePa in 300.0..2000.0 -> pressurePa * 100.0 // 防御性处理：若误传入 hPa 则自动转为 Pa
+            else -> pressurePa.coerceIn(30000.0, 120000.0)
+        }
         val v10 = ((windSpeedKmh ?: 0.0) / 3.6).coerceAtLeast(0.0) // m/s
-        val cc = (cloudCover ?: 0.5).coerceIn(0.0, 1.0)
+        val cc = when {
+            cloudCover == null -> 0.5
+            cloudCover > 1.0 -> (cloudCover / 100.0).coerceIn(0.0, 1.0) // 防御性处理：若误传入百分比 0~100 则归一化
+            else -> cloudCover.coerceIn(0.0, 1.0)
+        }
         val lat = latitude ?: 39.9042 // 默认北京基准
         val lon = longitude ?: 116.4074
 
