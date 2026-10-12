@@ -54,6 +54,18 @@ COUNTY_ALIASES = {
     "540581": "540524",  # 错那市 <- 错那县
     "632825": "632857",  # 大柴旦行委
     "140214": "140227",  # 云州区 <- 大同县
+    "130881": "130823",  # 平泉市 <- 平泉县
+    "350604": "350681",  # 龙海区 <- 龙海市
+    "411003": "411023",  # 建安区 <- 许昌县
+    "429021000": "429021",  # 神农架林区
+    "451203": "451281",  # 宜州区 <- 宜州市
+    "520201": "520221",  # 钟山区 <- 水城县
+    "520204": "520221",  # 水城区 <- 水城县
+    "520403": "520421",  # 平坝区 <- 平坝县
+    "520581": "522423",  # 黔西市 <- 黔西县
+    "520621": "522222",  # 江口县 <- 铜仁地区江口县
+    "520626": "522227",  # 德江县 <- 铜仁地区德江县
+    "522302": "522322",  # 兴仁市 <- 兴仁县
 }
 
 PROV_NAMES = {
@@ -66,14 +78,32 @@ PROV_NAMES = {
     "65": "新疆维吾尔自治区", "71": "台湾省", "81": "香港特别行政区", "82": "澳门特别行政区"
 }
 
+ETHNIC_TOKENS = [
+    "彝族", "傣族", "苗族", "回族", "满族", "蒙古族", "藏族", "畲族", "土家族", "侗族",
+    "朝鲜族", "俄罗斯族", "布依族", "水族", "阿昌族", "赫哲族", "瑶族", "仡佬族", "羌族",
+    "白族", "哈尼族", "哈萨克族", "维吾尔族", "纳西族", "景颇族", "怒族", "独龙族",
+    "仫佬族", "毛南族", "京族", "普米族", "撒拉族", "锡伯族", "塔吉克族", "塔塔尔族",
+    "乌孜别克族", "裕固族", "保安族", "德昂族", "基诺族", "门巴族", "珞巴族", "东乡族",
+    "布朗族", "佤族", "傈僳族", "拉祜族", "黎族", "壮族", "高山族", "民族",
+]
+
 def clean_town_name(name: str) -> str:
     """去除乡镇街道管理后缀，提取核心地名"""
     if not isinstance(name, str):
         return ""
-    for s in ["街道办事处", "街道", "地区办事处", "地区", "镇", "乡", "民族乡", "社区服务中心"]:
+    for s in ["街道办事处", "街道", "地区办事处", "地区", "镇", "乡", "民族乡", "社区服务中心", "区公所"]:
         if name.endswith(s):
             return name[:-len(s)]
     return name
+
+def clean_town_core(name: str) -> str:
+    """去除乡镇街道管理后缀与民族称谓，提取纯核心地名"""
+    if not isinstance(name, str):
+        return ""
+    s = clean_town_name(name)
+    for tok in ETHNIC_TOKENS:
+        s = s.replace(tok, "")
+    return s.strip()
 
 def build_counties_topology():
     print(">>> 1. 正在加载天地图县级行政区划多边形...")
@@ -119,15 +149,26 @@ def build_counties_topology():
 def build_townships(gdf_counties):
     print(">>> 5. 正在加载民政部 2026/2025.251231 官方最新四级底册...")
     mca_towns = []
-    with open(PATH_MCA_LEVEL4, "r", encoding="utf-8-sig") as f:
-        for row in csv.DictReader(f):
-            if row["deep"] == "3":
+    if os.path.exists(PATH_MCA_LEVEL4):
+        with open(PATH_MCA_LEVEL4, "r", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                if row["deep"] == "3":
+                    mca_towns.append({
+                        "id": row["id"],
+                        "pid": row["pid"],
+                        "name": row["name"],
+                        "ext_name": row["ext_name"],
+                        "ext_id": row["ext_id"]
+                    })
+    elif os.path.exists(OUTPUT_TOWNSHIPS_ALL):
+        with open(OUTPUT_TOWNSHIPS_ALL, "r", encoding="utf-8") as f:
+            for item in json.load(f):
                 mca_towns.append({
-                    "id": row["id"],
-                    "pid": row["pid"],
-                    "name": row["name"],
-                    "ext_name": row["ext_name"],
-                    "ext_id": row["ext_id"]
+                    "id": item.get("id", item["ext_id"][:9]),
+                    "pid": item["county_id"],
+                    "name": item["name"],
+                    "ext_name": item["ext_name"],
+                    "ext_id": item["ext_id"]
                 })
     print(f"    民政部法定乡镇街道总数: {len(mca_towns)}")
 
@@ -144,49 +185,64 @@ def build_townships(gdf_counties):
     adcode_by_code = {}
     adcode_by_cid_name = {}
     village_coords = defaultdict(list)
-    for path in glob.glob(os.path.join(PATH_ADCODE_DIR, "*.csv")):
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split(",")
-                if len(parts) >= 14:
-                    lvl = parts[3]
-                    code = parts[0]
-                    parent = parts[1]
-                    lon_s, lat_s = parts[12], parts[13]
-                    if lon_s and lat_s:
-                        try:
-                            lon, lat = float(lon_s), float(lat_s)
-                            if 73 <= lon <= 136 and 3 <= lat <= 54:
-                                if lvl == "town":
-                                    adcode_by_code[code] = (round(lon, 6), round(lat, 6))
-                                    clean_t = clean_town_name(parts[2])
-                                    adcode_by_cid_name[(parts[5], clean_t)] = (round(lon, 6), round(lat, 6))
-                                elif lvl == "village":
-                                    village_coords[parent].append((lon, lat))
-                        except ValueError:
-                            pass
-    # 村居重心回溯
-    for code, vlist in village_coords.items():
-        if code not in adcode_by_code:
-            adcode_by_code[code] = (
-                round(sum(v[0] for v in vlist) / len(vlist), 6),
-                round(sum(v[1] for v in vlist) / len(vlist), 6)
-            )
+    adcode_files = glob.glob(os.path.join(PATH_ADCODE_DIR, "*.csv"))
+    if adcode_files:
+        for path in adcode_files:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    parts = line.strip().split(",")
+                    if len(parts) >= 14:
+                        lvl = parts[3]
+                        code = parts[0]
+                        parent = parts[1]
+                        lon_s, lat_s = parts[12], parts[13]
+                        if lon_s and lat_s:
+                            try:
+                                lon, lat = float(lon_s), float(lat_s)
+                                if 73 <= lon <= 136 and 3 <= lat <= 54:
+                                    if lvl == "town":
+                                        adcode_by_code[code] = (round(lon, 6), round(lat, 6))
+                                        clean_t = clean_town_name(parts[2])
+                                        adcode_by_cid_name[(parts[5], clean_t)] = (round(lon, 6), round(lat, 6))
+                                    elif lvl == "village":
+                                        village_coords[parent].append((lon, lat))
+                            except ValueError:
+                                pass
+        # 村居重心回溯
+        for code, vlist in village_coords.items():
+            if code not in adcode_by_code:
+                adcode_by_code[code] = (
+                    round(sum(v[0] for v in vlist) / len(vlist), 6),
+                    round(sum(v[1] for v in vlist) / len(vlist), 6)
+                )
+    elif os.path.exists(OUTPUT_TOWNSHIPS_ACTIVE):
+        with open(OUTPUT_TOWNSHIPS_ACTIVE, "r", encoding="utf-8") as f:
+            for item in json.load(f):
+                if item.get("source", "").startswith("adcode"):
+                    adcode_by_code[item["ext_id"]] = (item["lon"], item["lat"])
+                    clean_t = clean_town_name(item["name"])
+                    adcode_by_cid_name[(item["county_id"], clean_t)] = (item["lon"], item["lat"])
 
     # 6.2 GB18306 国家抗震标准点位
     gb_by_cid_name = {}
-    with open(PATH_GB18306, "r", encoding="utf-8") as f:
-        for item in json.load(f):
-            try:
-                name = item["name"].encode("latin1").decode("utf-8")
-                clean_t = clean_town_name(name)
-                lon, lat = float(item["lon"]), float(item["lat"])
-                pcode = str(item.get("parentcode") or "")
-                ccode = pcode[3:] if len(pcode) == 9 and pcode.startswith("156") else pcode
-                if ccode:
-                    gb_by_cid_name[(ccode, clean_t)] = (round(lon, 6), round(lat, 6))
-            except Exception:
-                pass
+    gb_by_cid_core = {}
+    if os.path.exists(PATH_GB18306):
+        with open(PATH_GB18306, "r", encoding="utf-8") as f:
+            for item in json.load(f):
+                try:
+                    name = item["name"].encode("latin1").decode("utf-8")
+                    clean_t = clean_town_name(name)
+                    core_t = clean_town_core(name)
+                    lon, lat = float(item["lon"]), float(item["lat"])
+                    pcode = str(item.get("parentcode") or "")
+                    ccode = pcode[3:] if len(pcode) == 9 and pcode.startswith("156") else pcode
+                    if ccode:
+                        pt_val = (round(lon, 6), round(lat, 6))
+                        gb_by_cid_name[(ccode, clean_t)] = pt_val
+                        if core_t:
+                            gb_by_cid_core[(ccode, core_t)] = pt_val
+                except Exception:
+                    pass
 
     # 6.3 OSM 面要素与点要素
     print("    正在加载 OSM 行政多边形质心与地名点...")
@@ -217,6 +273,16 @@ def build_townships(gdf_counties):
                 ruiduobao_map[item["ext_id"]] = ((item["lon"], item["lat"]), item["source"])
         print(f"    已加载锐多宝交叉验证点位: {len(ruiduobao_map)} 个")
 
+    # 6.5 OSM 双通道严格校验驻地补点与兵团团场驻地
+    osm_resolved_map = {}
+    path_osm_resolved = os.path.join(BASE_DIR, "sources", "osm_seats.json")
+    if os.path.exists(path_osm_resolved):
+        with open(path_osm_resolved, "r", encoding="utf-8") as f:
+            for item in json.load(f):
+                if item.get("status") == "active" and item.get("lon") and item.get("lat") and not item.get("needs_review"):
+                    osm_resolved_map[item["ext_id"]] = ((item["lon"], item["lat"]), item.get("source", "osm_admin_seat"))
+        print(f"    已加载 OSM/兵团严格校验驻地补点: {len(osm_resolved_map)} 个")
+
     print(">>> 7. 正在执行 39,188 个乡镇的多层级消歧映射与位置继承...")
     results_all = []
     results_active = []
@@ -229,6 +295,7 @@ def build_townships(gdf_counties):
         name = m["name"]
         ext_name = m["ext_name"]
         clean_n = clean_town_name(name)
+        core_n = clean_town_core(name)
 
         # 获取历史别名县码
         alias_cid = COUNTY_ALIASES.get(cid, cid)
@@ -247,12 +314,18 @@ def build_townships(gdf_counties):
         elif (alias_cid, clean_n) in adcode_by_cid_name:
             pt = adcode_by_cid_name[(alias_cid, clean_n)]
             source = "adcode_name_inherit"
-        # 3. GB18306 同县同名（含别名）
+        # 3. GB18306 同县同名（含别名与民族去后缀）
         elif (cid, clean_n) in gb_by_cid_name:
             pt = gb_by_cid_name[(cid, clean_n)]
             source = "gb18306_name"
         elif (alias_cid, clean_n) in gb_by_cid_name:
             pt = gb_by_cid_name[(alias_cid, clean_n)]
+            source = "gb18306_name"
+        elif (cid, core_n) in gb_by_cid_core:
+            pt = gb_by_cid_core[(cid, core_n)]
+            source = "gb18306_name"
+        elif (alias_cid, core_n) in gb_by_cid_core:
+            pt = gb_by_cid_core[(alias_cid, core_n)]
             source = "gb18306_name"
         # 4. OSM 行政面质心
         elif ext_name in osm_poly_map:
@@ -296,6 +369,17 @@ def build_townships(gdf_counties):
         # 7. 锐多宝高精度多边形质心与村庄聚类中心 (经天地图区县多边形空间交叉验证)
         elif ext_id in ruiduobao_map:
             pt, source = ruiduobao_map[ext_id]
+        # 8. OSM / 兵团严格校验驻地补点 (多门禁验证后的高置信坐标)
+        elif ext_id in osm_resolved_map:
+            pt, source = osm_resolved_map[ext_id]
+
+        # 空间多边形复核：确保落点严格位于县多边形内部（防跨区越界）
+        if pt:
+            c_poly = county_geom.get(cid) or (county_geom.get(alias_cid) if alias_cid else None)
+            if c_poly is not None and not c_poly.is_empty:
+                if not c_poly.contains(Point(pt[0], pt[1])):
+                    pt = None
+                    source = None
 
         # 判断是否成功解析出真实离散坐标
         if pt:
@@ -349,6 +433,14 @@ def build_townships(gdf_counties):
         json.dump(unresolved_list, f, ensure_ascii=False, indent=2)
     print(f"    未完成待补全清单已保存: {OUTPUT_UNRESOLVED_JSON} (共 {len(unresolved_list)} 个条目)")
 
+    # 压缩全量与激活字典 (供归档与体积优化)
+    import gzip
+    with open(OUTPUT_TOWNSHIPS_ALL, "rb") as f_in, gzip.open(OUTPUT_TOWNSHIPS_ALL + ".gz", "wb") as f_out:
+        f_out.writelines(f_in)
+    with open(OUTPUT_TOWNSHIPS_ACTIVE, "rb") as f_in, gzip.open(OUTPUT_TOWNSHIPS_ACTIVE + ".gz", "wb") as f_out:
+        f_out.writelines(f_in)
+    print("    全量与激活字典已同步更新 .json.gz 压缩镜像。")
+
     # 输出简洁、单一官方名称的未完成待补全 CSV 清单
     generate_unresolved_csv(unresolved_list, county_name)
 
@@ -384,6 +476,10 @@ def generate_unresolved_csv(unresolved_list, county_name_map):
     print(f"    未完成待补全 CSV 清单已保存: {OUTPUT_UNRESOLVED_CSV} (共 {len(unresolved_list)} 个条目)")
 
 if __name__ == "__main__":
-    counties_gdf = build_counties_topology()
+    if os.path.exists(OUTPUT_COUNTIES):
+        print(f">>> 1. 发现现有高精区县边界图层 {OUTPUT_COUNTIES}，直接加载...")
+        counties_gdf = gpd.read_file(OUTPUT_COUNTIES)
+    else:
+        counties_gdf = build_counties_topology()
     build_townships(counties_gdf)
     print(">>> 全流程构建执行完毕！")

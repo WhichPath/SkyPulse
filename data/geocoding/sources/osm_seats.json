@@ -1,0 +1,200 @@
+[
+  {
+    "ext_id": "150784203000",
+    "county_id": "150784",
+    "name": "恩和",
+    "county_name": "额尔古纳市",
+    "lon": 119.842819,
+    "lat": 50.863796,
+    "source": "osm_admin_seat",
+    "status": "active",
+    "note": "恩和俄罗斯族民族乡 (OSM boundary=administrative 质心，通过 150784 县多边形包含校验)"
+  },
+  {
+    "ext_id": "220721001000",
+    "county_id": "220721",
+    "name": "阿穆尔",
+    "county_name": "前郭尔罗斯蒙古族自治县",
+    "lon": 124.826426,
+    "lat": 45.115797,
+    "source": "osm_admin_seat",
+    "status": "active",
+    "note": "阿穆尔街道 (OSM boundary=administrative 质心，V1-V5 双通道验证通过)"
+  },
+  {
+    "ext_id": "220721002000",
+    "county_id": "220721",
+    "name": "萨日朗",
+    "county_name": "前郭尔罗斯蒙古族自治县",
+    "lon": 124.84444,
+    "lat": 45.103502,
+    "source": "osm_admin_seat",
+    "status": "active",
+    "note": "萨日朗街道 (OSM boundary=administrative 质心，V1-V5 双通道验证通过)"
+  },
+  {
+    "ext_id": "340722119000",
+    "county_id": "340722",
+    "name": "藕山",
+    "county_name": "枞阳县",
+    "lon": 117.398548,
+    "lat": 30.77097,
+    "source": "osm_point",
+    "status": "active",
+    "note": "藕山镇 藕山村驻地点位 (通过 340722 县多边形包含校验)"
+  },
+  {
+    "ext_id": "341524113000",
+    "county_id": "341524",
+    "name": "流波幢",
+    "county_name": "金寨县",
+    "lon": 116.007061,
+    "lat": 31.437302,
+    "source": "osm_point",
+    "status": "active",
+    "note": "流波䃥镇人民政府驻地 (OSM townhall 标注，通过 341524 县多边形包含校验)"
+  },
+  {
+    "ext_id": "130731400000",
+    "county_id": "130731",
+    "name": "赵家蓬区公所",
+    "county_name": "涿鹿县",
+    "lon": 115.292314,
+    "lat": 39.885544,
+    "source": "osm_point",
+    "status": "active",
+    "note": "赵家蓬区公所 赵家蓬村驻地 (通过 130731 县多边形包含校验)"
+  },
+  {
+    "ext_id": "659001412000",
+    "county_id": "659001000",
+    "name": "一五二团",
+    "county_name": "石河子市",
+    "lon": 86.043458,
+    "lat": 44.184712,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第八师石河子市一五二团驻地 (通过 659001 多边形包含校验)"
+  },
+  {
+    "ext_id": "659002106000",
+    "county_id": "659002000",
+    "name": "十一团花桥",
+    "county_name": "阿拉尔市",
+    "lon": 81.56031,
+    "lat": 40.62659,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第一师阿拉尔市十一团花桥镇 (通过 659002 多边形包含校验，距同市驻地>5km)"
+  },
+  {
+    "ext_id": "659002107000",
+    "county_id": "659002000",
+    "name": "十三团幸福",
+    "county_name": "阿拉尔市",
+    "lon": 81.4974,
+    "lat": 40.6385,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第一师阿拉尔市十三团幸福镇 (通过 659002 多边形包含校验，距同市驻地>5km)"
+  },
+  {
+    "ext_id": "659002108000",
+    "county_id": "659002000",
+    "name": "十四团金杨",
+    "county_name": "阿拉尔市",
+    "lon": 81.76945,
+    "lat": 40.69033,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第一师阿拉尔市十四团金杨镇 (通过 659002 多边形包含校验，距同市驻地>19km)"
+  },
+  {
+    "ext_id": "659002114000",
+    "county_id": "659002000",
+    "name": "十六团新开岭",
+    "county_name": "阿拉尔市",
+    "lon": 80.84114,
+    "lat": 40.49326,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第一师阿拉尔市十六团新开岭镇 (通过 659002 多边形包含校验，距同市驻地>57km)"
+  },
+  {
+    "ext_id": "659003107000",
+    "county_id": "659003000",
+    "name": "五十团夏河",
+    "county_name": "图木舒克市",
+    "lon": 79.247952,
+    "lat": 39.9459,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第三师图木舒克市五十团夏河镇 (通过 659003 多边形包含校验)"
+  },
+  {
+    "ext_id": "659003110000",
+    "county_id": "659003000",
+    "name": "五十一团唐驿",
+    "county_name": "图木舒克市",
+    "lon": 79.144006,
+    "lat": 39.975147,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第三师图木舒克市五十一团唐驿镇 (通过 659003 多边形包含校验，距同市五十团>9km)"
+  },
+  {
+    "ext_id": "659005101000",
+    "county_id": "659005000",
+    "name": "一八七团丰庆",
+    "county_name": "北屯市",
+    "lon": 87.982856,
+    "lat": 47.274041,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第十师北屯市一八七团丰庆镇 (通过 659005 多边形包含校验)"
+  },
+  {
+    "ext_id": "659006105000",
+    "county_id": "659006000",
+    "name": "二二三团开泽",
+    "county_name": "铁门关市",
+    "lon": 86.530447,
+    "lat": 42.298966,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第二师铁门关市二二三团开泽镇 (通过 659006 多边形包含校验)"
+  },
+  {
+    "ext_id": "659009100000",
+    "county_id": "659009000",
+    "name": "四十七团老兵",
+    "county_name": "昆玉市",
+    "lon": 79.64322,
+    "lat": 37.51577,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第十四师昆玉市四十七团老兵镇 (通过 659009 多边形包含校验)"
+  },
+  {
+    "ext_id": "659009104000",
+    "county_id": "659009000",
+    "name": "二二四团玉园",
+    "county_name": "昆玉市",
+    "lon": 79.300741,
+    "lat": 37.206313,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第十四师昆玉市二二四团玉园镇 (通过 659009 多边形包含校验，距四十七团>45km)"
+  },
+  {
+    "ext_id": "659011102000",
+    "county_id": "659011000",
+    "name": "黄田农场黄田",
+    "county_name": "新星市",
+    "lon": 93.735711,
+    "lat": 42.797048,
+    "source": "xpcc_regiment_osm",
+    "status": "active",
+    "note": "第十三师新星市黄田农场黄田镇 (通过 659011 多边形包含校验)"
+  }
+]

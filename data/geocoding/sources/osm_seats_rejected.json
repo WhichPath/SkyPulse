@@ -1,0 +1,68 @@
+[
+  {
+    "ext_id": "150784203000",
+    "county_id": "150784",
+    "name": "恩和",
+    "county_name": "额尔古纳市",
+    "lon": 119.842819,
+    "lat": 50.863796,
+    "source": "osm_admin_seat",
+    "status": "active",
+    "osm": {
+      "type": "relation",
+      "id": 10591448,
+      "name": "恩和俄罗斯族乡",
+      "class": "boundary",
+      "osm_type": "administrative",
+      "name_flag": "exact",
+      "display_name": "恩和俄罗斯族乡, 额尔古纳市, 呼伦贝尔市, 内蒙古自治区, 中国",
+      "query": "呼伦贝尔市额尔古纳市恩和俄罗斯族民族乡",
+      "regime_change": true,
+      "reverse_county": "",
+      "too_close_peers": [],
+      "corroborated_by": "",
+      "corrob_dist_m": 0.0,
+      "km_to_county_centroid": 96.8
+    },
+    "verify": {
+      "inside_county": true,
+      "reverse_town": "恩和乡",
+      "reverse_town_match": true,
+      "reverse_county": "呼伦贝尔市",
+      "near_peers_800m": []
+    }
+  },
+  {
+    "ext_id": "429021203000",
+    "county_id": "429021000",
+    "name": "下谷坪",
+    "county_name": "神农架林区",
+    "lon": 110.240546,
+    "lat": 31.367994,
+    "source": "osm_admin_seat",
+    "status": "active",
+    "osm": {
+      "type": "way",
+      "id": 1483124525,
+      "name": "下谷坪土家族乡人民政府",
+      "class": "amenity",
+      "osm_type": "townhall",
+      "name_flag": "exact",
+      "display_name": "下谷坪土家族乡人民政府, 农耕大道, 下谷坪乡, 神农架林区, 湖北省, 中国",
+      "query": "下谷坪人民政府",
+      "regime_change": false,
+      "reverse_county": "",
+      "too_close_peers": [],
+      "corroborated_by": "",
+      "corrob_dist_m": 0.0,
+      "km_to_county_centroid": 1000000.0
+    },
+    "verify": {
+      "inside_county": false,
+      "reverse_town": "兴隆寺村",
+      "reverse_town_match": false,
+      "reverse_county": "",
+      "near_peers_800m": []
+    }
+  }
+]

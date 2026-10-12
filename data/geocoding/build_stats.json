@@ -1,11 +1,12 @@
 {
   "adcode_code": 28385,
-  "osm_poly_centroid": 2327,
   "adcode_name_inherit": 4559,
-  "gb18306_name": 2051,
-  "osm_point": 1308,
-  "ruiduobao_gson": 46,
+  "osm_poly_centroid": 2327,
+  "gb18306_name": 2088,
+  "osm_point": 1311,
+  "unresolved_pending": 390,
   "ruiduobao_cun_cluster": 56,
-  "unresolved_pending": 445,
-  "xpcc_regiment_osm": 11
+  "ruiduobao_gson": 46,
+  "xpcc_regiment_osm": 23,
+  "osm_admin_seat": 3
 }

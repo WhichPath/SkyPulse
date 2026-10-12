@@ -21935,11 +21935,10 @@
     "province": "河北省",
     "name": "赵家蓬区公所",
     "ext_name": "赵家蓬区公所",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 115.292314,
+    "lat": 39.885544,
+    "source": "osm_point",
+    "status": "active"
   },
   {
     "ext_id": "130732100000",
@@ -24267,11 +24266,10 @@
     "province": "河北省",
     "name": "七家岱",
     "ext_name": "七家岱满族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 118.635384,
+    "lat": 41.181304,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "130881202000",
@@ -24279,11 +24277,10 @@
     "province": "河北省",
     "name": "茅兰沟",
     "ext_name": "茅兰沟满族蒙古族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 118.839416,
+    "lat": 41.199184,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "130881205000",
@@ -25411,11 +25408,10 @@
     "province": "河北省",
     "name": "本斋",
     "ext_name": "本斋回族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 116.247983,
+    "lat": 38.3424,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "130929209000",
@@ -26213,11 +26209,10 @@
     "province": "河北省",
     "name": "果子洼",
     "ext_name": "果子洼回族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 116.04592,
+    "lat": 38.427068,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "130984209000",
@@ -47939,11 +47934,10 @@
     "province": "内蒙古自治区",
     "name": "恩和",
     "ext_name": "恩和俄罗斯族民族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 119.842819,
+    "lat": 50.863796,
+    "source": "osm_admin_seat",
+    "status": "active"
   },
   {
     "ext_id": "150784204000",
@@ -57551,11 +57545,10 @@
     "province": "辽宁省",
     "name": "下露河",
     "ext_name": "下露河朝鲜族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 125.521163,
+    "lat": 40.899017,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "210624206000",
@@ -66213,11 +66206,10 @@
     "province": "吉林省",
     "name": "双营子",
     "ext_name": "双营子回族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 125.58628,
+    "lat": 43.596228,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "220113001000",
@@ -69065,11 +69057,10 @@
     "province": "吉林省",
     "name": "叶赫",
     "ext_name": "叶赫满族镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 124.531416,
+    "lat": 42.944568,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "220303200000",
@@ -72077,11 +72068,10 @@
     "province": "吉林省",
     "name": "阿穆尔",
     "ext_name": "阿穆尔街道",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 124.826426,
+    "lat": 45.115797,
+    "source": "osm_admin_seat",
+    "status": "active"
   },
   {
     "ext_id": "220721002000",
@@ -72089,11 +72079,10 @@
     "province": "吉林省",
     "name": "萨日朗",
     "ext_name": "萨日朗街道",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 124.84444,
+    "lat": 45.103502,
+    "source": "osm_admin_seat",
+    "status": "active"
   },
   {
     "ext_id": "220721003000",
@@ -83733,11 +83722,10 @@
     "province": "黑龙江省",
     "name": "街津口",
     "ext_name": "街津口赫哲族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 132.841112,
+    "lat": 47.932724,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "230881205000",
@@ -111275,11 +111263,10 @@
     "province": "浙江省",
     "name": "水亭",
     "ext_name": "水亭畲族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 119.270416,
+    "lat": 29.181418,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "330782001000",
@@ -114537,11 +114524,10 @@
     "province": "浙江省",
     "name": "丽新",
     "ext_name": "丽新畲族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 119.692816,
+    "lat": 28.483676,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "331102211000",
@@ -121059,11 +121045,10 @@
     "province": "安徽省",
     "name": "藕山",
     "ext_name": "藕山镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 117.398548,
+    "lat": 30.77097,
+    "source": "osm_point",
+    "status": "active"
   },
   {
     "ext_id": "340722120000",
@@ -128751,11 +128736,10 @@
     "province": "安徽省",
     "name": "流波幢",
     "ext_name": "流波幢镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 116.007061,
+    "lat": 31.437302,
+    "source": "osm_point",
+    "status": "active"
   },
   {
     "ext_id": "341524202000",
@@ -137613,11 +137597,10 @@
     "province": "福建省",
     "name": "隆教",
     "ext_name": "隆教畲族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 118.056136,
+    "lat": 24.255426,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "350605100000",
@@ -188541,11 +188524,10 @@
     "province": "河南省",
     "name": "艾庄",
     "ext_name": "艾庄回族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 113.65096,
+    "lat": 34.145952,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "411024100000",
@@ -213949,11 +213931,10 @@
     "province": "湖北省",
     "name": "下谷坪",
     "ext_name": "下谷坪土家族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 110.251677,
+    "lat": 31.37161,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "430102001000",
@@ -224801,11 +224782,10 @@
     "province": "湖南省",
     "name": "甘堰",
     "ext_name": "甘堰土家族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 110.780568,
+    "lat": 29.279354,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "430822100000",
@@ -229683,11 +229663,10 @@
     "province": "湖南省",
     "name": "二酉",
     "ext_name": "二酉苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 110.280896,
+    "lat": 28.530854,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "431222215000",
@@ -245685,11 +245664,10 @@
     "province": "广东省",
     "name": "漳溪",
     "ext_name": "漳溪畲族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 114.92284,
+    "lat": 24.103156,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "441702001000",
@@ -259449,11 +259427,10 @@
     "province": "广西壮族自治区",
     "name": "北牙",
     "ext_name": "北牙瑶族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 108.400256,
+    "lat": 24.410748,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "451203210000",
@@ -272861,11 +272838,10 @@
     "province": "重庆市",
     "name": "红椿",
     "ext_name": "红椿土家族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 109.713096,
+    "lat": 30.851854,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "500237207000",
@@ -291175,11 +291151,10 @@
     "province": "四川省",
     "name": "观斗",
     "ext_name": "观斗苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 104.806618,
+    "lat": 28.19699,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "511527100000",
@@ -307307,11 +307282,10 @@
     "province": "贵州省",
     "name": "南开",
     "ext_name": "南开苗族彝族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 105.00268,
+    "lat": 26.756398,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520203001000",
@@ -307739,11 +307713,10 @@
     "province": "贵州省",
     "name": "花戛",
     "ext_name": "花戛苗族布依族彝族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 104.92564,
+    "lat": 26.077452,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520204205000",
@@ -307771,11 +307744,10 @@
     "province": "贵州省",
     "name": "野钟",
     "ext_name": "野钟苗族彝族布依族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 104.924576,
+    "lat": 26.237872,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520204208000",
@@ -307783,11 +307755,10 @@
     "province": "贵州省",
     "name": "果布戛",
     "ext_name": "果布戛彝族苗族布依族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 104.986984,
+    "lat": 26.269188,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520204209000",
@@ -310969,11 +310940,10 @@
     "province": "贵州省",
     "name": "羊昌",
     "ext_name": "羊昌布依族苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 106.321208,
+    "lat": 26.34623,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520422001000",
@@ -314231,11 +314201,10 @@
     "province": "贵州省",
     "name": "新仁",
     "ext_name": "新仁苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 106.094296,
+    "lat": 26.858602,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520581203000",
@@ -314253,11 +314222,10 @@
     "province": "贵州省",
     "name": "太来",
     "ext_name": "太来彝族苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 106.339176,
+    "lat": 27.06522,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520581205000",
@@ -314265,11 +314233,10 @@
     "province": "贵州省",
     "name": "永燊",
     "ext_name": "永燊彝族苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 106.200504,
+    "lat": 27.10412,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520581206000",
@@ -314297,11 +314264,10 @@
     "province": "贵州省",
     "name": "定新",
     "ext_name": "定新彝族苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 106.13176,
+    "lat": 27.170584,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520581209000",
@@ -314679,11 +314645,10 @@
     "province": "贵州省",
     "name": "德旺",
     "ext_name": "德旺土家族苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 108.55724,
+    "lat": 27.787528,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520621201000",
@@ -314691,11 +314656,10 @@
     "province": "贵州省",
     "name": "官和",
     "ext_name": "官和侗族土家族苗族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 108.657008,
+    "lat": 27.528906,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520622001000",
@@ -315613,11 +315577,10 @@
     "province": "贵州省",
     "name": "楠杆",
     "ext_name": "楠杆土家族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 107.87872,
+    "lat": 28.275964,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520626210000",
@@ -315635,11 +315598,10 @@
     "province": "贵州省",
     "name": "荆角",
     "ext_name": "荆角土家族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 108.16388,
+    "lat": 28.355056,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "520626212000",
@@ -316667,11 +316629,10 @@
     "province": "贵州省",
     "name": "鲁础营",
     "ext_name": "鲁础营回族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 105.040896,
+    "lat": 25.341512,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "522323001000",
@@ -324583,11 +324544,10 @@
     "province": "云南省",
     "name": "芒宽",
     "ext_name": "芒宽彝族傣族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 98.866904,
+    "lat": 25.448406,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "530521100000",
@@ -334485,11 +334445,10 @@
     "province": "云南省",
     "name": "户撒",
     "ext_name": "户撒阿昌族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 97.894368,
+    "lat": 24.468612,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "533124201000",
@@ -363117,11 +363076,10 @@
     "province": "甘肃省",
     "name": "五顷塬",
     "ext_name": "五顷塬回族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 108.4616,
+    "lat": 35.400836,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "621025208000",
@@ -365029,11 +364987,10 @@
     "province": "甘肃省",
     "name": "坪垭",
     "ext_name": "坪垭藏族乡",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 104.666968,
+    "lat": 33.508964,
+    "source": "gb18306_name",
+    "status": "active"
   },
   {
     "ext_id": "621202203000",
@@ -386695,11 +386652,10 @@
     "province": "新疆维吾尔自治区",
     "name": "一五二团",
     "ext_name": "一五二团",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 86.043458,
+    "lat": 44.184712,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659002001000",
@@ -386813,11 +386769,10 @@
     "province": "新疆维吾尔自治区",
     "name": "十一团花桥",
     "ext_name": "十一团花桥镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 81.56031,
+    "lat": 40.62659,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659002107000",
@@ -386825,11 +386780,10 @@
     "province": "新疆维吾尔自治区",
     "name": "十三团幸福",
     "ext_name": "十三团幸福镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 81.4974,
+    "lat": 40.6385,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659002108000",
@@ -386837,11 +386791,10 @@
     "province": "新疆维吾尔自治区",
     "name": "十四团金杨",
     "ext_name": "十四团金杨镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 81.76945,
+    "lat": 40.69033,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659002109000",
@@ -386905,11 +386858,10 @@
     "province": "新疆维吾尔自治区",
     "name": "十六团新开岭",
     "ext_name": "十六团新开岭镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 80.84114,
+    "lat": 40.49326,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659002201000",
@@ -387041,11 +386993,10 @@
     "province": "新疆维吾尔自治区",
     "name": "五十团夏河",
     "ext_name": "五十团夏河镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 79.247952,
+    "lat": 39.9459,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659003108000",
@@ -387075,11 +387026,10 @@
     "province": "新疆维吾尔自治区",
     "name": "五十一团唐驿",
     "ext_name": "五十一团唐驿镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 79.144006,
+    "lat": 39.975147,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659003111000",
@@ -387371,11 +387321,10 @@
     "province": "新疆维吾尔自治区",
     "name": "一八七团丰庆",
     "ext_name": "一八七团丰庆镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 87.982856,
+    "lat": 47.274041,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659005102000",
@@ -387523,11 +387472,10 @@
     "province": "新疆维吾尔自治区",
     "name": "二二三团开泽",
     "ext_name": "二二三团开泽镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 86.530447,
+    "lat": 42.298966,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659006106000",
@@ -387987,11 +387935,10 @@
     "province": "新疆维吾尔自治区",
     "name": "四十七团老兵",
     "ext_name": "四十七团老兵镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 79.64322,
+    "lat": 37.51577,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659009101000",
@@ -388035,11 +387982,10 @@
     "province": "新疆维吾尔自治区",
     "name": "二二四团玉园",
     "ext_name": "二二四团玉园镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 79.300741,
+    "lat": 37.206313,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659010001000",
@@ -388213,11 +388159,10 @@
     "province": "新疆维吾尔自治区",
     "name": "黄田农场黄田",
     "ext_name": "黄田农场黄田镇",
-    "lon": null,
-    "lat": null,
-    "source": "unresolved",
-    "status": "pending",
-    "reason": "缺少可信离散驻地坐标，暂不参与最近邻空间匹配"
+    "lon": 93.735711,
+    "lat": 42.797048,
+    "source": "xpcc_regiment_osm",
+    "status": "active"
   },
   {
     "ext_id": "659011400000",
