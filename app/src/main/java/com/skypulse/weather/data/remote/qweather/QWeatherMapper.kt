@@ -144,7 +144,7 @@ object QWeatherMapper {
 
     // ============ Air Quality (空气质量) ============
 
-    private fun mapAirQuality(air: QWeatherAirResponse?): AirQuality? {
+    internal fun mapAirQuality(air: QWeatherAirResponse?): AirQuality? {
         if (air == null) return null
         val indexes = air.indexes
         val pollutants = air.pollutants ?: emptyList()
@@ -165,13 +165,6 @@ object QWeatherMapper {
             }
         }
 
-        fun pollutantSubIndex(code: String): Int? {
-            val p = pollutants.firstOrNull { it.code == code } ?: return null
-            val sub = p.subIndexes?.firstOrNull { it.code == "us-epa" }
-                ?: p.subIndexes?.firstOrNull()
-            return sub?.aqi?.toInt()
-        }
-
         val pm25 = pollutantValue("pm2p5")
         val pm10 = pollutantValue("pm10")
         val o3 = pollutantValue("o3")
@@ -186,7 +179,7 @@ object QWeatherMapper {
         val no2Unit = pollutantUnit("no2", "μg/m³")
         val coUnit = pollutantUnit("co", "mg/m³")
 
-        // 优先使用本地美国 EPA 标准算法基于基础污染物浓度与实际单位计算 AQI
+        // 统一使用本地美国 EPA 标准算法基于基础污染物客观浓度与实际单位计算 AQI
         val localAqi = AqiCalculator.calculate(
             pm25 = pm25,
             pm10 = pm10,
@@ -208,12 +201,13 @@ object QWeatherMapper {
         val category = localAqi?.category ?: usEpa?.category ?: chnIndex?.category
         val primary = localAqi?.primaryPollutant ?: (chnIndex ?: usEpa)?.primaryPollutant?.name
 
-        val pm25Iaqi = pollutantSubIndex("pm2p5") ?: localAqi?.individualAqi?.get("PM2.5") ?: AqiCalculator.calculatePm25Aqi(pm25)
-        val pm10Iaqi = pollutantSubIndex("pm10") ?: localAqi?.individualAqi?.get("PM10") ?: AqiCalculator.calculatePm10Aqi(pm10)
-        val o3Iaqi = pollutantSubIndex("o3") ?: localAqi?.individualAqi?.get("O₃") ?: AqiCalculator.calculateO3Aqi(o3, o3Unit)
-        val so2Iaqi = pollutantSubIndex("so2") ?: localAqi?.individualAqi?.get("SO₂") ?: AqiCalculator.calculateSo2Aqi(so2, so2Unit)
-        val no2Iaqi = pollutantSubIndex("no2") ?: localAqi?.individualAqi?.get("NO₂") ?: AqiCalculator.calculateNo2Aqi(no2, no2Unit)
-        val coIaqi = pollutantSubIndex("co") ?: localAqi?.individualAqi?.get("CO") ?: AqiCalculator.calculateCoAqi(co, coUnit)
+        // 分项仅采集客观浓度数据，分项 IAQI 统一基于美国 EPA 标准计算确定颜色
+        val pm25Iaqi = localAqi?.individualAqi?.get("PM2.5") ?: AqiCalculator.calculatePm25Aqi(pm25)
+        val pm10Iaqi = localAqi?.individualAqi?.get("PM10") ?: AqiCalculator.calculatePm10Aqi(pm10)
+        val o3Iaqi = localAqi?.individualAqi?.get("O₃") ?: AqiCalculator.calculateO3Aqi(o3, o3Unit)
+        val so2Iaqi = localAqi?.individualAqi?.get("SO₂") ?: AqiCalculator.calculateSo2Aqi(so2, so2Unit)
+        val no2Iaqi = localAqi?.individualAqi?.get("NO₂") ?: AqiCalculator.calculateNo2Aqi(no2, no2Unit)
+        val coIaqi = localAqi?.individualAqi?.get("CO") ?: AqiCalculator.calculateCoAqi(co, coUnit)
 
         return AirQuality(
             pm25 = pm25,

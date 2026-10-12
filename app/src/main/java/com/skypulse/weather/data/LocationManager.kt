@@ -12,6 +12,7 @@ import com.skypulse.weather.data.provider.impl.AmapLocationProvider
 import com.skypulse.weather.data.provider.impl.AmapGeocodingProvider
 import com.skypulse.weather.data.provider.impl.SystemLocationProvider
 import com.skypulse.weather.data.provider.impl.SystemGeocoderProvider
+import com.skypulse.weather.data.provider.impl.OfflineGeocodingProvider
 import com.skypulse.weather.data.provider.model.SimpleLocation
 import com.skypulse.weather.util.FileLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,7 +28,8 @@ class LocationManager @Inject constructor(
     private val systemLocationProvider: SystemLocationProvider,
     private val amapLocationProvider: AmapLocationProvider,
     private val systemGeocoderProvider: SystemGeocoderProvider,
-    private val amapGeocodingProvider: AmapGeocodingProvider
+    private val amapGeocodingProvider: AmapGeocodingProvider,
+    private val offlineGeocodingProvider: OfflineGeocodingProvider
 ) {
     data class CachedLocation(
         val latitude: Double,
@@ -357,19 +359,23 @@ class LocationManager @Inject constructor(
                 timeoutMillis = profile.timeoutMillis
             )
             if (amapLoc != null) {
+                // 优先通过高精离线逆地理引擎获取民政部法定规范全称 (微秒级)
+                val geocodedName = reverseGeocode(
+                    amapLoc.latitude,
+                    amapLoc.longitude,
+                    forceRefresh = highAccuracy,
+                    accuracy = amapLoc.accuracy
+                )
                 val directName = resolveLocationName(amapLoc)
-                var name = if (directName != "未知位置" && directName.isNotBlank()) {
+                var name = if (geocodedName != "未知位置" && geocodedName.isNotBlank()) {
+                    geocodedName
+                } else if (directName != "未知位置" && directName.isNotBlank()) {
                     directName
                 } else {
-                    reverseGeocode(
-                        amapLoc.latitude,
-                        amapLoc.longitude,
-                        forceRefresh = highAccuracy,
-                        accuracy = amapLoc.accuracy
-                    )
+                    "未知位置"
                 }
-                // 高德 SDK 返回了城市或区级字段 → 名称可靠；全 null → 仅逆地理编码，可能不完整
-                var isReliableName = !amapLoc.cityName.isNullOrBlank() || !amapLoc.districtName.isNullOrBlank()
+                var isReliableName = (geocodedName != "未知位置" && geocodedName.isNotBlank()) ||
+                    !amapLoc.cityName.isNullOrBlank() || !amapLoc.districtName.isNullOrBlank()
                 
                 // 语义字段为空时，等待5秒后重试一次，给高德 SDK 时间获取完整数据（仅在时间预算充裕时）
                 val remainingForRetry = totalTimeoutMillis - elapsedSince(startMs)
@@ -560,7 +566,17 @@ class LocationManager @Inject constructor(
             }
         }
 
-        // 1. 优先使用官方高德 REST Web API 逆地理编码，保持与高德定位主路径一致。
+        // 0. 优先使用本地全离线两阶段逆地理引擎 (微秒级响应，0网络请求，100%对齐民政部最新法定乡镇街道)
+        val offlineStartMs = android.os.SystemClock.elapsedRealtime()
+        val offlineResult = offlineGeocodingProvider.reverseGeocode(lat, lon)
+        locI("reverse_geocode_offline_done: elapsed=${elapsedSince(offlineStartMs)}ms, result=${offlineResult.safeLogValue()}")
+
+        if (offlineResult != null && offlineResult != "未知位置" && offlineResult.isNotBlank()) {
+            locI("reverse_geocode_selected: source=offline_engine, total=${elapsedSince(startMs)}ms, result=${offlineResult.safeLogValue()}")
+            return@withContext offlineResult
+        }
+
+        // 1. 离线未命中 (如国境线外或特殊边界)，降级使用高德 REST Web API 逆地理编码
         val amapStartMs = android.os.SystemClock.elapsedRealtime()
         val amapResult = amapGeocodingProvider.reverseGeocode(lat, lon)
         locI("reverse_geocode_amap_web_done: elapsed=${elapsedSince(amapStartMs)}ms, result=${amapResult.safeLogValue()}")
@@ -571,7 +587,7 @@ class LocationManager @Inject constructor(
         }
 
         // 2. 高德 Web 失败后，降级系统 Geocoder，避免 API key/网络异常导致地址完全不可用。
-        Log.i(TAG, "reverseGeocode: 高德 Web 失败，降级尝试系统 Geocoder...")
+        Log.i(TAG, "reverseGeocode: 离线与高德 Web 均未命中，降级尝试系统 Geocoder...")
         val systemStartMs = android.os.SystemClock.elapsedRealtime()
         val systemResult = systemGeocoderProvider.reverseGeocode(lat, lon)
         locI("reverse_geocode_system_done: elapsed=${elapsedSince(systemStartMs)}ms, result=${systemResult.safeLogValue()}")

@@ -1,0 +1,947 @@
+[
+  {
+    "ext_id": "130105014000",
+    "county_id": "130105",
+    "province": "河北省",
+    "name": "赵佗路街道",
+    "lon": 114.429461,
+    "lat": 38.094155,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "130321001000",
+    "county_id": "130321",
+    "province": "河北省",
+    "name": "都阳路街道",
+    "lon": 118.945392,
+    "lat": 40.406175,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "140214025000",
+    "county_id": "140214",
+    "province": "山西省",
+    "name": "平泉路街道",
+    "lon": 113.213504,
+    "lat": 39.999598,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "150603004000",
+    "county_id": "150603",
+    "province": "内蒙古自治区",
+    "name": "康新街道",
+    "lon": 109.832573,
+    "lat": 39.612677,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "150781005000",
+    "county_id": "150781",
+    "province": "内蒙古自治区",
+    "name": "敖尔金街道",
+    "lon": 117.461551,
+    "lat": 49.607268,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "150824106000",
+    "county_id": "150824",
+    "province": "内蒙古自治区",
+    "name": "温更镇",
+    "lon": 108.178907,
+    "lat": 41.484143,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "152923002000",
+    "county_id": "152923",
+    "province": "内蒙古自治区",
+    "name": "航空街道",
+    "lon": 101.053654,
+    "lat": 41.952111,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "152923208000",
+    "county_id": "152923",
+    "province": "内蒙古自治区",
+    "name": "巴音陶海苏木",
+    "lon": 100.131578,
+    "lat": 40.945768,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "210111021000",
+    "county_id": "210111",
+    "province": "辽宁省",
+    "name": "白清姚千街道",
+    "lon": 123.692653,
+    "lat": 41.57458,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "211102101000",
+    "county_id": "211102",
+    "province": "辽宁省",
+    "name": "统一镇",
+    "lon": 121.967199,
+    "lat": 41.179818,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "220182209000",
+    "county_id": "220182",
+    "province": "吉林省",
+    "name": "延和朝鲜族乡",
+    "lon": 126.923276,
+    "lat": 45.11613,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "222426002000",
+    "county_id": "222426",
+    "province": "吉林省",
+    "name": "瓮声街道",
+    "lon": 128.910109,
+    "lat": 43.100993,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "230111013000",
+    "county_id": "230111",
+    "province": "黑龙江省",
+    "name": "裕田街道",
+    "lon": 126.562827,
+    "lat": 45.922948,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "230123210000",
+    "county_id": "230123",
+    "province": "黑龙江省",
+    "name": "迎兰朝鲜族乡",
+    "lon": 129.469563,
+    "lat": 46.363969,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "230321200000",
+    "county_id": "230321",
+    "province": "黑龙江省",
+    "name": "鸡林朝鲜族乡",
+    "lon": 131.242276,
+    "lat": 45.24957,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "230603016000",
+    "county_id": "230603",
+    "province": "黑龙江省",
+    "name": "龙政街道",
+    "lon": 125.129305,
+    "lat": 46.555527,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "230603017000",
+    "county_id": "230603",
+    "province": "黑龙江省",
+    "name": "湿地街道",
+    "lon": 125.13167,
+    "lat": 46.535488,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "230622207000",
+    "county_id": "230622",
+    "province": "黑龙江省",
+    "name": "超等蒙古族乡",
+    "lon": 124.709078,
+    "lat": 45.562636,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "230622211000",
+    "county_id": "230622",
+    "province": "黑龙江省",
+    "name": "浩德蒙古族乡",
+    "lon": 124.529086,
+    "lat": 45.734127,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "230811008000",
+    "county_id": "230811",
+    "province": "黑龙江省",
+    "name": "云环街道",
+    "lon": 130.262739,
+    "lat": 46.804607,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "231003004000",
+    "county_id": "231003",
+    "province": "黑龙江省",
+    "name": "桦橡街道",
+    "lon": 129.671012,
+    "lat": 44.682579,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "320282125000",
+    "county_id": "320282",
+    "province": "江苏省",
+    "name": "湖父镇",
+    "lon": 119.759641,
+    "lat": 31.199558,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "320804008000",
+    "county_id": "320804",
+    "province": "江苏省",
+    "name": "古清口街道",
+    "lon": 118.948814,
+    "lat": 33.627592,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "320804116000",
+    "county_id": "320804",
+    "province": "江苏省",
+    "name": "淮高镇",
+    "lon": 119.044802,
+    "lat": 33.716355,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "320922002000",
+    "county_id": "320922",
+    "province": "江苏省",
+    "name": "坎南街道",
+    "lon": 119.840827,
+    "lat": 33.97603,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "320922003000",
+    "county_id": "320922",
+    "province": "江苏省",
+    "name": "坎北街道",
+    "lon": 119.79972,
+    "lat": 34.038979,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "321281128000",
+    "county_id": "321281",
+    "province": "江苏省",
+    "name": "千垛镇",
+    "lon": 119.761107,
+    "lat": 32.996944,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "350703005000",
+    "county_id": "350703",
+    "province": "福建省",
+    "name": "崇泰街道",
+    "lon": 118.113267,
+    "lat": 27.38128,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "360302008000",
+    "county_id": "360302",
+    "province": "江西省",
+    "name": "光丰街道",
+    "lon": 113.863063,
+    "lat": 27.643018,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "360404005000",
+    "county_id": "360404",
+    "province": "江西省",
+    "name": "赛城湖街道",
+    "lon": 115.876224,
+    "lat": 29.676036,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "360481003000",
+    "county_id": "360481",
+    "province": "江西省",
+    "name": "赛湖街道",
+    "lon": 115.683287,
+    "lat": 29.68629,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "360923002000",
+    "county_id": "360923",
+    "province": "江西省",
+    "name": "锦阳街道",
+    "lon": 114.945709,
+    "lat": 28.235685,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "410202010000",
+    "county_id": "410202",
+    "province": "河南省",
+    "name": "金明池街道",
+    "lon": 114.294062,
+    "lat": 34.794409,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "410482006000",
+    "county_id": "410482",
+    "province": "河南省",
+    "name": "紫云路街道",
+    "lon": 112.915505,
+    "lat": 34.218458,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "410502003000",
+    "county_id": "410502",
+    "province": "河南省",
+    "name": "甜水井街街道",
+    "lon": 114.352943,
+    "lat": 36.10183,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "410702010000",
+    "county_id": "410702",
+    "province": "河南省",
+    "name": "振中街街道",
+    "lon": 113.896868,
+    "lat": 35.282297,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "410702011000",
+    "county_id": "410702",
+    "province": "河南省",
+    "name": "纬七路街道",
+    "lon": 114.042369,
+    "lat": 35.284062,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "410727201000",
+    "county_id": "410727",
+    "province": "河南省",
+    "name": "荆乡回族乡",
+    "lon": 114.358703,
+    "lat": 35.043061,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "410822002000",
+    "county_id": "410822",
+    "province": "河南省",
+    "name": "鸿昌街道",
+    "lon": 113.064062,
+    "lat": 35.193522,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "411003002000",
+    "county_id": "411003",
+    "province": "河南省",
+    "name": "许由街道",
+    "lon": 113.850569,
+    "lat": 33.984335,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "411302009000",
+    "county_id": "411302",
+    "province": "河南省",
+    "name": "姜营街道",
+    "lon": 112.599182,
+    "lat": 32.989333,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "411328004000",
+    "county_id": "411328",
+    "province": "河南省",
+    "name": "兴唐街道",
+    "lon": 112.850481,
+    "lat": 32.661933,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "411402012000",
+    "county_id": "411402",
+    "province": "河南省",
+    "name": "陇海街道",
+    "lon": 115.662533,
+    "lat": 34.464951,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "411727004000",
+    "county_id": "411727",
+    "province": "河南省",
+    "name": "宿鸭湖街道",
+    "lon": 114.318788,
+    "lat": 33.026908,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "430525203000",
+    "county_id": "430525",
+    "province": "湖南省",
+    "name": "挪溪瑶族乡",
+    "lon": 110.234699,
+    "lat": 27.054945,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "430582204000",
+    "county_id": "430582",
+    "province": "湖南省",
+    "name": "斫曹乡",
+    "lon": 111.879251,
+    "lat": 27.411195,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "431228224000",
+    "county_id": "431228",
+    "province": "湖南省",
+    "name": "罗卜田乡",
+    "lon": 109.741037,
+    "lat": 27.331474,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "451302004000",
+    "county_id": "451302",
+    "province": "广西壮族自治区",
+    "name": "来华街道",
+    "lon": 109.192834,
+    "lat": 23.76269,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "460108001000",
+    "county_id": "460108",
+    "province": "海南省",
+    "name": "海府路街道",
+    "lon": 110.342568,
+    "lat": 20.02872,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "510704006000",
+    "county_id": "510704",
+    "province": "四川省",
+    "name": "科学城春雷街道",
+    "lon": 104.74774,
+    "lat": 31.514828,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "510723114000",
+    "county_id": "510723",
+    "province": "四川省",
+    "name": "高渠镇",
+    "lon": 105.306448,
+    "lat": 31.211829,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "510723115000",
+    "county_id": "510723",
+    "province": "四川省",
+    "name": "鹅溪镇",
+    "lon": 105.260817,
+    "lat": 31.402655,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "510723116000",
+    "county_id": "510723",
+    "province": "四川省",
+    "name": "岐伯镇",
+    "lon": 105.380301,
+    "lat": 31.368264,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "511723001000",
+    "county_id": "511723",
+    "province": "四川省",
+    "name": "淙城街道",
+    "lon": 107.859664,
+    "lat": 31.088517,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "530326007000",
+    "county_id": "530326",
+    "province": "云南省",
+    "name": "钟屏街道",
+    "lon": 103.292704,
+    "lat": 26.41039,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "530326008000",
+    "county_id": "530326",
+    "province": "云南省",
+    "name": "以礼街道",
+    "lon": 103.240224,
+    "lat": 26.40548,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "532801005000",
+    "county_id": "532801",
+    "province": "云南省",
+    "name": "曼弄枫街道",
+    "lon": 100.79831,
+    "lat": 21.972328,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "540104204000",
+    "county_id": "540104",
+    "province": "西藏自治区",
+    "name": "邦堆乡",
+    "lon": 91.325534,
+    "lat": 29.726339,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "540321205000",
+    "county_id": "540321",
+    "province": "西藏自治区",
+    "name": "字呷乡",
+    "lon": 97.785947,
+    "lat": 31.713804,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "540602205000",
+    "county_id": "540602",
+    "province": "西藏自治区",
+    "name": "那玛切乡",
+    "lon": 91.451359,
+    "lat": 31.435691,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "540602210000",
+    "county_id": "540602",
+    "province": "西藏自治区",
+    "name": "洛麦乡",
+    "lon": 92.625157,
+    "lat": 31.183154,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "540623212000",
+    "county_id": "540623",
+    "province": "西藏自治区",
+    "name": "永曲乡",
+    "lon": 92.811171,
+    "lat": 32.635783,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "540624202000",
+    "county_id": "540624",
+    "province": "西藏自治区",
+    "name": "玛曲乡",
+    "lon": 91.680715,
+    "lat": 32.267587,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "540624209000",
+    "county_id": "540624",
+    "province": "西藏自治区",
+    "name": "玛荣乡",
+    "lon": 91.680715,
+    "lat": 32.267587,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "540625202000",
+    "county_id": "540625",
+    "province": "西藏自治区",
+    "name": "恰乡",
+    "lon": 88.149129,
+    "lat": 30.604913,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "540629210000",
+    "county_id": "540629",
+    "province": "西藏自治区",
+    "name": "文部乡",
+    "lon": 86.663305,
+    "lat": 31.522178,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "610302004000",
+    "county_id": "610302",
+    "province": "陕西省",
+    "name": "姜谭路街道",
+    "lon": 107.097466,
+    "lat": 34.357356,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "610603002000",
+    "county_id": "610603",
+    "province": "陕西省",
+    "name": "金明街道",
+    "lon": 109.330341,
+    "lat": 36.901519,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "620702201000",
+    "county_id": "620702",
+    "province": "甘肃省",
+    "name": "平山湖蒙古族乡",
+    "lon": 100.810019,
+    "lat": 39.128568,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "620721205000",
+    "county_id": "620721",
+    "province": "甘肃省",
+    "name": "祁丰藏族乡",
+    "lon": 98.163685,
+    "lat": 39.272584,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "620922207000",
+    "county_id": "620922",
+    "province": "甘肃省",
+    "name": "广至藏族乡",
+    "lon": 95.553394,
+    "lat": 40.421752,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "620924207000",
+    "county_id": "620924",
+    "province": "甘肃省",
+    "name": "阿伊纳乡",
+    "lon": 94.343934,
+    "lat": 39.631624,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "623021106000",
+    "county_id": "623021",
+    "province": "甘肃省",
+    "name": "古战镇",
+    "lon": 103.680544,
+    "lat": 34.557216,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "623021201000",
+    "county_id": "623021",
+    "province": "甘肃省",
+    "name": "术布乡",
+    "lon": 103.304838,
+    "lat": 34.680321,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "630106102000",
+    "county_id": "630106",
+    "province": "青海省",
+    "name": "鲁沙尔镇",
+    "lon": 101.577447,
+    "lat": 36.545364,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "632622201000",
+    "county_id": "632622",
+    "province": "青海省",
+    "name": "马可河乡",
+    "lon": 100.396926,
+    "lat": 33.003504,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "640104012000",
+    "county_id": "640104",
+    "province": "宁夏回族自治区",
+    "name": "星河街街道",
+    "lon": 106.286289,
+    "lat": 38.476541,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "640521206000",
+    "county_id": "640521",
+    "province": "宁夏回族自治区",
+    "name": "太阳梁乡",
+    "lon": 105.810366,
+    "lat": 37.620911,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "650402104000",
+    "county_id": "650402",
+    "province": "新疆维吾尔自治区",
+    "name": "艾丁湖镇",
+    "lon": 89.229422,
+    "lat": 42.915891,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "650502209000",
+    "county_id": "650502",
+    "province": "新疆维吾尔自治区",
+    "name": "德外里都如克哈萨克族乡",
+    "lon": 93.295996,
+    "lat": 42.862956,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "652701006000",
+    "county_id": "652701",
+    "province": "新疆维吾尔自治区",
+    "name": "克尔根卓街道",
+    "lon": 82.055327,
+    "lat": 44.887228,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "652701007000",
+    "county_id": "652701",
+    "province": "新疆维吾尔自治区",
+    "name": "青达拉街道",
+    "lon": 82.065928,
+    "lat": 44.88349,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "652702002000",
+    "county_id": "652702",
+    "province": "新疆维吾尔自治区",
+    "name": "阿拉套街道",
+    "lon": 82.561791,
+    "lat": 45.161681,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "652801006000",
+    "county_id": "652801",
+    "province": "新疆维吾尔自治区",
+    "name": "梨香街道",
+    "lon": 86.183698,
+    "lat": 41.734501,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "652823205000",
+    "county_id": "652823",
+    "province": "新疆维吾尔自治区",
+    "name": "阿克苏甫乡",
+    "lon": 86.700055,
+    "lat": 41.196051,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "652825103000",
+    "county_id": "652825",
+    "province": "新疆维吾尔自治区",
+    "name": "塔中镇",
+    "lon": 84.322062,
+    "lat": 38.994823,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "652927206000",
+    "county_id": "652927",
+    "province": "新疆维吾尔自治区",
+    "name": "亚曼苏柯尔克孜族乡",
+    "lon": 78.812386,
+    "lat": 41.303861,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "653101005000",
+    "county_id": "653101",
+    "province": "新疆维吾尔自治区",
+    "name": "库木代尔瓦扎街道",
+    "lon": 75.964382,
+    "lat": 39.467231,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "653101007000",
+    "county_id": "653101",
+    "province": "新疆维吾尔自治区",
+    "name": "西域大道街道",
+    "lon": 75.998102,
+    "lat": 39.544734,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "653124210000",
+    "county_id": "653124",
+    "province": "新疆维吾尔自治区",
+    "name": "桐安乡",
+    "lon": 77.250332,
+    "lat": 38.149479,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "653223211000",
+    "county_id": "653223",
+    "province": "新疆维吾尔自治区",
+    "name": "垴阿巴提塔吉克族乡",
+    "lon": 77.809382,
+    "lat": 36.576769,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "653227205000",
+    "county_id": "653227",
+    "province": "新疆维吾尔自治区",
+    "name": "亚瓦通古孜乡",
+    "lon": 83.078608,
+    "lat": 38.345607,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654027203000",
+    "county_id": "654027",
+    "province": "新疆维吾尔自治区",
+    "name": "阔克铁热克柯尔克孜族乡",
+    "lon": 81.572302,
+    "lat": 42.840026,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654201102000",
+    "county_id": "654201",
+    "province": "新疆维吾尔自治区",
+    "name": "博孜达克镇",
+    "lon": 82.983742,
+    "lat": 46.750947,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "654202205000",
+    "county_id": "654202",
+    "province": "新疆维吾尔自治区",
+    "name": "吉尔格勒特郭楞蒙古族乡",
+    "lon": 84.184127,
+    "lat": 44.326841,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654202206000",
+    "county_id": "654202",
+    "province": "新疆维吾尔自治区",
+    "name": "塔布勒合特蒙古族乡",
+    "lon": 84.153583,
+    "lat": 44.141082,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654221202000",
+    "county_id": "654221",
+    "province": "新疆维吾尔自治区",
+    "name": "额玛勒郭楞蒙古族乡",
+    "lon": 84.026684,
+    "lat": 46.660538,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654221208000",
+    "county_id": "654221",
+    "province": "新疆维吾尔自治区",
+    "name": "霍吉尔特蒙古族乡",
+    "lon": 83.823149,
+    "lat": 46.384212,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654301004000",
+    "county_id": "654301",
+    "province": "新疆维吾尔自治区",
+    "name": "恰秀路街道",
+    "lon": 88.116675,
+    "lat": 47.810694,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "654321205000",
+    "county_id": "654321",
+    "province": "新疆维吾尔自治区",
+    "name": "禾木喀纳斯蒙古族乡",
+    "lon": 87.401783,
+    "lat": 48.832239,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "654325104000",
+    "county_id": "654325",
+    "province": "新疆维吾尔自治区",
+    "name": "阿格达拉镇",
+    "lon": 90.0498,
+    "lat": 46.304529,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "654326103000",
+    "county_id": "654326",
+    "province": "新疆维吾尔自治区",
+    "name": "乌拉斯特镇",
+    "lon": 85.894235,
+    "lat": 47.508466,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "659006100000",
+    "county_id": "659006",
+    "province": "新疆维吾尔自治区",
+    "name": "二十九团博古其镇",
+    "lon": 85.970498,
+    "lat": 41.788769,
+    "source": "ruiduobao_gson"
+  },
+  {
+    "ext_id": "659010406000",
+    "county_id": "659010",
+    "province": "新疆维吾尔自治区",
+    "name": "一二九团",
+    "lon": 84.76299,
+    "lat": 44.837933,
+    "source": "ruiduobao_cun_cluster"
+  },
+  {
+    "ext_id": "659012401000",
+    "county_id": "659012",
+    "province": "新疆维吾尔自治区",
+    "name": "一六二团",
+    "lon": 82.967022,
+    "lat": 46.746721,
+    "source": "ruiduobao_cun_cluster"
+  }
+]

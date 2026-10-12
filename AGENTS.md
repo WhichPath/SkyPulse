@@ -28,8 +28,8 @@
 - **空气质量**: `/airquality/v1/current/{lat}/{lon}`（官方 v1 接口，返回 indexes 综合指数、pollutants 污染物浓度与各分指数 subIndexes）
   - **污染物单位动态规范 (concentration.unit)**:
     - 接口按站点标准动态返回单位：国内常规站点 PM2.5、PM10、O3、NO2、SO2 为 `μg/m3`，CO 为 `mg/m3`；部分境外站点气态污染物可能为 `ppb`，CO 为 `ppm`
-    - 代码（`QWeatherMapper`、`AqiCalculator`、`AqhiCalculator` 及 UI 卡片）必须动态透传与解析真实单位，杜绝硬编码假定，并在缺少原生 `subIndexes` 时依据实际单位执行精准折算
-    *(注: 每个污染物对象同时包含 `subIndexes` 数组，内置该污染物在对应标准下的分指数 IAQI，代码优先使用官方分指数)*
+    - 代码（`QWeatherMapper`、`AqiCalculator`、`AqhiCalculator` 及 UI 卡片）必须动态透传与解析真实单位，杜绝硬编码假定
+    *(注: 全面统一采用美国 EPA 标准。分项仅采集客观浓度数据与真实单位，综合 AQI 与各分项 IAQI 统一由本地 AqiCalculator 依据美标计算，以保障综合评级与各分项颜色评价标准完全一致)*
   - **新一代健康指数储备 - 香港 AQHI (空气质素健康指数)**:
     - 官方公开标准: 香港环境保护署 (EPD) 官方算法
     - 计算公式: `%AR = %AR(NO2) + %AR(SO2) + %AR(O3) + max(%AR(PM2.5), %AR(PM10))`
@@ -45,9 +45,14 @@
 - **GeoAPI 扩展**: 当前仅用城市搜索。和风还提供 POI 搜索（`/geo/v2/poi/lookup`，搜索地标景区）、热门城市（`/geo/v2/city/top`）、POI 范围搜索（`/geo/v2/poi/range`）。按需添加。
 - **时光机**: 历史天气数据，可视需要添加历史天气回顾功能。
 
+## 离线逆地理编码 (Offline Geocoding)
+- **定位与编码方案**: 采用全离线两阶段空间查询体系（阶段一：天地图 2,900 个法定区县多边形射线法命中；阶段二：民政部 2026 最新 39,188 个乡镇街道驻地最近邻匹配）
+- **数据管线位置**: `data/geocoding/`（全流程构建脚本 `build_offline_geodata.py`、区县边界 `counties_2026.geojson`、乡镇标准字典 `townships_2026.json`）
+- **拓扑特性**: 包含对两江新区（500157）与加格达奇区（232761）执行硬外壳差集剪裁后的 100% 紧密填充无缝多边形
+- **设计规范**: 详见 `docs/OFFLINE_GEOCODING_SPECIFICATION.md` 与 `data/geocoding/README.md`
+
 ## AMAP (高德地图)
-- **定位服务**: 使用 AMAP Location SDK 进行 GPS 定位
-- **API Key 配置位置**: `local.properties` 中的 `AMAP_API_KEY`
+- **定位服务**: 历史版本曾使用 AMAP Location SDK 与 Web API 进行定位与逆地理编码；现已由本地全离线逆地理编码体系取代，无需外部网络请求与 API Key。
 
 ## 版本管理
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
