@@ -36,7 +36,7 @@ OUTPUT_COUNTIES = os.path.join(BASE_DIR, "counties_2026.geojson")
 OUTPUT_TOWNSHIPS_ALL = os.path.join(BASE_DIR, "townships_2026.json")
 OUTPUT_TOWNSHIPS_ACTIVE = os.path.join(BASE_DIR, "townships_active.json")
 OUTPUT_UNRESOLVED_JSON = os.path.join(BASE_DIR, "unresolved_townships.json")
-OUTPUT_UNRESOLVED_MD = os.path.join(BASE_DIR, "UNRESOLVED_TOWNSHIPS.md")
+OUTPUT_UNRESOLVED_CSV = os.path.join(BASE_DIR, "unresolved_townships.csv")
 OUTPUT_STATS = os.path.join(BASE_DIR, "build_stats.json")
 
 # 外部原始数据路径
@@ -78,7 +78,9 @@ def clean_town_name(name: str) -> str:
 def build_counties_topology():
     print(">>> 1. 正在加载天地图县级行政区划多边形...")
     gdf = gpd.read_file(PATH_TIANDITU_COUNTIES)
-    print(f"    原生天地图区县数量: {len(gdf)}")
+    # 过滤掉天地图底图中的境界线 (MultiLineString) 与无代码要素
+    gdf = gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"]) & (gdf["gb"].astype(str).str.len() >= 6)].copy()
+    print(f"    原生天地图有效区县多边形数量: {len(gdf)}")
 
     print(">>> 2. 正在提取 OSM 两江新区并执行拓扑紧密剪裁...")
     df_lj = pyogrio.read_dataframe(PATH_OSM_PBF, layer="multipolygons", where="name = '两江新区'", columns=["name"])
@@ -130,10 +132,12 @@ def build_townships(gdf_counties):
     print(f"    民政部法定乡镇街道总数: {len(mca_towns)}")
 
     county_geom = {}
+    county_name = {}
     for idx, r in gdf_counties.iterrows():
         raw_gb = str(r["gb"])
         c6 = raw_gb[3:] if raw_gb.startswith("156") else raw_gb
         county_geom[c6] = r.geometry
+        county_name[c6] = r["name"]
 
     print(">>> 6. 正在构建多源分级坐标索引池...")
     # 6.1 Adcode (直接 12 位码 + 县域核心名 + 村居重心)
@@ -345,62 +349,39 @@ def build_townships(gdf_counties):
         json.dump(unresolved_list, f, ensure_ascii=False, indent=2)
     print(f"    未完成待补全清单已保存: {OUTPUT_UNRESOLVED_JSON} (共 {len(unresolved_list)} 个条目)")
 
-    # 输出人类可读的 UNRESOLVED_TOWNSHIPS.md
-    generate_unresolved_markdown(unresolved_list)
+    # 输出简洁、单一官方名称的未完成待补全 CSV 清单
+    generate_unresolved_csv(unresolved_list, county_name)
 
     with open(OUTPUT_STATS, "w", encoding="utf-8") as f:
         json.dump(dict(stats), f, ensure_ascii=False, indent=2)
 
-def generate_unresolved_markdown(unresolved_list):
-    """生成清晰、按省份分类的未完成乡镇街道 Markdown 文档"""
-    by_prov = defaultdict(list)
-    for u in unresolved_list:
-        by_prov[u["province"]].append(u)
+def generate_unresolved_csv(unresolved_list, county_name_map):
+    """生成简洁、唯一官方名称的未完成乡镇街道 CSV 清单"""
+    path_l3 = os.path.join(BASE_DIR, "sources", "ok_data_level3.csv")
+    fallback_cnames = {}
+    if os.path.exists(path_l3):
+        with open(path_l3, "r", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                if r.get("deep") == "2":
+                    cid_str = str(r["id"])
+                    fallback_cnames[cid_str] = r["ext_name"]
 
-    lines = [
-        "# SkyPulse 离线逆地理编码 - 未完成待补全乡镇街道清单",
-        "",
-        "> **核心设计说明**：",
-        "> 本清单记录了民政部 2026 最新官方底册中、经过全网开源多源挖掘后**尚未确认可信离散坐标**的乡镇街道。",
-        "> 依据严格的空间匹配规范，**坚决不赋予其虚假的县域几何中心**，以避免用户位于县中心（如县政府/中心街道）时发生误匹配。",
-        "> 本清单内的单位目前标记为 `pending` 状态，**暂不参与移动端运行时的空间最近邻检索**，直至获得真实坐标补充。",
-        "",
-        f"**未完成单位总数**：`{len(unresolved_list)}` 个（其中大陆境内共 `{sum(len(v) for k, v in by_prov.items() if k not in ['台湾省', '香港特别行政区', '澳门特别行政区'])}` 个）。",
-        "",
-        "---",
-        "",
-        "## 各省份未完成单位分布总览",
-        "",
-        "| 省份 / 特区 | 数量 | 典型特征 |",
-        "| :--- | :--- | :--- |"
-    ]
+    def sort_key(x):
+        cid = x["county_id"]
+        is_mainland = 0 if not cid.startswith(("71", "81", "82", "99")) else 1
+        return (is_mainland, x["province"], cid, x["ext_id"])
 
-    for prov, items in sorted(by_prov.items(), key=lambda x: -len(x[1])):
-        sample_names = "、".join([it["name"] for it in items[:3]])
-        if len(items) > 3:
-            sample_names += f" 等 {len(items)} 个"
-        lines.append(f"| **{prov}** | **{len(items)}** | {sample_names} |")
-
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## 详细待补全单位逐项清单",
-        ""
-    ])
-
-    for prov, items in sorted(by_prov.items(), key=lambda x: -len(x[1])):
-        lines.append(f"### {prov}（共 {len(items)} 个）")
-        lines.append("")
-        lines.append("| 序号 | 12位官方代码 | 所属县码 | 乡镇街道简称 | 官方全称 | 处理状态 |")
-        lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
-        for idx, it in enumerate(items, 1):
-            lines.append(f"| {idx} | `{it['ext_id']}` | `{it['county_id']}` | **{it['name']}** | {it['ext_name']} | 待查实驻地坐标 |")
-        lines.append("")
-
-    with open(OUTPUT_UNRESOLVED_MD, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-    print(f"    未完成 Markdown 说明文档已生成: {OUTPUT_UNRESOLVED_MD}")
+    sorted_list = sorted(unresolved_list, key=sort_key)
+    with open(OUTPUT_UNRESOLVED_CSV, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["ext_id", "county_id", "province", "county_name", "official_name", "reason"])
+        for x in sorted_list:
+            cid = x["county_id"]
+            cname = county_name_map.get(cid) or fallback_cnames.get(cid, "")
+            off_name = x.get("ext_name") or x.get("name")
+            reason = x.get("reason", "缺少可信离散驻地坐标")
+            writer.writerow([x["ext_id"], cid, x["province"], cname, off_name, reason])
+    print(f"    未完成待补全 CSV 清单已保存: {OUTPUT_UNRESOLVED_CSV} (共 {len(unresolved_list)} 个条目)")
 
 if __name__ == "__main__":
     counties_gdf = build_counties_topology()

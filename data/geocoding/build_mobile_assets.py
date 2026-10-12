@@ -35,6 +35,35 @@ INPUT_TOWNSHIPS = os.path.join(BASE_DIR, "townships_active.json")
 OUTPUT_COUNTIES_BIN = os.path.join(ASSETS_DIR, "counties.bin")
 OUTPUT_TOWNSHIPS_BIN = os.path.join(ASSETS_DIR, "townships.bin")
 
+def get_canonical_county_prefix(cid, cname, p_map):
+    """
+    依据民政部层级规范格式化区县前缀:
+    1. 市辖区 (01-20 且以"区"结尾，或特定新区): 全国存在重名 (如鼓楼区、朝阳区)，必须保留上级地级市或直辖市 (如 "合肥市蜀山区", "北京市朝阳区")
+    2. 县/县级市/旗/林区/特区: 全国名称唯一，彻底省略上级省市 (如 "青龙满族自治县", "昆山市", "神农架林区", "大理市")
+    3. 特殊建制: 重庆市两江新区 (500157)、大兴安岭地区加格达奇区 (232761)
+    """
+    if cid == "500157":
+        return "重庆市两江新区"
+    if cid == "232761":
+        return "大兴安岭地区加格达奇区"
+
+    prov_id = int(cid[:2])
+    city_id = int(cid[:4])
+    tail = int(cid[4:6])
+
+    prov_name = p_map.get(prov_id, "")
+    city_name = p_map.get(city_id, "")
+
+    # 只有市辖区 (以"区"结尾且末两位 01-20) 属于非唯一名称，需要保留地级市或直辖市前缀
+    # 县级市 (以"市"结尾，如大理市、延吉市、仙桃市) 与县/自治县/旗/林区全国唯一，省略上级
+    if 1 <= tail <= 20 and cname.endswith("区"):
+        if prov_id in [11, 12, 31, 50]:
+            return f"{prov_name}{cname}"
+        else:
+            return f"{city_name}{cname}" if city_name else cname
+    else:
+        return cname
+
 def main():
     print("=== SkyPulse 离线逆地理移动端二进制资产构建器 ===")
     os.makedirs(ASSETS_DIR, exist_ok=True)
@@ -50,10 +79,18 @@ def main():
     with open(INPUT_TOWNSHIPS, "r", encoding="utf-8") as f:
         towns = json.load(f)
 
-    print(f"    成功加载区县: {len(gdf)} 个, 激活乡镇: {len(towns)} 个")
+    # 加载民政部三级关系表以推导市辖区所属地级市/直辖市
+    path_l3 = os.path.join(BASE_DIR, "sources", "ok_data_level3.csv")
+    p_map = {}
+    if os.path.exists(path_l3):
+        import pandas as pd
+        df_l3 = pd.read_csv(path_l3)
+        p_map = dict(zip(df_l3["id"], df_l3["ext_name"]))
 
-    # 1. 构建 townships.bin
-    print(">>> 2. 正在构建 townships.bin (按区县聚集排列)...")
+    print(f"    成功加载区县: {len(gdf)} 个, 激活乡镇: {len(towns)} 个, 上级映射: {len(p_map)} 条")
+
+    # 1. 构建 townships.bin (使用法定标准官方全名 ext_name)
+    print(">>> 2. 正在构建 townships.bin (使用民政部法定官方全名)...")
     towns_by_cid = {}
     for t in towns:
         cid = t["county_id"]
@@ -77,7 +114,9 @@ def main():
         for t in c_towns:
             lon_i = int(round(t["lon"] * SCALE))
             lat_i = int(round(t["lat"] * SCALE))
-            name_bytes = t["name"].encode("utf-8")
+            # 必须使用法定标准全称 (如 "东华门街道", "都阳路街道", "玉山镇")
+            official_name = t.get("ext_name") or t["name"]
+            name_bytes = official_name.encode("utf-8")
             t_buf.extend(struct.pack("<iiB", lon_i, lat_i, len(name_bytes)))
             t_buf.extend(name_bytes)
 
@@ -161,7 +200,8 @@ def main():
         offset = len(c_buf)
         county_offsets.append(offset)
         cid = row["code"]
-        cname = row["name"].encode("utf-8")
+        canonical_name = get_canonical_county_prefix(cid, row["name"], p_map)
+        cname = canonical_name.encode("utf-8")
         geom = row.geometry
         minx, miny, maxx, maxy = geom.bounds
 
