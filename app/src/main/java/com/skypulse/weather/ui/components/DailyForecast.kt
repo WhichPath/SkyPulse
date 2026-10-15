@@ -85,7 +85,7 @@ fun DailyForecastCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 temperatures.forEachIndexed { index, temp ->
-                    val originalIndex = startIndex + index
+                    val originalIndex = index
                     val skycon = forecast.skycon?.getOrNull(originalIndex)?.value
                     val isPast = WeatherUtils.isYesterday(temp.date)
                     DailyColumn(
