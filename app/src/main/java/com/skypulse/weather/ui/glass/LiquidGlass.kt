@@ -218,8 +218,9 @@ class LiquidGlassRenderer(private val shader: RuntimeShader?) {
         if (width <= 0f || height <= 0f) return
 
         try {
-            // 直接按 density 换算，避免依赖不同 Compose 版本间签名有差异的 dp->px 扩展
-            val radiusPx = minOf(params.radius.value * scope.density.density, minOf(width, height) / 2f)
+            // DrawScope 本身实现 Density，scope.density 即缩放系数；
+            // 同时把圆角半径钳制在短边一半以内，否则 SDF 会退化为无效形状
+            val radiusPx = minOf(params.radius.value * scope.density, minOf(width, height) / 2f)
             target.setFloatUniform("size", width, height)
             target.setFloatUniform("radius", radiusPx)
             target.setFloatUniform(
