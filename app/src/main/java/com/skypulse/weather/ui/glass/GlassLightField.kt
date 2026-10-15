@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawOutline
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.unit.Dp
