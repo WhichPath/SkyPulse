@@ -3,7 +3,8 @@ package com.skypulse.weather.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
 import com.skypulse.weather.ui.glass.floatingModalLightField
 import com.skypulse.weather.ui.glass.glassLightField
 import com.skypulse.weather.ui.glass.surfaceLightField
@@ -18,12 +19,12 @@ import com.skypulse.weather.ui.theme.LocalSecondaryPageTheme
  * 两种模式都保证足够的文字对比度。
  */
 @Composable
-fun Modifier.secondaryGlassSurface(shape: Shape): Modifier {
+fun Modifier.secondaryGlassSurface(radius: Dp): Modifier {
     val page = LocalSecondaryPageTheme.current
     val field = page.surfaceLightField()
     return this
-        .clip(shape)
-        .glassLightField(shape = shape, field = field)
+        .clip(RoundedCornerShape(radius))
+        .glassLightField(radius = radius, field = field)
 }
 
 /**
@@ -32,9 +33,9 @@ fun Modifier.secondaryGlassSurface(shape: Shape): Modifier {
  * 背后是整屏实时硬件高斯模糊，因此罩色更透、边缘折射高光更强。
  */
 @Composable
-fun Modifier.floatingGlassSurface(shape: Shape): Modifier {
+fun Modifier.floatingGlassSurface(radius: Dp): Modifier {
     val field = floatingModalLightField()
     return this
-        .clip(shape)
-        .glassLightField(shape = shape, field = field)
+        .clip(RoundedCornerShape(radius))
+        .glassLightField(radius = radius, field = field)
 }

@@ -107,9 +107,7 @@ fun QWeatherApiSettingsSection(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
-            .secondaryGlassSurface(
-                shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.settingsCard)
-            )
+            .secondaryGlassSurface(SkyPulseDesignSystem.Radius.settingsCard)
     ) {
         Row(
             modifier = Modifier

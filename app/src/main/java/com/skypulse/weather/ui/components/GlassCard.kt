@@ -66,7 +66,7 @@ fun GlassCard(
                     Modifier.background(glass.tintFallback)
                 }
             )
-            .glassLightField(shape = shape, field = lightField),
+            .glassLightField(radius = radius, field = lightField),
         content = content
     )
 }

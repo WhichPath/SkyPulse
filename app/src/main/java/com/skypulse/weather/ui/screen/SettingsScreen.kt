@@ -255,9 +255,7 @@ private fun IosCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
-            .secondaryGlassSurface(
-                shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.settingsCard)
-            ),
+            .secondaryGlassSurface(SkyPulseDesignSystem.Radius.settingsCard),
         content = content
     )
 }

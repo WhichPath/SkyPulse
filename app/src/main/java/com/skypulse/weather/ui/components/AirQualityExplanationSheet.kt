@@ -201,12 +201,10 @@ fun ExplanationModalOverlay(
                         animationSpec = tween(durationMillis = 200)
                     )
             ) {
-                val modalShape = RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .floatingGlassSurface(shape = modalShape)
+                        .floatingGlassSurface(SkyPulseDesignSystem.Radius.extraLarge)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,

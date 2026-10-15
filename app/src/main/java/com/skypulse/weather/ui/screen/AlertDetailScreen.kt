@@ -90,7 +90,7 @@ internal fun AlertDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .secondaryGlassSurface(shape = RoundedCornerShape(14.dp))
+                            .secondaryGlassSurface(14.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             if (!title.isNullOrBlank()) {

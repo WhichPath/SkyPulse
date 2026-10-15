@@ -88,9 +88,7 @@ fun CityListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(SkyPulseDesignSystem.TouchTarget.default)
-                        .secondaryGlassSurface(
-                            shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.pill)
-                        ),
+                        .secondaryGlassSurface(SkyPulseDesignSystem.Radius.pill),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = page.textPrimary, fontSize = 18.sp),
                     singleLine = true,
                     cursorBrush = SolidColor(page.accentBlue),
