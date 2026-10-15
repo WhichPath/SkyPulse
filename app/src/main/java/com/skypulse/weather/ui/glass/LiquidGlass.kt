@@ -218,8 +218,8 @@ class LiquidGlassRenderer(private val shader: RuntimeShader?) {
         if (width <= 0f || height <= 0f) return
 
         try {
-            // 圆角半径不得超过短边一半，否则 SDF 退化为无效形状
-            val radiusPx = minOf(params.radius.toPx(scope.density), minOf(width, height) / 2f)
+            // 直接按 density 换算，避免依赖不同 Compose 版本间签名有差异的 dp->px 扩展
+            val radiusPx = minOf(params.radius.value * scope.density.density, minOf(width, height) / 2f)
             target.setFloatUniform("size", width, height)
             target.setFloatUniform("radius", radiusPx)
             target.setFloatUniform(
