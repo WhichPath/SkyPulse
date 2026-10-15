@@ -51,7 +51,13 @@
 - **构建隔离**：CI 的 `local.properties` 生成本就容忍 secrets 为空，因此**删除仓库 secrets 后仍可编译发布**，
   包体不含任何密钥，用户在设置页自填即可；同时保留 secrets 时编译注入行为不变。
 
-### 3. 版本号
+### 3. 收尾：清除会员体系遗留死代码
+
+- `WeatherScreen.kt` 中恒为 `true` 的 `isPremium` 及全部 `isPremium && ...` 门控已移除，
+  `effectiveCities` 直接等于全部已存城市，`WeatherContentBody` 去掉多余参数。
+  至此仓库内不再有 `MembershipRepository` / `CheckUpdateUseCase` / `isPremium` 残留。
+
+### 4. 版本号
 
 - `versionCode = 1007` / `versionName = "4.0.2"`。
 

@@ -1,5 +1,7 @@
 # SkyPulse v4.0.1 改造进度与待续记录
 
+> 本文档记录已完结。Task 3（液态玻璃 UI 重构）与全部遗留收尾见 [V4_0_2_PROGRESS.md](V4_0_2_PROGRESS.md)。
+
 ## 一、已完成部分 (Completed)
 
 1. **全离线四级行政区划正向检索引擎与二进制资产 (`divisions.bin`)**
