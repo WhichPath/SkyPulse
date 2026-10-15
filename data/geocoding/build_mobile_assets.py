@@ -2,18 +2,22 @@
 # -*- coding: utf-8 -*-
 """
 SkyPulse Mobile Offline Geocoding Asset Compiler
-将高精度区县图层 (counties_2026.geojson) 与激活乡镇驻地 (townships_active.json)
+将高精度区县图层 (counties_2026.geojson)、激活乡镇驻地 (townships_active.json)
+与全量四级行政区划字典 (ok_data_level3.csv + townships_2026.json)
 编译为移动端高性能二进制资产:
   - app/src/main/assets/geo/counties.bin  (含 0.5° 空间哈希网格索引与 100% 原始测绘精度多边形顶点流)
   - app/src/main/assets/geo/townships.bin (按区县聚集排列的高紧凑乡镇驻地坐标字典)
+  - app/src/main/assets/geo/divisions.bin (全国省/市/县/乡四级完整行政区划树与正向名称检索引擎资产)
 """
 
 import os
 import sys
+import csv
 import json
 import struct
 import time
 import zlib
+from collections import defaultdict
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon, box
 
@@ -32,8 +36,11 @@ ASSETS_DIR = os.path.join(PROJECT_ROOT, "app", "src", "main", "assets", "geo")
 
 INPUT_COUNTIES = os.path.join(BASE_DIR, "counties_2026.geojson")
 INPUT_TOWNSHIPS = os.path.join(BASE_DIR, "townships_active.json")
+INPUT_TOWNSHIPS_ALL = os.path.join(BASE_DIR, "townships_2026.json")
+INPUT_LEVEL3_CSV = os.path.join(BASE_DIR, "sources", "ok_data_level3.csv")
 OUTPUT_COUNTIES_BIN = os.path.join(ASSETS_DIR, "counties.bin")
 OUTPUT_TOWNSHIPS_BIN = os.path.join(ASSETS_DIR, "townships.bin")
+OUTPUT_DIVISIONS_BIN = os.path.join(ASSETS_DIR, "divisions.bin")
 
 def get_canonical_county_prefix(cid, cname, p_map):
     """
@@ -54,15 +61,291 @@ def get_canonical_county_prefix(cid, cname, p_map):
     prov_name = p_map.get(prov_id, "")
     city_name = p_map.get(city_id, "")
 
-    # 只有市辖区 (以"区"结尾且末两位 01-20) 属于非唯一名称，需要保留地级市或直辖市前缀
+    if prov_id == 81:
+        return "香港特别行政区"
+    if prov_id == 82:
+        return "澳门特别行政区"
+
+    # 只有市辖区 (以"区"结尾且非林区/特区/自治区/特别行政区) 属于非唯一名称，需要保留地级市或直辖市前缀
     # 县级市 (以"市"结尾，如大理市、延吉市、仙桃市) 与县/自治县/旗/林区全国唯一，省略上级
-    if 1 <= tail <= 20 and cname.endswith("区"):
+    if cname.endswith("区") and not cname.endswith(("林区", "特区", "自治区", "特别行政区")):
         if prov_id in [11, 12, 31, 50]:
             return f"{prov_name}{cname}"
         else:
             return f"{city_name}{cname}" if city_name else cname
     else:
         return cname
+
+
+def build_divisions_bin(gdf):
+    """
+    构建全国省/市/县/乡四级完整行政区划树与正向名称检索引擎二进制资产 (divisions.bin)
+    格式 (Magic: SPGD, Little-Endian):
+      Header (12 bytes):
+        magic: 4B ("SPGD")
+        version: uint16 (1)
+        reserved: uint16 (0)
+        num_nodes: uint32
+      Node Stream (num_nodes 条记录):
+        parent_idx: int16 (-1 表示省级根节点)
+        first_child_idx: int32 (-1 表示无下辖子节点)
+        child_count: uint16
+        flags: uint8 (bits 0..1: admin_rank 0=省/1=地市/2=区县/3=乡镇街道; bit 2: is_fallback_center; bit 3: is_urban_district)
+        lon_i: int32 (lon * 1e6)
+        lat_i: int32 (lat * 1e6)
+        code_int: int64 (12位民政部标准代码数值，保障任意层级严格按民政部代码升序排列)
+        ext_name_len: uint8 + ext_name_utf8
+        short_name_len: uint8 + short_name_utf8 (若与 ext_name 相同则为 0)
+    """
+    print(">>> 4b. 正在构建 divisions.bin (全国四级行政区划树与离线正向检索引擎资产)...")
+    county_centers = {}
+    for _, row in gdf.iterrows():
+        geom = row.geometry
+        c = geom.centroid
+        if not geom.contains(c):
+            c = geom.representative_point()
+        county_centers[row["code"]] = (round(c.x, 6), round(c.y, 6))
+
+    for k, v in {
+        "460302": "460321",
+        "460303": "460322",
+        "540481": "540422",
+        "540581": "540530",
+        "632825": "632857",
+    }.items():
+        if v in county_centers:
+            county_centers[k] = county_centers[v]
+
+    tw_l1_to_gdf = {
+        "7101": "710009", "7102": "710001", "7103": "710014", "7104": "710016",
+        "7106": "710008", "7107": "710004", "7108": "710019", "7109": "710005",
+        "7111": "710012", "7112": "710021", "7113": "710020", "7114": "710018",
+        "7115": "710007", "7117": "710023", "7119": "710006", "7121": "710022",
+        "7124": "710011", "7125": "710013", "7126": "710003", "7127": "710010",
+    }
+    for k, v in tw_l1_to_gdf.items():
+        if v in county_centers:
+            county_centers[k] = county_centers[v]
+
+    with open(INPUT_LEVEL3_CSV, "r", encoding="utf-8-sig") as f:
+        l3 = [r for r in csv.DictReader(f) if not r["id"].startswith("91")]
+
+    with open(INPUT_TOWNSHIPS_ALL, "r", encoding="utf-8") as f:
+        towns_all = [t for t in json.load(f) if t["county_id"] != "910000"]
+
+    d0_raw = sorted([r for r in l3 if r["deep"] == "0"], key=lambda x: x["id"])
+    d1_raw = sorted([r for r in l3 if r["deep"] == "1"], key=lambda x: x["id"])
+    d2_raw = sorted([r for r in l3 if r["deep"] == "2"], key=lambda x: x["id"])
+    d1_by_id = {r["id"]: r for r in d1_raw}
+
+    dummy_d1_ids = {"1101", "1201", "3101", "5001", "5002", "8100", "8200"}
+    dummy_d2_to_d1 = {
+        r["id"]: r["pid"]
+        for r in d2_raw
+        if r["id"] not in ("810000", "820000")
+        and r["ext_name"] == d1_by_id.get(r["pid"], {}).get("ext_name")
+    }
+
+    nodes = []
+    idx_by_key = {}
+
+    # 1. Level 0 (34 省级行政区)
+    for r in d0_raw:
+        rid = r["id"]
+        k = "L0:" + rid
+        idx_by_key[k] = len(nodes)
+        nodes.append({
+            "key": k,
+            "code": rid,
+            "parent_idx": -1,
+            "admin_rank": 0,
+            "name": r["name"].strip(),
+            "ext_name": r["ext_name"].strip(),
+            "lon": None,
+            "lat": None,
+            "is_fallback": False,
+            "is_urban_district": False,
+        })
+
+    # 2. Level 1 (地级行政区 / 省直辖县级行政区 / 台湾 20 县市)
+    for r in d1_raw:
+        rid = r["id"]
+        if rid in dummy_d1_ids:
+            continue
+        k = "L1:" + rid
+        pk = "L0:" + r["pid"]
+        pt = county_centers.get(rid) or county_centers.get(rid[:6])
+        # 省直辖县级行政区 (如 4190xx, 4290xx, 4690xx, 6590xx): 在省下展示为直接子级，同时本身属于县级单位
+        is_direct_county = len(rid) >= 6
+        idx_by_key[k] = len(nodes)
+        nodes.append({
+            "key": k,
+            "code": rid,
+            "parent_idx": idx_by_key[pk],
+            "admin_rank": 2 if is_direct_county else 1,
+            "name": r["name"].strip(),
+            "ext_name": r["ext_name"].strip(),
+            "lon": pt[0] if pt else None,
+            "lat": pt[1] if pt else None,
+            "is_fallback": False,
+            "is_urban_district": False,
+        })
+
+    # 3. Level 2 (大陆区县 + 香港 18 区 + 澳门 8 堂区)
+    l2_items = []
+    for r in d2_raw:
+        rid = r["id"]
+        if rid in ("810000", "820000") or rid in dummy_d2_to_d1 or rid.startswith("71"):
+            continue
+        pid = r["pid"]
+        pk = ("L0:" + pid[:2]) if pid in ("1101", "1201", "3101", "5001", "5002") else ("L1:" + pid)
+        pt = county_centers.get(rid) or county_centers.get(rid[:6])
+        ext_name = r["ext_name"].strip()
+        is_urban = ext_name.endswith("区") and not ext_name.endswith(("林区", "特区", "自治区", "特别行政区"))
+        l2_items.append((rid, pk, r["name"].strip(), ext_name, pt[0], pt[1], is_urban))
+
+    for t in towns_all:
+        ext_id = str(t["ext_id"])
+        if ext_id.startswith("81"):
+            l2_items.append((ext_id[:6], "L0:81", t["name"].strip(), t["ext_name"].strip(), t["lon"], t["lat"], True))
+        elif ext_id.startswith("82"):
+            l2_items.append((ext_id[:6], "L0:82", t["name"].strip(), t["ext_name"].strip(), t["lon"], t["lat"], True))
+
+    l2_items.sort(key=lambda x: x[0])
+    for rid, pk, name, ext_name, lon, lat, is_urban in l2_items:
+        k = "L2:" + rid
+        idx_by_key[k] = len(nodes)
+        nodes.append({
+            "key": k,
+            "code": rid,
+            "parent_idx": idx_by_key[pk],
+            "admin_rank": 2,
+            "name": name,
+            "ext_name": ext_name,
+            "lon": lon,
+            "lat": lat,
+            "is_fallback": False,
+            "is_urban_district": is_urban,
+        })
+
+    # 4. Level 3 (大陆乡镇街道 + 台湾 358 乡镇市区)
+    l3_items = []
+    for t in towns_all:
+        ext_id = str(t["ext_id"])
+        if ext_id.startswith(("81", "82")):
+            continue
+        cid = str(t["county_id"])
+        if ext_id.startswith("71"):
+            pk = "L1:" + ext_id[:4]
+            rank = 2  # 台湾省下辖县市的下一级为乡镇市区
+        elif cid in dummy_d2_to_d1:
+            pk = "L1:" + dummy_d2_to_d1[cid]
+            rank = 3
+        else:
+            pk = "L2:" + cid
+            rank = 3
+
+        p_idx = idx_by_key[pk]
+        is_active = (t.get("status") == "active" and t.get("lon") is not None and t.get("lat") is not None)
+        if is_active:
+            lon, lat = t["lon"], t["lat"]
+            is_fb = False
+        else:
+            p_node = nodes[p_idx]
+            lon, lat = p_node["lon"], p_node["lat"]
+            is_fb = True
+
+        l3_items.append((ext_id, p_idx, rank, t["name"].strip(), (t.get("ext_name") or t["name"]).strip(), lon, lat, is_fb))
+
+    l3_items.sort(key=lambda x: x[0])
+    for ext_id, p_idx, rank, name, ext_name, lon, lat, is_fb in l3_items:
+        k = "L3:" + ext_id
+        idx_by_key[k] = len(nodes)
+        nodes.append({
+            "key": k,
+            "code": ext_id,
+            "parent_idx": p_idx,
+            "admin_rank": rank,
+            "name": name,
+            "ext_name": ext_name,
+            "lon": lon,
+            "lat": lat,
+            "is_fallback": is_fb,
+            "is_urban_district": False,
+        })
+
+    # 计算每个父节点的 [first_child_idx, child_count]
+    children_map = defaultdict(list)
+    for idx, node in enumerate(nodes):
+        p_idx = node["parent_idx"]
+        if p_idx >= 0:
+            children_map[p_idx].append(idx)
+
+    for idx, node in enumerate(nodes):
+        ch = children_map.get(idx, [])
+        if ch:
+            assert ch == list(range(ch[0], ch[0] + len(ch))), f"Non-contiguous children for node {node['key']}"
+            node["first_child_idx"] = ch[0]
+            node["child_count"] = len(ch)
+        else:
+            node["first_child_idx"] = -1
+            node["child_count"] = 0
+
+    # 回填地级市与省级行政中心坐标 (取民政部排序首位下辖区县/首府中心点)
+    for node in nodes:
+        if node["admin_rank"] == 1 and (node["lon"] is None or node["lat"] is None):
+            first_c = nodes[node["first_child_idx"]]
+            node["lon"], node["lat"] = first_c["lon"], first_c["lat"]
+    for node in nodes:
+        if node["admin_rank"] == 0 and (node["lon"] is None or node["lat"] is None):
+            first_c = nodes[node["first_child_idx"]]
+            node["lon"], node["lat"] = first_c["lon"], first_c["lat"]
+
+    # 序列化为 divisions.bin
+    d_buf = bytearray()
+    d_buf.extend(b"SPGD")
+    d_buf.extend(struct.pack("<HHI", 1, 0, len(nodes)))
+
+    fallback_count = 0
+    for node in nodes:
+        flags = (node["admin_rank"] & 0x03)
+        if node["is_fallback"]:
+            flags |= 0x04
+            fallback_count += 1
+        if node["is_urban_district"]:
+            flags |= 0x08
+
+        lon_i = int(round(node["lon"] * SCALE))
+        lat_i = int(round(node["lat"] * SCALE))
+        code_str = str(node["code"]).ljust(12, "0")[:12]
+        code_int = int(code_str)
+
+        ext_bytes = node["ext_name"].encode("utf-8")
+        short_str = node["name"] if node["name"] != node["ext_name"] else ""
+        short_bytes = short_str.encode("utf-8")
+
+        d_buf.extend(struct.pack(
+            "<hiHBiiqB",
+            node["parent_idx"],
+            node["first_child_idx"],
+            node["child_count"],
+            flags,
+            lon_i,
+            lat_i,
+            code_int,
+            len(ext_bytes)
+        ))
+        d_buf.extend(ext_bytes)
+        d_buf.extend(struct.pack("<B", len(short_bytes)))
+        if short_bytes:
+            d_buf.extend(short_bytes)
+
+    with open(OUTPUT_DIVISIONS_BIN, "wb") as f:
+        f.write(d_buf)
+
+    print(f"    divisions.bin 写入完成: 共 {len(nodes):,} 个行政区节点 (含 {fallback_count} 个回退上级中心点的待补全乡镇), "
+          f"{len(d_buf):,} 字节 ({len(d_buf)/1024:.1f} KB, gzip: {len(zlib.compress(d_buf))/1024:.1f} KB)")
+    return d_buf
 
 def main():
     print("=== SkyPulse 离线逆地理移动端二进制资产构建器 ===")
@@ -237,7 +520,10 @@ def main():
         f.write(c_buf)
 
     print(f"    counties.bin 写入完成: {len(c_buf):,} 字节 ({len(c_buf)/1024/1024:.2f} MB, gzip: {len(zlib.compress(c_buf))/1024/1024:.2f} MB)")
-    print(f">>> 移动端离线地理资产构建成功！总 APK 压缩包体增量仅约 {(len(zlib.compress(t_buf)) + len(zlib.compress(c_buf)))/1024/1024:.2f} MB")
+
+    d_buf = build_divisions_bin(gdf)
+    total_gz_mb = (len(zlib.compress(t_buf)) + len(zlib.compress(c_buf)) + len(zlib.compress(d_buf))) / 1024 / 1024
+    print(f">>> 移动端离线地理资产构建成功！总 APK 压缩包体增量仅约 {total_gz_mb:.2f} MB")
 
     # 4. 执行多点位真实反查性能测试与校验
     print(">>> 5. 正在执行二进制资产快速反查基准测试...")

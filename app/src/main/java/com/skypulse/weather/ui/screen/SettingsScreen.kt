@@ -1,6 +1,5 @@
 package com.skypulse.weather.ui.screen
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,22 +29,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.skypulse.weather.BuildConfig
-import com.skypulse.weather.data.ActivationResult
 import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.data.WeatherSettings
-import com.skypulse.weather.ui.components.MembershipDialog
-import com.skypulse.weather.ui.components.VipBadge
-import com.skypulse.weather.ui.components.VipStatusCard
 import com.skypulse.weather.ui.theme.*
-import com.skypulse.weather.viewmodel.UpdateCheckResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onCheckUpdate: () -> Unit,
-    updateState: UpdateCheckResult?,
-    onClearUpdateState: () -> Unit,
     settings: WeatherSettings,
     onRainAlertChange: (Boolean) -> Unit,
     onWarningAlertChange: (Boolean) -> Unit,
@@ -60,54 +51,10 @@ fun SettingsScreen(
     onShowCardSunriseSunsetChange: (Boolean) -> Unit,
     onShowCardMinutelyChange: (Boolean) -> Unit,
     onShowCardTyphoonChange: (Boolean) -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
-    isPremium: Boolean = false,
-    activatedAt: Long = 0L,
-    deviceId: String = "",
-    onActivateCode: (String) -> ActivationResult = { _ -> ActivationResult.INVALID_CODE }
+    onThemeModeChange: (ThemeMode) -> Unit
 ) {
     val context = LocalContext.current
     val page = LocalSecondaryPageTheme.current
-    var showMembershipDialog by remember { mutableStateOf(false) }
-
-    val isChecking = updateState is UpdateCheckResult.Checking
-    // 仅在检查更新期间驱动旋转动画；停止检查后协程自动取消，不再每帧空转耗电
-    var rotation by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(isChecking) {
-        if (!isChecking) return@LaunchedEffect
-        rotation = 0f
-        var lastFrameTime = 0L
-        while (true) {
-            withFrameMillis { frameTime ->
-                if (lastFrameTime > 0L) {
-                    val delta = (frameTime - lastFrameTime) / 1000f
-                    rotation = (rotation + delta * 360f) % 360f
-                }
-                lastFrameTime = frameTime
-            }
-        }
-    }
-
-    LaunchedEffect(updateState) {
-        when (updateState) {
-            is UpdateCheckResult.UpToDate -> {
-                Toast.makeText(context, "已是最新版本", Toast.LENGTH_SHORT).show()
-                onClearUpdateState()
-            }
-            is UpdateCheckResult.Error -> {
-                Toast.makeText(context, updateState.message, Toast.LENGTH_SHORT).show()
-                onClearUpdateState()
-            }
-            else -> {}
-        }
-    }
-    if (showMembershipDialog) {
-        MembershipDialog(
-            onDismiss = { showMembershipDialog = false },
-            onActivate = onActivateCode,
-            deviceId = deviceId
-        )
-    }
 
     Box(
         modifier = Modifier
@@ -139,39 +86,6 @@ fun SettingsScreen(
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // VIP / 会员激活
-                if (isPremium) {
-                    Box(modifier = Modifier.padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)) {
-                        VipStatusCard(deviceId = deviceId)
-                    }
-                } else {
-                    SectionHeader("会员")
-                    IosCard {
-                        SimpleItem(
-                            title = "激活会员",
-                            subtitle = buildAnnotatedString {
-                                append("¥19.9成为")
-                                withStyle(SpanStyle(color = Color(0xFFFFC125), fontWeight = FontWeight.Bold)) {
-                                    append("永久会员")
-                                }
-                                append("解锁所有高级功能")
-                            },
-                            titleColor = page.accentBlue,
-                            trailing = {
-                                LucideIcon(
-                                    name = "key-round",
-                                    contentDescription = null,
-                                    size = 20.dp,
-                                    tint = page.accentBlue
-                                )
-                            },
-                            onClick = { showMembershipDialog = true }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // Appearance settings（仅城市管理/预警详情/设置三页生效，主页与小组件不变）
                 SectionHeader("外观")
                 IosCard {
@@ -201,16 +115,14 @@ fun SettingsScreen(
                         title = "短临降水提醒",
                         checked = settings.rainAlert,
                         onCheckedChange = onRainAlertChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
                         title = "气象预警",
                         checked = settings.warningAlert,
                         onCheckedChange = onWarningAlertChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem("变温提醒", settings.tempChangeAlert, onTempChangeAlertChange)
@@ -221,8 +133,7 @@ fun SettingsScreen(
                         title = "极端天气",
                         checked = settings.typhoonAlert,
                         onCheckedChange = onTyphoonAlertChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                 }
 
@@ -235,32 +146,28 @@ fun SettingsScreen(
                         title = "空气质量",
                         checked = settings.showHourlyAqi,
                         onCheckedChange = onShowHourlyAqiChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
                         title = "紫外线",
                         checked = settings.showHourlyUv,
                         onCheckedChange = onShowHourlyUvChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
                         title = "风力",
                         checked = settings.showHourlyWind,
                         onCheckedChange = onShowHourlyWindChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
                         title = "阵风",
                         checked = settings.showHourlyWindGust,
                         onCheckedChange = onShowHourlyWindGustChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                 }
 
@@ -273,24 +180,21 @@ fun SettingsScreen(
                         title = "分钟级降水",
                         checked = settings.showCardMinutely,
                         onCheckedChange = onShowCardMinutelyChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
                         title = "气象详情",
                         checked = settings.showCardDetail,
                         onCheckedChange = onShowCardDetailChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
                         title = "日出日落与月相",
                         checked = settings.showCardSunriseSunset,
                         onCheckedChange = onShowCardSunriseSunsetChange,
-                        locked = !isPremium,
-                        onLockedClick = { showMembershipDialog = true }
+
                     )
                     IosDivider()
                     ToggleItem(
@@ -303,253 +207,7 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Premium benefits section
-                SectionHeader("权益")
-                IosCard {
-                    // 免广告 - 所有用户均已解锁
-                    SimpleItem(
-                        title = "免广告",
-                        titleColor = page.textPrimary,
-                        trailing = {
-                            LucideIcon(
-                                name = "check",
-                                contentDescription = "已解锁",
-                                size = 18.dp,
-                                tint = page.accentGreen
-                            )
-                        },
-                        onClick = { }
-                    )
-                    IosDivider()
-                    // 天气动效 - 所有用户均已解锁
-                    SimpleItem(
-                        title = "天气动效",
-                        titleColor = page.textPrimary,
-                        trailing = {
-                            LucideIcon(
-                                name = "check",
-                                contentDescription = "已解锁",
-                                size = 18.dp,
-                                tint = page.accentGreen
-                            )
-                        },
-                        onClick = { }
-                    )
-                    IosDivider()
-                    if (!isPremium) {
-                        // 未付费状态：显示锁定项
-                        SimpleItem(
-                            title = "多城市天气",
-                            titleColor = page.textSecondary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "lock",
-                                    contentDescription = "会员功能",
-                                    size = 18.dp,
-                                    tint = page.textSecondary.copy(alpha = 0.5f)
-                                )
-                            },
-                            onClick = { showMembershipDialog = true }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "街道/小区级定位",
-                            titleColor = page.textSecondary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "lock",
-                                    contentDescription = "会员功能",
-                                    size = 18.dp,
-                                    tint = page.textSecondary.copy(alpha = 0.5f)
-                                )
-                            },
-                            onClick = { showMembershipDialog = true }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "15日预报",
-                            titleColor = page.textSecondary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "lock",
-                                    contentDescription = "会员功能",
-                                    size = 18.dp,
-                                    tint = page.textSecondary.copy(alpha = 0.5f)
-                                )
-                            },
-                            onClick = { showMembershipDialog = true }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "AI天气校准",
-                            titleColor = page.textSecondary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "lock",
-                                    contentDescription = "会员功能",
-                                    size = 18.dp,
-                                    tint = page.textSecondary.copy(alpha = 0.5f)
-                                )
-                            },
-                            onClick = { showMembershipDialog = true }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "多功能小组件",
-                            titleColor = page.textSecondary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "lock",
-                                    contentDescription = "会员功能",
-                                    size = 18.dp,
-                                    tint = page.textSecondary.copy(alpha = 0.5f)
-                                )
-                            },
-                            onClick = { showMembershipDialog = true }
-                        )
-                    } else {
-                        // 已付费状态：显示已解锁项
-                        SimpleItem(
-                            title = "多城市天气",
-                            titleColor = page.textPrimary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "check",
-                                    contentDescription = "已解锁",
-                                    size = 18.dp,
-                                    tint = page.accentGreen
-                                )
-                            },
-                            onClick = { }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "街道/小区级定位",
-                            titleColor = page.textPrimary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "check",
-                                    contentDescription = "已解锁",
-                                    size = 18.dp,
-                                    tint = page.accentGreen
-                                )
-                            },
-                            onClick = { }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "15日预报",
-                            titleColor = page.textPrimary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "check",
-                                    contentDescription = "已解锁",
-                                    size = 18.dp,
-                                    tint = page.accentGreen
-                                )
-                            },
-                            onClick = { }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "AI天气校准",
-                            titleColor = page.textPrimary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "check",
-                                    contentDescription = "已解锁",
-                                    size = 18.dp,
-                                    tint = page.accentGreen
-                                )
-                            },
-                            onClick = { }
-                        )
-                        IosDivider()
-                        SimpleItem(
-                            title = "多功能小组件",
-                            titleColor = page.textPrimary,
-                            trailing = {
-                                LucideIcon(
-                                    name = "check",
-                                    contentDescription = "已解锁",
-                                    size = 18.dp,
-                                    tint = page.accentGreen
-                                )
-                            },
-                            onClick = { }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // About section
-                SectionHeader("关于")
-                IosCard {
-                    SimpleItem("检查更新") {
-                        if (!isChecking) onCheckUpdate()
-                    }
-                }
-
-                // Update result
-                if (updateState is UpdateCheckResult.UpdateAvailable) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    IosCard {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, updateState.url.toUri())
-                                    context.startActivity(intent)
-                                }
-                                .padding(horizontal = 20.dp, vertical = 14.dp)
-                        ) {
-                            Text(
-                                text = "前往下载 v${updateState.version}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = page.accentBlue
-                            )
-                        }
-                    }
-                }
-
-                if (isChecking) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    IosCard {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            LucideIcon(
-                                name = "refresh-cw",
-                                contentDescription = null,
-                                size = 20.dp,
-                                tint = page.textSecondary,
-                                modifier = Modifier.rotate(rotation)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "正在检查更新...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = page.textSecondary
-                            )
-                        }
-                    }
-                }
-
                 Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "QQ群：758426293   邮箱：1096005725@qq.com",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = page.textSecondary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 24.dp, bottom = 4.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
 
                 Text(
                     text = "v${BuildConfig.VERSION_NAME}",

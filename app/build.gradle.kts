@@ -15,16 +15,6 @@ val localProperties = Properties().apply {
     }
 }
 
-val amapApiKey = providers.gradleProperty("AMAP_API_KEY")
-    .orElse(localProperties.getProperty("AMAP_API_KEY", ""))
-    .get()
-val escapedAmapApiKey = amapApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
-
-val amapWebApiKey = providers.gradleProperty("AMAP_WEB_API_KEY")
-    .orElse(localProperties.getProperty("AMAP_WEB_API_KEY", ""))
-    .get()
-val escapedAmapWebApiKey = amapWebApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
-
 val qweatherProjectId = providers.gradleProperty("QWEATHER_PROJECT_ID")
     .orElse(localProperties.getProperty("QWEATHER_PROJECT_ID", ""))
     .get()
@@ -55,18 +45,15 @@ android {
 
     defaultConfig {
         applicationId = "com.skypulse.weather"
-        minSdk = 26
+        minSdk = 34
         targetSdk = 35
-        versionCode = 1005
-        versionName = "4.0.0"
+        versionCode = 1006
+        versionName = "4.0.1"
 
         vectorDrawables {
             useSupportLibrary = true
         }
 
-        manifestPlaceholders["AMAP_API_KEY"] = amapApiKey
-        buildConfigField("String", "AMAP_API_KEY", "\"$escapedAmapApiKey\"")
-        buildConfigField("String", "AMAP_WEB_API_KEY", "\"$escapedAmapWebApiKey\"")
         buildConfigField("String", "QWEATHER_PROJECT_ID", "\"$escapedQweatherProjectId\"")
         buildConfigField("String", "QWEATHER_KEY_ID", "\"$escapedQweatherKeyId\"")
         buildConfigField("String", "QWEATHER_PRIVATE_KEY", "\"$escapedQweatherPrivateKey\"")
@@ -146,7 +133,6 @@ dependencies {
 
     // Location
     implementation(libs.play.services.location)
-    implementation(libs.amap.location)
     implementation(libs.accompanist.permissions)
 
     // UI
@@ -172,9 +158,6 @@ dependencies {
 
     // DataStore
     implementation(libs.datastore.preferences)
-
-    // Security — EncryptedSharedPreferences
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")

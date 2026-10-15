@@ -1,48 +1,33 @@
 package com.skypulse.weather.data
 
-import com.skypulse.weather.data.remote.qweather.QWeatherApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.skypulse.weather.data.provider.impl.OfflineGeocodingProvider
 import javax.inject.Inject
+import javax.inject.Singleton
 
 data class CityEntry(
     val name: String,
     val province: String,
     val lat: Double,
-    val lon: Double
+    val lon: Double,
+    val savedName: String = name,
+    val isApproximateCenter: Boolean = false,
+    val parentCountyName: String = "",
+    val drillDownQuery: String? = null
 )
 
 /**
- * 城市搜索服务。
+ * 纯离线行政区划与位置搜索服务。
  *
- * 使用和风天气 GeoAPI (/geo/v2/city/lookup) 进行城市模糊搜索。
- * 替换了原有的小米天气城市搜索接口。
+ * 国内查询 100% 走本地民政部四级行政区划与空间坐标引擎 (OfflineGeocodingProvider)，
+ * 不发起任何外部网络请求。
  */
+@Singleton
 class GeocodingService @Inject constructor(
-    private val api: QWeatherApi
+    private val offlineGeocodingProvider: OfflineGeocodingProvider
 ) {
 
     suspend fun search(query: String): List<CityEntry> {
         if (query.isBlank()) return emptyList()
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = api.searchCity(query)
-                response.location?.mapNotNull { item ->
-                    try {
-                        val name = item.name ?: return@mapNotNull null
-                        val lat = item.lat?.toDoubleOrNull() ?: return@mapNotNull null
-                        val lon = item.lon?.toDoubleOrNull() ?: return@mapNotNull null
-                        val province = item.adm1 ?: item.adm2 ?: ""
-
-                        CityEntry(name = name, province = province, lat = lat, lon = lon)
-                    } catch (e: Exception) {
-                        null
-                    }
-                } ?: emptyList()
-            } catch (e: Exception) {
-                emptyList()
-            }
-        }
+        return offlineGeocodingProvider.search(query)
     }
 }

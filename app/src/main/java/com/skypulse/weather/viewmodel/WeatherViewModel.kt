@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skypulse.weather.data.LocationManager
 import com.skypulse.weather.data.PermissionDataStore
-import com.skypulse.weather.domain.CheckUpdateUseCase
 import com.skypulse.weather.domain.CitySelectionPolicy
 import com.skypulse.weather.domain.ManageCityUseCase
 import com.skypulse.weather.domain.RefreshWeatherUseCase
@@ -77,7 +76,6 @@ class WeatherViewModel @Inject constructor(
     private val manageCityUseCase: ManageCityUseCase,
     private val locationManager: LocationManager,
     private val permissionDataStore: PermissionDataStore,
-    private val checkUpdateUseCase: CheckUpdateUseCase,
 ) : ViewModel() {
 
     companion object {
@@ -192,10 +190,6 @@ class WeatherViewModel @Inject constructor(
 
     private val _isLocating = MutableStateFlow(false)
     val isLocating: StateFlow<Boolean> = _isLocating.asStateFlow()
-
-    // --- Update check ---
-    private val _updateState = MutableStateFlow<UpdateCheckResult?>(null)
-    val updateState: StateFlow<UpdateCheckResult?> = _updateState.asStateFlow()
 
     private val refreshingCityIds = mutableSetOf<String>()
     private val refreshingCityIdsMutex = Mutex()
@@ -920,21 +914,4 @@ class WeatherViewModel @Inject constructor(
         return refreshWeatherUseCase.isFreshEnough(city.id)
     }
 
-    // ============ Update Check ============
-
-    fun checkForUpdates() {
-        viewModelScope.launch {
-            _updateState.value = UpdateCheckResult.Checking
-            val result = checkUpdateUseCase.checkForUpdate()
-            _updateState.value = when (result) {
-                is CheckUpdateUseCase.Result.UpToDate -> UpdateCheckResult.UpToDate
-                is CheckUpdateUseCase.Result.UpdateAvailable -> UpdateCheckResult.UpdateAvailable(result.version, result.url)
-                is CheckUpdateUseCase.Result.Error -> UpdateCheckResult.Error(result.message)
-            }
-        }
-    }
-
-    fun clearUpdateState() {
-        _updateState.value = null
-    }
 }

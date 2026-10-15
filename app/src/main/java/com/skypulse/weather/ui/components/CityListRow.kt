@@ -215,7 +215,11 @@ fun SwipeableCityListRow(
 fun CitySearchResultRow(
     name: String,
     district: String,
+    isApproximateCenter: Boolean = false,
+    drillDownQuery: String? = null,
     onClick: () -> Unit,
+    onInfoClick: (() -> Unit)? = null,
+    onDrillDown: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -238,6 +242,20 @@ fun CitySearchResultRow(
                 style = MaterialTheme.typography.bodyLarge,
                 color = page.textPrimary
             )
+            if (isApproximateCenter) {
+                Spacer(modifier = Modifier.width(6.dp))
+                IconButton(
+                    onClick = { onInfoClick?.invoke() },
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    LucideIcon(
+                        name = "circle-alert",
+                        contentDescription = "定位精度说明",
+                        size = 16.dp,
+                        tint = page.textSecondary
+                    )
+                }
+            }
             if (district.isNotBlank()) {
                 Text(
                     text = "，",
@@ -249,6 +267,16 @@ fun CitySearchResultRow(
                     style = MaterialTheme.typography.bodyLarge,
                     color = page.textSecondary
                 )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            if (drillDownQuery != null && onDrillDown != null) {
+                TextButton(onClick = { onDrillDown(drillDownQuery) }) {
+                    Text(
+                        text = "下辖",
+                        color = page.accentBlue,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
     }

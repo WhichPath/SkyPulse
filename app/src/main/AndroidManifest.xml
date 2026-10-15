@@ -21,13 +21,6 @@
         android:theme="@style/Theme.SkyPulse"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <meta-data
-            android:name="com.amap.api.v2.apikey"
-            android:value="${AMAP_API_KEY}" />
-
-        <service android:name="com.amap.api.location.APSService"
-                 android:foregroundServiceType="location" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

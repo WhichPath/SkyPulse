@@ -84,13 +84,11 @@ fun WeatherScreen(
     val searchResults by searchViewModel.searchResults.collectAsStateWithLifecycle()
     val isSearching by searchViewModel.isSearching.collectAsStateWithLifecycle()
     val isSearchActive by searchViewModel.isSearchActive.collectAsStateWithLifecycle()
-    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     val selectedAlertIndex by viewModel.selectedAlertIndex.collectAsStateWithLifecycle()
     val selectedCityId by viewModel.selectedCityId.collectAsStateWithLifecycle()
     val onboardingReady by viewModel.onboardingReady.collectAsStateWithLifecycle()
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
-    val isPremium by settingsViewModel.isPremium.collectAsStateWithLifecycle()
-    var showMembershipDialog by remember { mutableStateOf(false) }
+    val isPremium = true
     // 免费用户定位名称截断到区/县级（取空格前第一段）
     val effectiveLocationName by remember {
         derivedStateOf {
@@ -253,7 +251,7 @@ fun WeatherScreen(
                     isSearching = isSearching,
                     isSearchActive = isSearchActive,
                     onCityClick = { cityId -> viewModel.navigateToCityDetail(cityId) },
-                    onAddCity = { result -> viewModel.addCity(result.name, result.longitude, result.latitude) },
+                    onAddCity = { result -> viewModel.addCity(result.savedName, result.longitude, result.latitude) },
                     onRemoveCity = { cityId -> viewModel.removeCity(cityId) },
                     onSearch = { query -> searchViewModel.searchCities(query) },
                     onClearSearch = { searchViewModel.clearSearchResults() },
@@ -265,14 +263,6 @@ fun WeatherScreen(
             }
 
             AppScreen.CityDetail -> {
-                if (showMembershipDialog) {
-                    MembershipDialog(
-                        onDismiss = { showMembershipDialog = false },
-                        onActivate = { code -> settingsViewModel.activateCode(code) },
-                        deviceId = settingsViewModel.getDeviceId()
-                    )
-                }
-
                 var activeExplanation by remember { mutableStateOf<ActiveExplanation?>(null) }
                 val explanationController = remember {
                     object : ExplanationController {
@@ -428,19 +418,15 @@ fun WeatherScreen(
                                                     showBookmark = showBookmarkBtn,
                                                     isBookmarked = isBookmarked,
                                                     onBookmarkClick = {
-                                                        if (isPremium) {
-                                                            if (city?.isCurrentLocation == true) {
-                                                                viewModel.bookmarkCurrentLocation()
-                                                            } else if (city != null) {
-                                                                // 取消收藏：先回到定位城市，再删除
-                                                                val currentLocCity = savedCities.firstOrNull { it.isCurrentLocation }
-                                                                if (currentLocCity != null) {
-                                                                    viewModel.navigateToCityDetail(currentLocCity.id)
-                                                                }
-                                                                viewModel.removeCity(city.id)
+                                                        if (city?.isCurrentLocation == true) {
+                                                            viewModel.bookmarkCurrentLocation()
+                                                        } else if (city != null) {
+                                                            // 取消收藏：先回到定位城市，再删除
+                                                            val currentLocCity = savedCities.firstOrNull { it.isCurrentLocation }
+                                                            if (currentLocCity != null) {
+                                                                viewModel.navigateToCityDetail(currentLocCity.id)
                                                             }
-                                                        } else {
-                                                            showMembershipDialog = true
+                                                            viewModel.removeCity(city.id)
                                                         }
                                                     },
                                                     onRadarClick = { viewModel.navigateToRadarMap() }
@@ -501,9 +487,6 @@ fun WeatherScreen(
             AppScreen.Settings -> {
                 SettingsScreen(
                     onBack = { viewModel.navigateBack() },
-                    onCheckUpdate = { viewModel.checkForUpdates() },
-                    updateState = updateState,
-                    onClearUpdateState = { viewModel.clearUpdateState() },
                     settings = settings,
                     onRainAlertChange = { settingsViewModel.setRainAlert(it) },
                     onWarningAlertChange = { settingsViewModel.setWarningAlert(it) },
@@ -518,11 +501,7 @@ fun WeatherScreen(
                     onShowCardSunriseSunsetChange = { settingsViewModel.setShowCardSunriseSunset(it) },
                     onShowCardMinutelyChange = { settingsViewModel.setShowCardMinutely(it) },
                     onShowCardTyphoonChange = { settingsViewModel.setShowCardTyphoon(it) },
-                    onThemeModeChange = { settingsViewModel.setThemeMode(it) },
-                    isPremium = isPremium,
-                    activatedAt = settingsViewModel.getActivatedAt(),
-                    deviceId = settingsViewModel.getDeviceId(),
-                    onActivateCode = { code -> settingsViewModel.activateCode(code) }
+                    onThemeModeChange = { settingsViewModel.setThemeMode(it) }
                 )
             }
 
@@ -786,7 +765,6 @@ private fun WeatherContentBody(
 
             DailyForecastCard(
                 daily = result?.daily,
-                isPremium = isPremium,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)

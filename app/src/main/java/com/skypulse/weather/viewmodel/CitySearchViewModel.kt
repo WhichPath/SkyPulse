@@ -3,8 +3,8 @@ package com.skypulse.weather.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.skypulse.weather.data.GeocodingService
 import com.skypulse.weather.data.CityEntry
+import com.skypulse.weather.data.GeocodingService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -18,7 +18,11 @@ data class CitySearchResult(
     val name: String,
     val district: String,
     val longitude: Double,
-    val latitude: Double
+    val latitude: Double,
+    val savedName: String = name,
+    val isApproximateCenter: Boolean = false,
+    val parentCountyName: String = "",
+    val drillDownQuery: String? = null
 )
 
 @HiltViewModel
@@ -39,29 +43,31 @@ class CitySearchViewModel @Inject constructor(
 
     fun searchCities(query: String) {
         if (query.isBlank()) {
-            Log.d("SearchVM", "searchCities called with BLANK query, ignoring")
+            clearSearchResults()
             return
         }
-        Log.d("SearchVM", "searchCities called: query='$query' isSearchActive=${_isSearchActive.value} hasResults=${_searchResults.value.size}")
         _isSearchActive.value = true
         _isSearching.value = true
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            delay(400)
-            Log.d("SearchVM", "debounce done, fetching results for '$query'")
+            // 离线内存检索毫秒级完成，仅保留极短防抖避免输入法高频合成帧抖动
+            delay(60)
             try {
                 val entries: List<CityEntry> = geocodingService.search(query)
-                Log.d("SearchVM", "search returned ${entries.size} results for '$query'")
                 _searchResults.value = entries.map { entry ->
                     CitySearchResult(
                         name = entry.name,
                         district = entry.province,
                         longitude = entry.lon,
-                        latitude = entry.lat
+                        latitude = entry.lat,
+                        savedName = entry.savedName,
+                        isApproximateCenter = entry.isApproximateCenter,
+                        parentCountyName = entry.parentCountyName,
+                        drillDownQuery = entry.drillDownQuery
                     )
                 }
             } catch (e: Exception) {
-                Log.w("SearchVM", "search failed for '$query'", e)
+                Log.w("SearchVM", "offline search failed for '$query'", e)
                 _searchResults.value = emptyList()
             } finally {
                 _isSearching.value = false
@@ -70,7 +76,6 @@ class CitySearchViewModel @Inject constructor(
     }
 
     fun clearSearchResults() {
-        Log.d("SearchVM", "clearSearchResults called (wasActive=${_isSearchActive.value} results=${_searchResults.value.size})")
         searchJob?.cancel()
         _searchResults.value = emptyList()
         _isSearching.value = false

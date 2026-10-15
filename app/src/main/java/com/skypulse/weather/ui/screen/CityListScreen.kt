@@ -46,6 +46,7 @@ fun CityListScreen(
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var showAccuracyDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val page = LocalSecondaryPageTheme.current
     Box(
@@ -175,15 +176,44 @@ fun CityListScreen(
                             )
                         }
                     } else {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .clickable { showAccuracyDialog = true },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                LucideIcon(
+                                    name = "circle-help",
+                                    contentDescription = "说明",
+                                    size = 18.dp,
+                                    tint = page.textSecondary
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "定位精度说明",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = page.textSecondary
+                                )
+                            }
+                        }
                         items(searchResults) { result ->
                             CitySearchResultRow(
                                 name = result.name,
                                 district = result.district,
+                                isApproximateCenter = result.isApproximateCenter,
+                                drillDownQuery = result.drillDownQuery,
                                 onClick = {
                                     onAddCity(result)
                                     searchQuery = ""
                                     onClearSearch()
                                     focusManager.clearFocus()
+                                },
+                                onInfoClick = { showAccuracyDialog = true },
+                                onDrillDown = { query ->
+                                    searchQuery = query
+                                    onSearch(query)
                                 }
                             )
                             if (result != searchResults.last()) {
@@ -219,6 +249,20 @@ fun CityListScreen(
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
             }
+        }
+        if (showAccuracyDialog) {
+            AlertDialog(
+                onDismissRequest = { showAccuracyDialog = false },
+                title = { Text("定位精度说明") },
+                text = {
+                    Text("部分乡镇暂无离散坐标，选择此项时实际经纬度将采用其上级区县中心点数据，天气可能略有偏差。")
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAccuracyDialog = false }) {
+                        Text("知道了")
+                    }
+                }
+            )
         }
     }
 }

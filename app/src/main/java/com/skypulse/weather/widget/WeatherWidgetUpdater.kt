@@ -14,7 +14,7 @@ import com.skypulse.weather.ui.components.WeatherSvgRenderer
 import com.skypulse.weather.util.FileLogger
 import androidx.compose.ui.graphics.toArgb
 import com.skypulse.weather.util.WeatherUtils
-import com.skypulse.weather.data.MembershipRepository
+
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -454,37 +454,6 @@ object WeatherWidgetUpdater {
                 return
             }
 
-            // Check premium status
-            val membershipRepository = MembershipRepository(context)
-            val isPremium = membershipRepository.isPremium.value
-            
-            // If not premium, show locked state
-            if (!isPremium) {
-                FileLogger.i(TAG, "updateMediumAll: 用户未付费，显示锁定状态")
-                ids.forEach { widgetId ->
-                    try {
-                        val views = RemoteViews(context.packageName, R.layout.widget_medium)
-                        views.setTextViewText(R.id.widget_city, "需要付费解锁")
-                        views.setTextViewText(R.id.widget_temp, "")
-                        views.setTextViewText(R.id.widget_wind, "此功能需要付费解锁")
-                        views.setTextViewText(R.id.widget_humidity, "")
-                        views.setTextViewText(R.id.widget_aqi, "")
-                        views.setTextViewText(R.id.widget_uv, "")
-                        views.setBoolean(R.id.widget_container, "setClipToOutline", true)
-                        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_rounded_bg)
-                        
-                        val intent = Intent(context, MainActivity::class.java)
-                        val pending = PendingIntent.getActivity(
-                            context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                        )
-                        views.setOnClickPendingIntent(R.id.widget_container, pending)
-                        manager.updateAppWidget(widgetId, views)
-                    } catch (_: Exception) {}
-                }
-                FileLogger.i(TAG, "updateMediumAll: 渲染锁定状态完成, widgetCount=${ids.size}")
-                return
-            }
-
             val realtime = weather?.result?.realtime
             val daily = weather?.result?.daily
             val skycon = realtime?.skycon
@@ -701,33 +670,6 @@ object WeatherWidgetUpdater {
             val ids = manager.getAppWidgetIds(ComponentName(context, WeatherWidget4x2Provider::class.java))
             if (ids.isEmpty()) {
                 FileLogger.w(TAG, "update4x2All: 无活跃 widget，跳过渲染")
-                return
-            }
-
-            // Check premium status
-            val membershipRepository = MembershipRepository(context)
-            val isPremium = membershipRepository.isPremium.value
-            
-            // If not premium, show locked state
-            if (!isPremium) {
-                FileLogger.i(TAG, "update4x2All: 用户未付费，显示锁定状态")
-                ids.forEach { widgetId ->
-                    try {
-                        val views = RemoteViews(context.packageName, R.layout.widget_4x2)
-                        views.setTextViewText(R.id.widget_city, "需要付费解锁")
-                        views.setTextViewText(R.id.widget_weather_desc, "此功能需要付费解锁")
-                        views.setTextViewText(R.id.widget_temp_range, "")
-                        views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-                        
-                        val intent = Intent(context, MainActivity::class.java)
-                        val pending = PendingIntent.getActivity(
-                            context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                        )
-                        views.setOnClickPendingIntent(R.id.widget_container, pending)
-                        manager.updateAppWidget(widgetId, views)
-                    } catch (_: Exception) {}
-                }
-                FileLogger.i(TAG, "update4x2All: 渲染锁定状态完成, widgetCount=${ids.size}")
                 return
             }
 

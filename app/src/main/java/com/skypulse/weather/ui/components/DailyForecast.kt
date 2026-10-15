@@ -34,22 +34,13 @@ private const val DAY_WIDTH = 64
 @Composable
 fun DailyForecastCard(
     daily: DailyForecast?,
-    isPremium: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (daily?.temperature.isNullOrEmpty()) return
     val forecast = daily ?: return
     val allTemperatures = forecast.temperature ?: return
     
-    // Free users: limit to 5 days (including yesterday)
-    val startIndex = if (isPremium) 0 else {
-        val yesterdayIndex = allTemperatures.indexOfFirst { WeatherUtils.isYesterday(it.date) }
-        if (yesterdayIndex >= 0) yesterdayIndex else 0
-    }
-    val endIndex = if (isPremium) allTemperatures.size else {
-        minOf(startIndex + 5, allTemperatures.size)
-    }
-    val temperatures = allTemperatures.subList(startIndex, endIndex)
+    val temperatures = allTemperatures
 
     val skipAnimation = LocalSkipCardAnimation.current
     var visible by remember { mutableStateOf(false) }

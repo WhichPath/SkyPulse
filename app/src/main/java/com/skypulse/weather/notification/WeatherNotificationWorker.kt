@@ -13,7 +13,6 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.skypulse.weather.R
-import com.skypulse.weather.data.MembershipRepository
 import com.skypulse.weather.repository.CityRepository
 import com.skypulse.weather.repository.WeatherRepository
 import com.skypulse.weather.sync.RefreshPolicy
@@ -40,7 +39,6 @@ class WeatherNotificationWorker @AssistedInject constructor(
     private val repository: WeatherRepository,
     private val cityRepository: CityRepository,
     private val refreshManager: RefreshManager,
-    private val membershipRepository: MembershipRepository,
 ) : CoroutineWorker(appContext, params) {
 
     companion object {
@@ -70,7 +68,6 @@ class WeatherNotificationWorker @AssistedInject constructor(
             }
 
             val prefs = context.getSharedPreferences(WeatherNotificationScheduler.PREFS_NAME, Context.MODE_PRIVATE)
-            val isPremium = membershipRepository.isPremium.value
             val cities = cityRepository.getCities()
             val city = cities.firstOrNull { it.isCurrentLocation } ?: cities.firstOrNull()
                 ?: return Result.success()
@@ -127,7 +124,7 @@ class WeatherNotificationWorker @AssistedInject constructor(
                 effectivePrecip > 0 -> "毛毛雨"
                 else -> weatherDesc
             }
-            if (isPremium && prefs.getBoolean("rain_alert", true)) {
+            if (prefs.getBoolean("rain_alert", true)) {
                 if (hasMinutelyRain) {
                     if (dedup.shouldNotifyRain()) {
                         val title = buildNotificationTitle("短临降水提醒", precipIntensityDesc)
@@ -170,7 +167,7 @@ class WeatherNotificationWorker @AssistedInject constructor(
                     }
                 }
             }
-            if (isPremium && prefs.getBoolean("typhoon_alert", true)) {
+            if (prefs.getBoolean("typhoon_alert", true)) {
                 if (skycon == "STORM_RAIN") {
                     if (dedup.shouldNotifyExtreme()) {
                         val title = buildNotificationTitle("极端天气提醒", "暴雨")

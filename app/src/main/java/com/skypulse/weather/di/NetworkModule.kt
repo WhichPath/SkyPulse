@@ -1,7 +1,6 @@
 package com.skypulse.weather.di
 
 import com.skypulse.weather.BuildConfig
-import com.skypulse.weather.data.remote.GithubApi
 import com.skypulse.weather.data.remote.WeatherApiService
 import com.skypulse.weather.data.remote.qweather.QWeatherApi
 import com.skypulse.weather.data.remote.qweather.QWeatherAuthInterceptor
@@ -80,16 +79,6 @@ object NetworkModule {
     @Singleton
     fun provideQWeatherApi(retrofit: Retrofit): QWeatherApi =
         retrofit.create(QWeatherApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideGithubApi(client: OkHttpClient, moshi: Moshi): GithubApi =
-        Retrofit.Builder()
-            .baseUrl("https://api.github.com/")
-            .client(client)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(GithubApi::class.java)
 }
 
 /**
