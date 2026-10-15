@@ -164,6 +164,3 @@ internal fun Color.dim(amount: Float): Color = Color(
 
 /** 直接覆写 alpha。 */
 internal fun Color.withAlpha(alpha: Float): Color = copy(alpha = alpha.coerceIn(0f, 1f))
-
-/** 供测试与预览使用的空尺寸。 */
-internal val EmptySize: Size = Size.Zero
