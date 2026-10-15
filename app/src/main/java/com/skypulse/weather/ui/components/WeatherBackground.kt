@@ -139,9 +139,12 @@ private fun LightFieldAtmosphere(
                 .drawBehind {
                     drawRect(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = field.vignetteAlpha)),
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = field.vignetteAlpha)
+                            ),
                             center = Offset(size.width * 0.5f, size.height * 0.42f),
-                            radius = maxOf(size.width, size.height) * 0.72f
+                            radius = field.vignetteRadius(size.width, size.height)
                         )
                     )
                 }

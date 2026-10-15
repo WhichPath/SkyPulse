@@ -48,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.skypulse.weather.ui.glass.weatherPageBackground
 import com.skypulse.weather.data.WeatherSettings
 import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.domain.CitySelectionPolicy
@@ -226,7 +227,7 @@ fun WeatherScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(currentScreen.screenBackgroundBrush(weatherTheme, secondaryPageColors.background))
+                .background(currentScreen.screenBackgroundBrush(weatherTheme, secondaryPageColors))
         ) {
             AnimatedContent(
                 targetState = currentScreen,
@@ -567,13 +568,20 @@ private fun AnimatedContentTransitionScope<AppScreen>.skyPulseScreenTransition()
         SizeTransform(clip = true)
 }
 
-private fun AppScreen.screenBackgroundBrush(weatherTheme: WeatherTheme, secondaryBackground: Color): Brush {
+private fun AppScreen.screenBackgroundBrush(weatherTheme: WeatherTheme, secondaryPageColors: SecondaryPageColors): Brush {
     return when (this) {
         AppScreen.CityDetail -> Brush.verticalGradient(colorStops = *skyGradientColorStops(weatherTheme.backgroundGradient))
+        // 次级页与主页同源：色相取自当前天气，再按深浅色模式调整明度，
+        // 保证既看得出天气、又不会牺牲文字对比度
         AppScreen.CityList,
         AppScreen.Settings,
-        AppScreen.AlertDetail,
-        AppScreen.RadarMap -> Brush.verticalGradient(listOf(secondaryBackground, secondaryBackground))
+        AppScreen.AlertDetail -> weatherPageBackground(
+            weatherGradient = weatherTheme.backgroundGradient,
+            isDark = secondaryPageColors.isDark
+        )
+        AppScreen.RadarMap -> Brush.verticalGradient(
+            listOf(secondaryPageColors.background, secondaryPageColors.background)
+        )
     }
 }
 

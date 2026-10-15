@@ -33,10 +33,11 @@ internal fun AlertDetailScreen(
     val sortedAlerts = remember(alerts) {
         alerts.sortedByPublishTimeDescending()
     }
+    // 背景由 WeatherScreen 的天气着色渐变统一提供，这里必须保持透明
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(page.background)
+            .background(Color.Transparent)
     ) {
         TopAppBar(
             title = { Text("预警详情", color = page.textPrimary) },
@@ -89,10 +90,7 @@ internal fun AlertDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .secondaryGlassSurface(
-                                shape = RoundedCornerShape(14.dp),
-                                radius = 14.dp
-                            )
+                            .secondaryGlassSurface(shape = RoundedCornerShape(14.dp))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             if (!title.isNullOrBlank()) {

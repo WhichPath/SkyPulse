@@ -65,10 +65,12 @@ fun SettingsScreen(
     val context = LocalContext.current
     val page = LocalSecondaryPageTheme.current
 
+    // 背景由 WeatherScreen 的天气着色渐变统一提供，这里必须透明，
+    // 否则会盖住底色，卡片半透玻璃就失去了"底部有颜色"的来源
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(page.background)
+            .background(Color.Transparent)
             .navigationBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -84,7 +86,7 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = page.background
+                    containerColor = Color.Transparent
                 )
             )
 
@@ -254,8 +256,7 @@ private fun IosCard(
             .fillMaxWidth()
             .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
             .secondaryGlassSurface(
-                shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.settingsCard),
-                radius = SkyPulseDesignSystem.Radius.settingsCard
+                shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.settingsCard)
             ),
         content = content
     )

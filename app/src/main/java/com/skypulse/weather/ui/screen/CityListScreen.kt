@@ -50,10 +50,11 @@ fun CityListScreen(
     var showAccuracyDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val page = LocalSecondaryPageTheme.current
+    // 背景由 WeatherScreen 的天气着色渐变统一提供
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(page.background)
+            .background(Color.Transparent)
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -71,7 +72,7 @@ fun CityListScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = page.background
+                        containerColor = Color.Transparent
                     )
                 )
             }
@@ -88,8 +89,7 @@ fun CityListScreen(
                         .fillMaxWidth()
                         .height(SkyPulseDesignSystem.TouchTarget.default)
                         .secondaryGlassSurface(
-                            shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.pill),
-                            radius = SkyPulseDesignSystem.Radius.pill
+                            shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.pill)
                         ),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = page.textPrimary, fontSize = 18.sp),
                     singleLine = true,
