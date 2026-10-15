@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toPx
 import com.skypulse.weather.util.FileLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -219,14 +218,14 @@ class LiquidGlassRenderer(private val shader: RuntimeShader?) {
         if (width <= 0f || height <= 0f) return
 
         try {
-            with(scope.density) {
-                target.setFloatUniform("size", width, height)
-                // 圆角半径不得超过短边一半，否则 SDF 退化为无效形状
-                val maxRadiusPx = minOf(width, height) / 2f
-                val radiusPx = minOf(params.radius.toPx(), maxRadiusPx)
-                target.setFloatUniform("radius", radiusPx)
-                target.setFloatUniform("lightAngle", Math.toRadians(params.lightAngleDegrees.toDouble()).toFloat())
-            }
+            // 圆角半径不得超过短边一半，否则 SDF 退化为无效形状
+            val radiusPx = minOf(params.radius.toPx(scope.density), minOf(width, height) / 2f)
+            target.setFloatUniform("size", width, height)
+            target.setFloatUniform("radius", radiusPx)
+            target.setFloatUniform(
+                "lightAngle",
+                Math.toRadians(params.lightAngleDegrees.toDouble()).toFloat()
+            )
             target.setFloatUniform("press", params.press.coerceIn(0f, 1f))
             target.setFloatUniform("phase", phase)
             target.setFloatUniform(
