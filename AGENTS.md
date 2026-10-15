@@ -17,7 +17,13 @@
 - **天气数据源**: 使用 QWeather API 提供天气/预警/空气质量/分钟降水数据
 - **认证方式**: JWT (Ed25519 签名)，比 API Key 更安全
 - **免费额度**: 每月 50,000 次请求（天气和基础服务）
-- **API 配置位置**: `local.properties` 中的 `QWEATHER_PROJECT_ID`、`QWEATHER_KEY_ID`、`QWEATHER_PRIVATE_KEY`、`QWEATHER_API_HOST`
+- **API 配置位置（v4.0.2 起两级解析）**: 
+  1. **运行时优先**：用户在设置页「和风天气 API」分区填写，存于 `QWeatherCredentialStore`（应用私有 SharedPreferences，不随构建产物分发）；
+  2. **编译期回退**：`local.properties` / CI secrets 注入的 `QWEATHER_PROJECT_ID`、`QWEATHER_KEY_ID`、`QWEATHER_PRIVATE_KEY`、`QWEATHER_API_HOST`（BuildConfig）。
+  - 两级都为空时 App 仍可启动并进入设置页补全，不再硬依赖编译期密钥
+  - 换密钥无需重启：`QWeatherCredentials.fingerprint` 变化会使 JWT 缓存立即失效重签
+  - 换 API Host 无需重启：`QWeatherApiProvider` 按 Host 缓存 Retrofit 实例（baseUrl 构建后不可变）
+  - **彻底隔离密钥**：删除仓库 Actions secrets 后 CI 仍可编译发布（生成的 `local.properties` 容忍空值），包体不含任何密钥
 - **JWT 生成**: App 运行时使用 BouncyCastle (Ed25519) 在本地签名生成 JWT，私钥由用户保管
 - **依赖库**: `org.bouncycastle:bcprov-jdk18on` (Ed25519 签名支持 minSdk 26)
 

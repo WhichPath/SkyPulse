@@ -23,7 +23,7 @@ import javax.inject.Singleton
 class QWeatherApiProvider @Inject constructor(
     private val baseClient: OkHttpClient,
     moshi: Moshi,
-    jwtGenerator: QWeatherJwtGenerator,
+    private val jwtGenerator: QWeatherJwtGenerator,
     private val authInterceptor: QWeatherAuthInterceptor,
     private val credentialStore: QWeatherCredentialStore
 ) {
