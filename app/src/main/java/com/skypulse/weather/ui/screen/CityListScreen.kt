@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import com.skypulse.weather.model.City
 import com.skypulse.weather.ui.components.CitySearchResultRow
 import com.skypulse.weather.ui.components.SwipeableCityListRow
+import com.skypulse.weather.ui.components.secondaryGlassSurface
 import com.skypulse.weather.ui.theme.*
 import com.skypulse.weather.viewmodel.CitySearchResult
 import com.skypulse.weather.viewmodel.CityWeatherData
@@ -86,8 +87,10 @@ fun CityListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(SkyPulseDesignSystem.TouchTarget.default)
-                        .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.pill))
-                        .background(page.cardBackground),
+                        .secondaryGlassSurface(
+                            shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.pill),
+                            radius = SkyPulseDesignSystem.Radius.pill
+                        ),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = page.textPrimary, fontSize = 18.sp),
                     singleLine = true,
                     cursorBrush = SolidColor(page.accentBlue),

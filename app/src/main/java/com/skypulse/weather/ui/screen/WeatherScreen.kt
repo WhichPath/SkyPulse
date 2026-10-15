@@ -88,6 +88,7 @@ fun WeatherScreen(
     val selectedCityId by viewModel.selectedCityId.collectAsStateWithLifecycle()
     val onboardingReady by viewModel.onboardingReady.collectAsStateWithLifecycle()
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val qWeatherCredentials by settingsViewModel.credentials.collectAsStateWithLifecycle()
     val isPremium = true
     // 免费用户定位名称截断到区/县级（取空格前第一段）
     val effectiveLocationName by remember {
@@ -501,7 +502,14 @@ fun WeatherScreen(
                     onShowCardSunriseSunsetChange = { settingsViewModel.setShowCardSunriseSunset(it) },
                     onShowCardMinutelyChange = { settingsViewModel.setShowCardMinutely(it) },
                     onShowCardTyphoonChange = { settingsViewModel.setShowCardTyphoon(it) },
-                    onThemeModeChange = { settingsViewModel.setThemeMode(it) }
+                    onThemeModeChange = { settingsViewModel.setThemeMode(it) },
+                    qWeatherCredentials = qWeatherCredentials,
+                    hasBuildInjectedCredentials = settingsViewModel.hasBuildInjectedCredentials,
+                    onSaveQWeatherCredentials = { projectId, keyId, pem, host ->
+                        settingsViewModel.saveQWeatherCredentials(projectId, keyId, pem, host)
+                    },
+                    onClearQWeatherCredentials = { settingsViewModel.clearQWeatherCredentials() },
+                    onTestQWeatherCredentials = { settingsViewModel.testQWeatherCredentials(it) }
                 )
             }
 

@@ -31,6 +31,10 @@ import androidx.core.net.toUri
 import com.skypulse.weather.BuildConfig
 import com.skypulse.weather.data.ThemeMode
 import com.skypulse.weather.data.WeatherSettings
+import com.skypulse.weather.data.remote.qweather.QWeatherConnectionResult
+import com.skypulse.weather.data.remote.qweather.QWeatherCredentials
+import com.skypulse.weather.ui.components.QWeatherApiSettingsSection
+import com.skypulse.weather.ui.components.secondaryGlassSurface
 import com.skypulse.weather.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,7 +55,12 @@ fun SettingsScreen(
     onShowCardSunriseSunsetChange: (Boolean) -> Unit,
     onShowCardMinutelyChange: (Boolean) -> Unit,
     onShowCardTyphoonChange: (Boolean) -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit
+    onThemeModeChange: (ThemeMode) -> Unit,
+    qWeatherCredentials: QWeatherCredentials,
+    hasBuildInjectedCredentials: Boolean,
+    onSaveQWeatherCredentials: (String, String, String, String) -> Unit,
+    onClearQWeatherCredentials: () -> Unit,
+    onTestQWeatherCredentials: suspend (QWeatherCredentials) -> QWeatherConnectionResult
 ) {
     val context = LocalContext.current
     val page = LocalSecondaryPageTheme.current
@@ -207,6 +216,18 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // 数据源设置：和风天气 API（v4.0.2 密钥与编译解耦）
+                SectionHeader("数据源")
+                QWeatherApiSettingsSection(
+                    credentials = qWeatherCredentials,
+                    buildInjectedAvailable = hasBuildInjectedCredentials,
+                    onSave = onSaveQWeatherCredentials,
+                    onClear = onClearQWeatherCredentials,
+                    onTest = onTestQWeatherCredentials
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
@@ -228,13 +249,14 @@ private fun IosCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val page = LocalSecondaryPageTheme.current
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
-            .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.settingsCard))
-            .background(page.cardBackground),
+            .secondaryGlassSurface(
+                shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.settingsCard),
+                radius = SkyPulseDesignSystem.Radius.settingsCard
+            ),
         content = content
     )
 }

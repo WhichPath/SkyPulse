@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.skypulse.weather.ui.glass.rememberLiquidGlassPhase
 import com.skypulse.weather.ui.theme.TextDisabled
 import com.skypulse.weather.ui.theme.TextPrimary
 import com.skypulse.weather.ui.theme.TextSecondary
@@ -201,27 +202,19 @@ fun ExplanationModalOverlay(
                         animationSpec = tween(durationMillis = 200)
                     )
             ) {
+                val modalRadius = SkyPulseDesignSystem.Radius.extraLarge
+                val modalShape = RoundedCornerShape(modalRadius)
+                // 弹窗是唯一需要「活着」的光场：相位以 12fps 缓慢流动，
+                // 让边缘折射微光有呼吸感，又不至于拖慢整页重绘
+                val phase = rememberLiquidGlassPhase(animated = true, fps = 12)
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.18f),
-                                    Color.White.copy(alpha = 0.10f)
-                                )
-                            )
-                        )
-                        .border(
-                            width = 1.dp,
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.40f),
-                                    Color.White.copy(alpha = 0.12f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
+                        .floatingGlassSurface(
+                            shape = modalShape,
+                            radius = modalRadius,
+                            phase = phase
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },

@@ -1,9 +1,11 @@
 package com.skypulse.weather.di
 
 import com.skypulse.weather.BuildConfig
+import com.skypulse.weather.data.QWeatherCredentialStore
 import com.skypulse.weather.data.remote.WeatherApiService
-import com.skypulse.weather.data.remote.qweather.QWeatherApi
+import com.skypulse.weather.data.remote.qweather.QWeatherApiService
 import com.skypulse.weather.data.remote.qweather.QWeatherAuthInterceptor
+import com.skypulse.weather.data.remote.qweather.QWeatherJwtGenerator
 import com.squareup.moshi.Moshi
 import dagger.Binds
 import dagger.Module
@@ -12,8 +14,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -49,36 +49,19 @@ object NetworkModule {
         .build()
 
     /**
-     * 和风天气专用 Retrofit 实例。
+     * 和风天气鉴权拦截器。
      *
-     * 在共享 OkHttpClient 基础上追加 QWeatherAuthInterceptor（JWT 鉴权）。
-     * Base URL 为用户在 local.properties 中配置的项目 API Host。
+     * 凭据解析采用动态回调，运行时优先级为「设置页用户填写 > 编译期 BuildConfig 注入」，
+     * 因此用户在设置页更换密钥后无需重启进程即可生效。
      */
     @Provides
     @Singleton
-    fun provideQWeatherRetrofit(
-        client: OkHttpClient,
-        authInterceptor: QWeatherAuthInterceptor,
-        moshi: Moshi
-    ): Retrofit {
-        val qweatherClient = client.newBuilder()
-            .addInterceptor(authInterceptor)
-            .build()
-
-        var baseUrl = BuildConfig.QWEATHER_API_HOST
-        if (!baseUrl.endsWith("/")) baseUrl += "/"
-
-        return Retrofit.Builder()
-            .baseUrl(baseUrl)
-            .client(qweatherClient)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
+    fun provideQWeatherAuthInterceptor(
+        jwtGenerator: QWeatherJwtGenerator,
+        credentialStore: QWeatherCredentialStore
+    ): QWeatherAuthInterceptor = QWeatherAuthInterceptor(jwtGenerator) {
+        credentialStore.resolveCurrent()
     }
-
-    @Provides
-    @Singleton
-    fun provideQWeatherApi(retrofit: Retrofit): QWeatherApi =
-        retrofit.create(QWeatherApi::class.java)
 }
 
 /**
@@ -91,6 +74,6 @@ abstract class ApiModule {
     @Binds
     @Singleton
     abstract fun bindWeatherApiService(
-        impl: com.skypulse.weather.data.remote.qweather.QWeatherApiService
+        impl: QWeatherApiService
     ): WeatherApiService
 }

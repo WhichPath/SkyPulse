@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.skypulse.weather.model.AlertContent
 import com.skypulse.weather.model.sortedByPublishTimeDescending
+import com.skypulse.weather.ui.components.secondaryGlassSurface
 import com.skypulse.weather.ui.theme.LocalSecondaryPageTheme
 import com.skypulse.weather.ui.theme.alertLevelColor
 
@@ -88,8 +89,10 @@ internal fun AlertDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(page.cardBackground)
+                            .secondaryGlassSurface(
+                                shape = RoundedCornerShape(14.dp),
+                                radius = 14.dp
+                            )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             if (!title.isNullOrBlank()) {

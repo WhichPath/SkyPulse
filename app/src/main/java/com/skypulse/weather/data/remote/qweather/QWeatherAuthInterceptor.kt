@@ -1,21 +1,24 @@
 package com.skypulse.weather.data.remote.qweather
 
-import com.skypulse.weather.BuildConfig
 import com.skypulse.weather.util.FileLogger
 import okhttp3.Interceptor
 import okhttp3.Response
-import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * 和风天气鉴权拦截器。
  *
  * 为每个请求自动生成并附加 JWT（Ed25519 签名）到 Authorization: Bearer 头。
- * JWT 缓存 14 分钟后在接近过期时自动刷新。
+ * JWT 缓存 14 分钟后在接近过期时自动刷新；凭据指纹变化时（用户切换密钥）立即失效重签。
+ *
+ * 凭据由构造参数 [credentialResolver] 提供而非直接读 BuildConfig，
+ * 以支持「用户运行时填写 > 编译期注入」的两级解析（见 QWeatherCredentialStore），
+ * 同时允许连通性测试用一份临时凭据构造独立实例。
  */
 @Singleton
-class QWeatherAuthInterceptor @Inject constructor(
-    private val jwtGenerator: QWeatherJwtGenerator
+class QWeatherAuthInterceptor(
+    private val jwtGenerator: QWeatherJwtGenerator,
+    private val credentialResolver: () -> QWeatherCredentials
 ) : Interceptor {
 
     companion object {
@@ -29,6 +32,10 @@ class QWeatherAuthInterceptor @Inject constructor(
 
     @Volatile
     private var tokenGeneratedAt: Long = 0L
+
+    /** 已缓存 token 对应的凭据指纹，用于检测密钥切换。 */
+    @Volatile
+    private var cachedFingerprint: String? = null
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = getValidToken()
@@ -45,26 +52,37 @@ class QWeatherAuthInterceptor @Inject constructor(
 
     @Synchronized
     private fun getValidToken(): String? {
+        val credentials = credentialResolver()
         val now = System.currentTimeMillis()
         val cached = cachedToken
-        if (cached != null && now - tokenGeneratedAt < TOKEN_TTL_MS - REFRESH_BUFFER_MS) {
+        val fingerprint = credentials.fingerprint
+
+        // 缓存命中：未过期且凭据未变化
+        if (cached != null &&
+            cachedFingerprint == fingerprint &&
+            now - tokenGeneratedAt < TOKEN_TTL_MS - REFRESH_BUFFER_MS
+        ) {
             return cached
         }
 
-        // 生成新 JWT
-        val projectId = BuildConfig.QWEATHER_PROJECT_ID
-        val keyId = BuildConfig.QWEATHER_KEY_ID
-        val privateKey = BuildConfig.QWEATHER_PRIVATE_KEY
-
-        if (projectId.isBlank() || keyId.isBlank() || privateKey.isBlank()) {
-            FileLogger.w(TAG, "QWeather credentials not configured (projectId/keyId/privateKey empty)")
+        if (!credentials.isComplete) {
+            FileLogger.w(
+                TAG,
+                "QWeather credentials not configured (source=${credentials.source}, " +
+                    "projectId/keyId/privateKey empty)"
+            )
             return cached // 返回旧 token 兜底，或 null
         }
 
-        val newToken = jwtGenerator.generateToken(projectId, keyId, privateKey)
+        val newToken = jwtGenerator.generateToken(
+            credentials.projectId,
+            credentials.keyId,
+            credentials.privateKeyPem
+        )
         return if (newToken != null) {
             cachedToken = newToken
             tokenGeneratedAt = now
+            cachedFingerprint = fingerprint
             newToken
         } else {
             FileLogger.e(TAG, "JWT generation returned null, using stale token if available")

@@ -28,12 +28,19 @@ import javax.inject.Singleton
  */
 @Singleton
 class QWeatherApiService @Inject constructor(
-    private val api: QWeatherApi
+    private val apiProvider: QWeatherApiProvider
 ) : WeatherApiService {
 
     companion object {
         private const val TAG = "QWeatherApiService"
     }
+
+    /**
+     * 每次刷新都重新解析 API 实例：用户若在设置页切换了 API Host，
+     * 这里会拿到指向新 Host 的实例，无需重启进程。
+     */
+    private val api: QWeatherApi
+        get() = apiProvider.api()
 
     /**
      * 安全执行网络请求，不吞掉 CancellationException。

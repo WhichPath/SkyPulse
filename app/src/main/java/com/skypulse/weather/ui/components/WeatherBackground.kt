@@ -6,21 +6,30 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import com.skypulse.weather.model.DailyForecast
+import com.skypulse.weather.ui.glass.AtmosphereLightField
 import com.skypulse.weather.util.WeatherUtils
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 
 /**
- * 天气背景容器：5 色渐变 + 粒子特效 + 实时模糊源。
+ * 天气背景容器：光场氛围层 + 5 色渐变 + 粒子特效 + 实时模糊源。
  *
  * 结构分两层（这是玻璃卡片能正确模糊的关键）：
- * 1. 模糊源层（haze）：仅天气渐变 + 粒子特效，被录入离屏图层；
+ * 1. 模糊源层（haze）：光场氛围层 + 天气渐变 + 粒子特效，被录入离屏图层；
  * 2. 内容层：卡片等 UI，通过 [LocalGlassHazeState] 拿到状态后
  *    以 hazeChild 采样模糊源——内容层自身不会被录入，避免自我模糊反馈。
+ *
+ * 氛围层提供 ColorOS 16 式的光场底调：天顶受光、地平线反光、四周暗角收拢，
+ * 让玻璃卡片边缘的高光有「光从上方来」的物理依据。
  *
  * 省电模式下不提供模糊状态，卡片自动降级为增强底色（见 GlassCard）。
  */
@@ -51,7 +60,7 @@ fun WeatherBackground(
     val hazeState = remember { HazeState() }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // 第一层：模糊源（仅渐变 + 粒子）
+        // 第一层：模糊源（光场氛围 + 渐变 + 粒子）
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -68,6 +77,14 @@ fun WeatherBackground(
                         )
                     )
             )
+
+            // 光场氛围层：与渐变同层叠加，为卡片高光提供光照依据
+            LightFieldAtmosphere(
+                zenith = animatedColors.firstOrNull() ?: Color.Black,
+                horizon = animatedColors.lastOrNull() ?: Color.White,
+                isDay = isDay
+            )
+
             // 粒子效果叠加层（不影响内容展示）
             if (showParticles) {
                 WeatherEffectOverlay(
@@ -85,5 +102,49 @@ fun WeatherBackground(
         ) {
             content()
         }
+    }
+}
+
+/**
+ * 光场氛围层：天顶光晕 + 地平线反光 + 四周暗角。
+ *
+ * 全部为静态画笔且不参与逐帧重绘，因此即使上方跑着粒子特效也不会增加绘制负担。
+ */
+@Composable
+private fun LightFieldAtmosphere(
+    zenith: Color,
+    horizon: Color,
+    isDay: Boolean
+) {
+    val field = remember(zenith, horizon, isDay) {
+        AtmosphereLightField(zenith = zenith, horizon = horizon, isDay = isDay)
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(field.verticalWash())
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(field.horizonGlow())
+        )
+        // 暗角必须按实际绘制尺寸构造：Brush 的中心/半径是像素单位，
+        // 用归一化值会让几乎整屏落到暗色端。
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = field.vignetteAlpha)),
+                            center = Offset(size.width * 0.5f, size.height * 0.42f),
+                            radius = maxOf(size.width, size.height) * 0.72f
+                        )
+                    )
+                }
+        )
     }
 }
