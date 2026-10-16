@@ -1,11 +1,19 @@
 package com.skypulse.weather.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,8 +25,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skypulse.weather.model.DailyAstro
@@ -27,9 +38,20 @@ import com.skypulse.weather.model.HourlyWind
 import com.skypulse.weather.ui.theme.*
 import com.skypulse.weather.ui.screen.LocalSkipCardAnimation
 import com.skypulse.weather.util.WeatherUtils
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val HOUR_WIDTH = 64
 private val SIDE_PADDING = 12
+
+/** 滑出该小时数后浮出「回到现在」按钮 */
+private const val BACK_TO_NOW_THRESHOLD_HOURS = 72
+
+/** 超过该滚动速度（px/s）即视为快速滑动，渲染降级为占位 */
+private const val FAST_SCROLL_PX_PER_SEC = 2200f
+
+/** 停止滚动多久后恢复完整渲染（ms） */
+private const val FAST_SCROLL_SETTLE_MS = 140L
 
 // ============ Hourly Parameter Colors (低饱和度，兼容毛玻璃主题) ============
 private object HourlyParamColors {
@@ -169,6 +191,9 @@ fun HourlyForecastCard(
     LaunchedEffect(Unit) { visible = true }
     LaunchedEffect(skipAnimation) { if (skipAnimation) visible = true }
 
+    // v4.1.3：横滑状态提升至卡片层，供「回到现在」按钮与窗口化渲染共享
+    val scrollState = rememberScrollState()
+
     GlassCard(
         modifier = modifier.alpha(cardAlpha)
     ) {
@@ -180,9 +205,12 @@ fun HourlyForecastCard(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
+            HourlyBackToNowBar(scrollState = scrollState, modifier = Modifier.fillMaxWidth())
+
             Spacer(modifier = Modifier.height(16.dp))
 
             HourlyTemperatureChart(
+                scrollState = scrollState,
                 hourlyData = data,
                 astro = astro,
                 showAqi = showAqi,
@@ -194,8 +222,125 @@ fun HourlyForecastCard(
     }
 }
 
+/**
+ * 「回到现在」快捷按钮。
+ *
+ * 逐小时数据已扩展至 10 天（240h），横滑距离很长；当用户滑出 [BACK_TO_NOW_THRESHOLD_HOURS]
+ * 之后，于卡片标题下方浮出该按钮，点击可平滑回到最左侧（当前时刻）。
+ */
+@Composable
+private fun HourlyBackToNowBar(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier
+) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val thresholdPx = remember(density) {
+        with(density) { (BACK_TO_NOW_THRESHOLD_HOURS * HOUR_WIDTH).dp.toPx() }
+    }
+    val show by remember {
+        derivedStateOf { scrollState.value > thresholdPx }
+    }
+
+    AnimatedVisibility(
+        visible = show,
+        enter = fadeIn(tween(160)) + expandVertically(tween(180)),
+        exit = fadeOut(tween(120)) + shrinkVertically(tween(160)),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, end = 16.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.14f))
+                    .clickable {
+                        scope.launch { scrollState.animateScrollTo(0) }
+                    }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LucideIcon(
+                    name = "chevron-left",
+                    contentDescription = null,
+                    size = 13.dp,
+                    tint = TextSecondary
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = "回到现在",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 快速滑动（惯性滚动）检测。
+ *
+ * 速度超过 [FAST_SCROLL_PX_PER_SEC] 时返回 true，调用方据此降级为低成本占位渲染；
+ * 停止滚动约 [FAST_SCROLL_SETTLE_MS] 后恢复 false。
+ */
+@Composable
+private fun rememberFastScrollFlag(scrollState: ScrollState): Boolean {
+    var fast by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val holder = remember { ScrollSettleHolder() }
+
+    LaunchedEffect(scrollState) {
+        var lastValue = scrollState.value
+        var lastNanos = System.nanoTime()
+        snapshotFlow { scrollState.value }.collect { value ->
+            val now = System.nanoTime()
+            val dtMs = (now - lastNanos) / 1_000_000f
+            val velocity = if (dtMs > 0.5f) kotlin.math.abs(value - lastValue) / dtMs * 1000f else 0f
+            lastValue = value
+            lastNanos = now
+            if (velocity > FAST_SCROLL_PX_PER_SEC) {
+                if (!fast) fast = true
+                holder.job?.cancel()
+                holder.job = scope.launch {
+                    delay(FAST_SCROLL_SETTLE_MS)
+                    fast = false
+                }
+            }
+        }
+    }
+    return fast
+}
+
+private class ScrollSettleHolder {
+    var job: kotlinx.coroutines.Job? = null
+}
+
+/** 窗口化渲染时的单元格占位（与 LoadingShimmer 同一视觉语言）。 */
+@Composable
+private fun HourlyCellPlaceholder(width: Dp, height: Dp = 16.dp) {
+    Box(
+        modifier = Modifier.width(width).height(height),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .height(height * 0.7f)
+                .clip(ParamTagShape)
+                .background(Color.White.copy(alpha = 0.12f))
+        )
+    }
+}
+
 @Composable
 private fun HourlyTemperatureChart(
+    scrollState: ScrollState,
     hourlyData: HourlyForecast,
     astro: List<DailyAstro>? = null,
     showAqi: Boolean = true,
@@ -204,17 +349,19 @@ private fun HourlyTemperatureChart(
     showWindGust: Boolean = true
 ) {
     val showAnyParam = showAqi || showUv || showWind || showWindGust
-    val temperatures = hourlyData.temperature?.take(24)?.filter { it.value != null } ?: return
+    val temperatures = hourlyData.temperature?.filter { it.value != null } ?: return
     if (temperatures.size < 2) return
-    val skycons = hourlyData.skycon?.take(24)
-    val precipitation = hourlyData.precipitation?.take(24)
-    val winds = hourlyData.wind?.take(24)
-    val gustValues = hourlyData.gust?.take(24)
-    val aqiValues = hourlyData.air_quality?.aqi?.take(24)
-    val uvItems = hourlyData.life_index?.ultraviolet?.take(24)
+    val itemCount = temperatures.size
+    val skycons = hourlyData.skycon
+    val precipitation = hourlyData.precipitation
+    val winds = hourlyData.wind
+    val gustValues = hourlyData.gust
+    val aqiValues = hourlyData.air_quality?.aqi
+    val uvItems = hourlyData.life_index?.ultraviolet
 
     val theme = LocalWeatherTheme.current
     val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
 
     val tempValues = temperatures.map { kotlin.math.round(it.value!!) }
 
@@ -226,421 +373,525 @@ private fun HourlyTemperatureChart(
     val paddedMax = maxTemp + padding
     val tempRange = (paddedMax - paddedMin).coerceAtLeast(1.0)
 
-    val probValues = precipitation?.map { it.probability ?: 0.0 } ?: List(temperatures.size) { 0.0 }
-    val skyconValues = skycons?.map { it.value } ?: List(temperatures.size) { null }
+    val probValues = precipitation?.map { it.probability ?: 0.0 } ?: List(itemCount) { 0.0 }
+    val skyconValues = skycons?.map { it.value }?.take(itemCount) ?: List(itemCount) { null }
 
     // 标签位于玻璃卡片之上，对比度随卡片玻璃明暗自适应（亮玻璃用深色文字色，深玻璃用浅色文字色）
     val isBrightBg = theme.glass.isLight
 
     val itemWidthDp = HOUR_WIDTH.dp
     val sidePad = SIDE_PADDING.dp
-    val totalWidth = (temperatures.size * HOUR_WIDTH).dp + sidePad * 2
+    val totalWidth = (itemCount * HOUR_WIDTH).dp + sidePad * 2
     val chartHeight = 120.dp
     val horizontalEdgeGuard = rememberHorizontalScrollEdgeGuard()
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .nestedScroll(horizontalEdgeGuard)
-            .disableCityPagerWhilePressed()
-            .horizontalScroll(rememberScrollState())
-    ) {
-        Canvas(
+    // 快速滑动时降级为占位渲染，避免一次性构建大量文本与雨丝
+    val fastScrolling = rememberFastScrollFlag(scrollState)
+
+    val tagWidth = 62.dp
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val itemWidthPx = with(density) { itemWidthDp.toPx() }
+        val sidePadPx = with(density) { sidePad.toPx() }
+        val viewportPx = with(density) { maxWidth.toPx() }
+
+        // ---------- 窗口化：只构建视口附近（±2 格缓冲）的元素 ----------
+        val scrollOffset = scrollState.value.toFloat()
+        val firstVisible = ((scrollOffset - sidePadPx) / itemWidthPx).toInt().coerceAtLeast(0)
+        val visibleCount = kotlin.math.ceil((viewportPx + itemWidthPx * 4f) / itemWidthPx).toInt()
+        val windowStart = (firstVisible - 2).coerceAtLeast(0)
+        val windowEnd = (firstVisible + visibleCount + 2).coerceAtMost(itemCount)
+        val windowCount = (windowEnd - windowStart).coerceAtLeast(1)
+
+        val windowStartPx = (windowStart * itemWidthPx).toInt()
+        val leadingPadPx = if (windowStart == 0) sidePadPx else 0f
+        val trailingPadPx = if (windowEnd == itemCount) sidePadPx else 0f
+        val windowWidthDp = with(density) {
+            (windowCount * itemWidthPx + leadingPadPx + trailingPadPx).toDp()
+        }
+        val leadingPadDp = with(density) { leadingPadPx.toDp() }
+        val trailingPadDp = with(density) { trailingPadPx.toDp() }
+
+        Column(
             modifier = Modifier
-                .width(totalWidth)
-                .height(chartHeight)
-                .padding(horizontal = sidePad)
+                .fillMaxWidth()
+                .nestedScroll(horizontalEdgeGuard)
+                .disableCityPagerWhilePressed()
+                .horizontalScroll(scrollState)
         ) {
-            val canvasH = size.height
-            if (size.width <= 0f || canvasH <= 0f) return@Canvas
+            // 仅用于声明横向内容总宽度，使 ScrollState 的 maxValue 正确
+            Box(modifier = Modifier.width(totalWidth)) {
+                Box(modifier = Modifier.offset { IntOffset(windowStartPx, 0) }) {
+                    Canvas(
+                        modifier = Modifier
+                            .width(windowWidthDp)
+                            .height(chartHeight)
+                    ) {
+                        val canvasH = size.height
+                        if (size.width <= 0f || canvasH <= 0f) return@Canvas
 
-            val itemCount = temperatures.size
-            val step = size.width / itemCount
-            val halfStep = step / 2f
+                        // 内容坐标系 -> 窗口画布坐标系
+                        val translateX = -windowStartPx + leadingPadPx
+                        val step = itemWidthPx // 全局步长，不随窗口缩放
+                        val halfStep = step / 2f
+                        val contentLeftLocal = translateX
+                        val contentRightLocal = itemCount * step + sidePadPx + windowStartPx - leadingPadPx
 
-            val curveAreaBottom = canvasH * 0.70f
-            val curveTop = 20.dp.toPx()
+                        val curveAreaBottom = canvasH * 0.70f
+                        val curveTop = 20.dp.toPx()
 
-            val points = (0 until itemCount).map { i ->
-                val x = halfStep + i * step
-                val normalizedY = ((tempValues[i] - paddedMin) / tempRange).toFloat()
-                val y = curveAreaBottom - normalizedY * (curveAreaBottom - curveTop)
-                Offset(x, y.coerceIn(curveTop, curveAreaBottom))
-            }
+                        val points = (0 until itemCount).map { i ->
+                            val x = halfStep + i * step
+                            val normalizedY = ((tempValues[i] - paddedMin) / tempRange).toFloat()
+                            val y = curveAreaBottom - normalizedY * (curveAreaBottom - curveTop)
+                            Offset(x, y.coerceIn(curveTop, curveAreaBottom))
+                        }
 
-            val tangents = FloatArray(itemCount)
-            val segmentSlopes = FloatArray(itemCount - 1)
-            for (i in 0 until itemCount - 1) {
-                segmentSlopes[i] = (points[i + 1].y - points[i].y) / (points[i + 1].x - points[i].x)
-            }
+                        val tangents = FloatArray(itemCount)
+                        val segmentSlopes = FloatArray(itemCount - 1)
+                        for (i in 0 until itemCount - 1) {
+                            segmentSlopes[i] = (points[i + 1].y - points[i].y) / (points[i + 1].x - points[i].x)
+                        }
 
-            for (i in 0 until itemCount) {
-                when {
-                    i == 0 -> tangents[i] = segmentSlopes[0]
-                    i == itemCount - 1 -> tangents[i] = segmentSlopes[itemCount - 2]
-                    else -> {
-                        val s0 = segmentSlopes[i - 1]
-                        val s1 = segmentSlopes[i]
-                        tangents[i] = if (s0 * s1 <= 0) 0f else (s0 + s1) / 2f
-                    }
-                }
-            }
-
-            fun findSegmentIndex(x: Float): Int {
-                var lo = 0; var hi = points.size - 2
-                while (lo <= hi) {
-                    val mid = (lo + hi) ushr 1
-                    if (x < points[mid].x) hi = mid - 1
-                    else if (x > points[mid + 1].x) lo = mid + 1
-                    else return mid
-                }
-                return lo.coerceIn(0, points.size - 2)
-            }
-
-            fun sampleSplineY(x: Float): Float {
-                if (points.isEmpty()) return curveAreaBottom
-                if (x <= points.first().x) return points.first().y
-                if (x >= points.last().x) return points.last().y
-                val i = findSegmentIndex(x)
-                val p0 = points[i]; val p1 = points[i + 1]
-                val m0 = tangents[i]; val m1 = tangents[i + 1]
-                val t = (x - p0.x) / (p1.x - p0.x)
-                val t2 = t * t; val t3 = t2 * t
-                val h00 = 2 * t3 - 3 * t2 + 1; val h10 = t3 - 2 * t2 + t
-                val h01 = -2 * t3 + 3 * t2; val h11 = t3 - t2
-                val dx = p1.x - p0.x
-                return h00 * p0.y + h10 * m0 * dx + h01 * p1.y + h11 * m1 * dx
-            }
-
-            val chartColors = theme.chartColors
-            val barColorPairs = skyconValues.map { skycon ->
-                when {
-                    skycon == null -> chartColors.clear
-                    skycon.contains("STORM") -> chartColors.storm
-                    skycon.contains("HEAVY_RAIN") || skycon.contains("HEAVY_SNOW") -> chartColors.rain
-                    skycon.contains("RAIN") || skycon.contains("SNOW") -> chartColors.rain
-                    skycon.contains("LIGHT_RAIN") || skycon.contains("LIGHT_SNOW") -> chartColors.rain
-                    skycon.contains("PARTLY_CLOUDY") -> chartColors.partlyCloudy
-                    skycon.contains("CLOUDY") -> chartColors.cloudy
-                    skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> chartColors.haze
-                    skycon == "WIND" -> chartColors.wind
-                    skycon.contains("CLEAR") -> chartColors.clear
-                    else -> chartColors.clear
-                }
-            }
-
-            for (i in 0 until itemCount) {
-                val leftX = if (i == 0) 0f else (points[i - 1].x + points[i].x) / 2f
-                val rightX = if (i == itemCount - 1) size.width else (points[i].x + points[i + 1].x) / 2f
-                val (topColor, _) = barColorPairs[i]
-
-                val barSteps = ((rightX - leftX) / (2f * density)).toInt().coerceIn(10, 50)
-                val sampledYs = FloatArray(barSteps + 1)
-                for (s in 0..barSteps) {
-                    val x = leftX + (rightX - leftX) * (s.toFloat() / barSteps)
-                    sampledYs[s] = sampleSplineY(x)
-                }
-                val barTopY = sampledYs.min()
-
-                val barPath = Path().apply {
-                    moveTo(leftX, canvasH)
-                    for (s in 0..barSteps) {
-                        val x = leftX + (rightX - leftX) * (s.toFloat() / barSteps)
-                        lineTo(x, sampledYs[s])
-                    }
-                    lineTo(rightX, canvasH); close()
-                }
-                drawPath(path = barPath, brush = Brush.verticalGradient(
-                    colors = listOf(
-                        topColor,
-                        topColor.copy(alpha = topColor.alpha * 0.6f),
-                        topColor.copy(alpha = topColor.alpha * 0.25f),
-                        topColor.copy(alpha = 0f)
-                    ),
-                    startY = barTopY,
-                    endY = canvasH
-                ))
-
-                // 绘制下雨效果 - 三层分布，统一角度
-                val skycon = skyconValues[i]
-                val isRain = skycon?.contains("RAIN") == true || skycon?.contains("STORM") == true
-                if (isRain && skycon != null) {
-                    val rainIntensity = when {
-                        skycon.contains("STORM") -> 4      // 暴雨
-                        skycon.contains("HEAVY_RAIN") -> 3  // 大雨
-                        skycon.contains("MODERATE_RAIN") -> 2 // 中雨
-                        else -> 1                           // 小雨
-                    }
-                    val rainColor = Color.White
-                    val barWidth = rightX - leftX
-                    val rainHeight = (canvasH - barTopY) * 0.5f
-
-                    if (barWidth > 0f && rainHeight > 0f) {
-                        // 裁剪区域 - 精确限制在当前柱子范围内
-                        clipRect(
-                            left = leftX,
-                            top = barTopY,
-                            right = rightX,
-                            bottom = canvasH
-                        ) {
-                            // 统一基础角度：向右倾斜约8度
-                            val baseSkewRatio = 0.14f
-
-                            // 三层定义：上、中、下
-                            // 每层有不同的起始位置、长度比例、透明度
-                            val layerConfigs = listOf(
-                                Triple(0.0f, 0.35f, 0.6f),   // 上层：从曲线开始，短雨滴，最亮
-                                Triple(0.15f, 0.5f, 0.45f),  // 中层：偏移15%，中等雨滴
-                                Triple(0.3f, 0.65f, 0.3f)    // 下层：偏移30%，长雨滴，较淡
-                            )
-
-                            // 根据强度确定总斜线数
-                            val totalLines = when (rainIntensity) {
-                                1 -> (barWidth / 20f).toInt().coerceAtLeast(2)
-                                2 -> (barWidth / 16f).toInt().coerceAtLeast(3)
-                                3 -> (barWidth / 12f).toInt().coerceAtLeast(4)
-                                else -> (barWidth / 9f).toInt().coerceAtLeast(5)
-                            }
-
-                            // 每条斜线随机分配到某一层
-                            for (j in 0 until totalLines) {
-                                val t = (j + 0.5f) / totalLines
-
-                                // 使用正弦函数生成伪随机数，决定这条线属于哪一层
-                                val layerRandom = kotlin.math.sin(t * 47.3f + j * 13.7f)
-                                val layerIndex = when {
-                                    layerRandom < -0.3f -> 0  // 上层
-                                    layerRandom < 0.3f -> 1   // 中层
-                                    else -> 2                  // 下层
+                        for (i in 0 until itemCount) {
+                            when {
+                                i == 0 -> tangents[i] = segmentSlopes[0]
+                                i == itemCount - 1 -> tangents[i] = segmentSlopes[itemCount - 2]
+                                else -> {
+                                    val s0 = segmentSlopes[i - 1]
+                                    val s1 = segmentSlopes[i]
+                                    tangents[i] = if (s0 * s1 <= 0) 0f else (s0 + s1) / 2f
                                 }
-                                val (layerOffset, lengthRatio, alphaRatio) = layerConfigs[layerIndex]
+                            }
+                        }
 
-                                // X位置：基础位置 + 小范围随机偏移
-                                val xOffset = kotlin.math.sin(t * 23.7f + j * 7.3f) * barWidth * 0.08f
-                                val x = (leftX + barWidth * t + xOffset).coerceIn(leftX, rightX)
+                        fun findSegmentIndex(x: Float): Int {
+                            var lo = 0; var hi = points.size - 2
+                            while (lo <= hi) {
+                                val mid = (lo + hi) ushr 1
+                                if (x < points[mid].x) hi = mid - 1
+                                else if (x > points[mid + 1].x) lo = mid + 1
+                                else return mid
+                            }
+                            return lo.coerceIn(0, points.size - 2)
+                        }
 
-                                // 使用sampleSplineY获取曲线在该X位置的实际Y值
-                                val curveY = sampleSplineY(x)
+                        fun sampleSplineY(x: Float): Float {
+                            if (points.isEmpty()) return curveAreaBottom
+                            if (x <= points.first().x) return points.first().y
+                            if (x >= points.last().x) return points.last().y
+                            val i = findSegmentIndex(x)
+                            val p0 = points[i]; val p1 = points[i + 1]
+                            val m0 = tangents[i]; val m1 = tangents[i + 1]
+                            val t = (x - p0.x) / (p1.x - p0.x)
+                            val t2 = t * t; val t3 = t2 * t
+                            val h00 = 2 * t3 - 3 * t2 + 1; val h10 = t3 - 2 * t2 + t
+                            val h01 = -2 * t3 + 3 * t2; val h11 = t3 - t2
+                            val dx = p1.x - p0.x
+                            return h00 * p0.y + h10 * m0 * dx + h01 * p1.y + h11 * m1 * dx
+                        }
 
-                                // 起始Y：从曲线位置 + 层偏移
-                                val startY = curveY + (rainHeight * layerOffset) + 2.dp.toPx()
+                        val chartColors = theme.chartColors
+                        val barColorPairs = skyconValues.map { skycon ->
+                            when {
+                                skycon == null -> chartColors.clear
+                                skycon.contains("STORM") -> chartColors.storm
+                                skycon.contains("HEAVY_RAIN") || skycon.contains("HEAVY_SNOW") -> chartColors.rain
+                                skycon.contains("RAIN") || skycon.contains("SNOW") -> chartColors.rain
+                                skycon.contains("LIGHT_RAIN") || skycon.contains("LIGHT_SNOW") -> chartColors.rain
+                                skycon.contains("PARTLY_CLOUDY") -> chartColors.partlyCloudy
+                                skycon.contains("CLOUDY") -> chartColors.cloudy
+                                skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> chartColors.haze
+                                skycon == "WIND" -> chartColors.wind
+                                skycon.contains("CLEAR") -> chartColors.clear
+                                else -> chartColors.clear
+                            }
+                        }
 
-                                // 斜线长度：基础长度 × 层系数 × 随机变化
-                                val lengthVariation = 0.8f + 0.4f * kotlin.math.sin(t * 31.3f + j * 11.7f)
-                                val lineLength = rainHeight * lengthRatio * lengthVariation
-                                val endY = startY + lineLength
+                        translate(translateX, 0f) {
+                            // 快速滑动时只画曲线骨架，跳过柱体/雨丝/文字标注
+                            if (!fastScrolling) {
+                                for (i in windowStart until windowEnd) {
+                                    val leftX = if (i == 0) contentLeftLocal else (points[i - 1].x + points[i].x) / 2f
+                                    val rightX = if (i == itemCount - 1) contentRightLocal else (points[i].x + points[i + 1].x) / 2f
+                                    val (topColor, _) = barColorPairs[i]
 
-                                // 统一角度 + 小范围自然变化（±2度）
-                                val angleVariation = kotlin.math.sin(t * 19.7f + j * 5.3f) * 0.03f
-                                val skew = lineLength * (baseSkewRatio + angleVariation)
-                                val endX = x + skew
+                                    val barSteps = ((rightX - leftX) / (2f * this@Canvas.density)).toInt().coerceIn(10, 50)
+                                    val sampledYs = FloatArray(barSteps + 1)
+                                    for (s in 0..barSteps) {
+                                        val x = leftX + (rightX - leftX) * (s.toFloat() / barSteps)
+                                        sampledYs[s] = sampleSplineY(x)
+                                    }
+                                    val barTopY = sampledYs.min()
 
-                                // 透明度：头轻脚重
-                                val bottomAlpha = alphaRatio * (0.85f + 0.15f * kotlin.math.sin(t * 11.3f + j * 3.7f))
-                                val topAlpha = bottomAlpha * 0.3f
-
-                                // 线条粗细
-                                val strokeWidth = (1.1f + 0.3f * kotlin.math.sin(t * 17.3f + j * 2.3f)).dp.toPx()
-
-                                // 绘制带渐变的斜线
-                                drawLine(
-                                    brush = Brush.verticalGradient(
+                                    val barPath = Path().apply {
+                                        moveTo(leftX, canvasH)
+                                        for (s in 0..barSteps) {
+                                            val x = leftX + (rightX - leftX) * (s.toFloat() / barSteps)
+                                            lineTo(x, sampledYs[s])
+                                        }
+                                        lineTo(rightX, canvasH); close()
+                                    }
+                                    drawPath(path = barPath, brush = Brush.verticalGradient(
                                         colors = listOf(
-                                            rainColor.copy(alpha = topAlpha),
-                                            rainColor.copy(alpha = bottomAlpha)
+                                            topColor,
+                                            topColor.copy(alpha = topColor.alpha * 0.6f),
+                                            topColor.copy(alpha = topColor.alpha * 0.25f),
+                                            topColor.copy(alpha = 0f)
                                         ),
-                                        startY = startY,
-                                        endY = endY
-                                    ),
-                                    start = Offset(x, startY),
-                                    end = Offset(endX, endY),
-                                    strokeWidth = strokeWidth,
-                                    cap = StrokeCap.Round
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+                                        startY = barTopY,
+                                        endY = canvasH
+                                    ))
 
-            if (points.size >= 2) {
-                val linePath = Path().apply {
-                    // Extend to left bar boundary
-                    moveTo(0f, points.first().y)
-                    lineTo(points.first().x, points.first().y)
-                    for (i in 0 until points.size - 1) {
-                        val p0 = points[i]; val p1 = points[i + 1]
-                        val m0 = tangents[i]; val m1 = tangents[i + 1]; val dx = p1.x - p0.x
-                        cubicTo(p0.x + dx / 3f, p0.y + m0 * dx / 3f, p1.x - dx / 3f, p1.y - m1 * dx / 3f, p1.x, p1.y)
-                    }
-                    // Extend to right bar boundary
-                    lineTo(size.width, points.last().y)
-                }
-                drawPath(path = linePath, color = Color.White, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Butt, join = StrokeJoin.Round))
-            }
-            points.forEachIndexed { index, point ->
-                if (index == 0) {
-                    drawCircle(Color.White.copy(alpha = 0.25f), 8.dp.toPx(), point)
-                    drawCircle(Color.White, 4.5.dp.toPx(), point)
-                } else {
-                    drawCircle(Color.White, 3.5.dp.toPx(), point)
-                }
-                val tempText = "${tempValues[index].toInt()}°"
-                val result = textMeasurer.measure(AnnotatedString(tempText), style = TextStyle(fontSize = 13.sp, color = Color.White))
-                drawText(result, topLeft = Offset(point.x - result.size.width / 2, point.y - result.size.height - 6.dp.toPx()))
-            }
+                                    // 绘制下雨效果 - 三层分布，统一角度
+                                    val skycon = skyconValues[i]
+                                    val isRain = skycon?.contains("RAIN") == true || skycon?.contains("STORM") == true
+                                    if (isRain && skycon != null) {
+                                        val rainIntensity = when {
+                                            skycon.contains("STORM") -> 4      // 暴雨
+                                            skycon.contains("HEAVY_RAIN") -> 3  // 大雨
+                                            skycon.contains("MODERATE_RAIN") -> 2 // 中雨
+                                            else -> 1                           // 小雨
+                                        }
+                                        val rainColor = Color.White
+                                        val barWidth = rightX - leftX
+                                        val rainHeight = (canvasH - barTopY) * 0.5f
 
-            val labelStyle = TextStyle(fontSize = 12.sp, color = TextSecondary)
-            val labelCenterY = curveAreaBottom + (canvasH - curveAreaBottom) * 0.45f
-            for (i in 0 until itemCount) {
-                val skycon = skyconValues[i] ?: continue
-                val leftX = if (i == 0) 0f else (points[i - 1].x + points[i].x) / 2f
-                val rightX = if (i == itemCount - 1) size.width else (points[i].x + points[i + 1].x) / 2f
-                val centerX = (leftX + rightX) / 2f
-                val isDay = WeatherUtils.isHourlyDay(skycons?.getOrNull(i)?.datetime, astro)
-                val weatherInfo = WeatherUtils.getWeatherInfo(skycon, isDay)
-                val weatherResult = textMeasurer.measure(AnnotatedString(weatherInfo.description), style = labelStyle)
-                val isPrecip = skycon.contains("RAIN") || skycon.contains("STORM") || skycon.contains("SNOW")
-                val prob = probValues[i]
-                val probText = if (isPrecip && prob >= 1.0) "${prob.toInt()}%" else ""
-                val lineSpacing = 2.dp.toPx()
-                val totalH = if (probText.isNotEmpty()) weatherResult.size.height + lineSpacing + textMeasurer.measure(AnnotatedString(probText), style = labelStyle).size.height else weatherResult.size.height.toFloat()
-                if (rightX - leftX < weatherResult.size.width * 0.7f) continue
-                val startY = labelCenterY - totalH / 2f
-                drawText(weatherResult, topLeft = Offset(centerX - weatherResult.size.width / 2f, startY))
-                if (probText.isNotEmpty()) {
-                    val probResult = textMeasurer.measure(AnnotatedString(probText), style = labelStyle)
-                    drawText(probResult, topLeft = Offset(centerX - probResult.size.width / 2f, startY + weatherResult.size.height + lineSpacing))
-                }
-            }
-        }
+                                        if (barWidth > 0f && rainHeight > 0f) {
+                                            clipRect(
+                                                left = leftX,
+                                                top = barTopY,
+                                                right = rightX,
+                                                bottom = canvasH
+                                            ) {
+                                                val baseSkewRatio = 0.14f
+                                                val layerConfigs = listOf(
+                                                    Triple(0.0f, 0.35f, 0.6f),
+                                                    Triple(0.15f, 0.5f, 0.45f),
+                                                    Triple(0.3f, 0.65f, 0.3f)
+                                                )
+                                                val totalLines = when (rainIntensity) {
+                                                    1 -> (barWidth / 20f).toInt().coerceAtLeast(2)
+                                                    2 -> (barWidth / 16f).toInt().coerceAtLeast(3)
+                                                    3 -> (barWidth / 12f).toInt().coerceAtLeast(4)
+                                                    else -> (barWidth / 9f).toInt().coerceAtLeast(5)
+                                                }
 
-        Spacer(modifier = Modifier.height(4.dp))
+                                                for (j in 0 until totalLines) {
+                                                    val t = (j + 0.5f) / totalLines
+                                                    val layerRandom = kotlin.math.sin(t * 47.3f + j * 13.7f)
+                                                    val layerIndex = when {
+                                                        layerRandom < -0.3f -> 0
+                                                        layerRandom < 0.3f -> 1
+                                                        else -> 2
+                                                    }
+                                                    val (layerOffset, lengthRatio, alphaRatio) = layerConfigs[layerIndex]
+                                                    val xOffset = kotlin.math.sin(t * 23.7f + j * 7.3f) * barWidth * 0.08f
+                                                    val x = (leftX + barWidth * t + xOffset).coerceIn(leftX, rightX)
+                                                    val curveY = sampleSplineY(x)
+                                                    val startY = curveY + (rainHeight * layerOffset) + 2.dp.toPx()
+                                                    val lengthVariation = 0.8f + 0.4f * kotlin.math.sin(t * 31.3f + j * 11.7f)
+                                                    val lineLength = rainHeight * lengthRatio * lengthVariation
+                                                    val endY = startY + lineLength
+                                                    val angleVariation = kotlin.math.sin(t * 19.7f + j * 5.3f) * 0.03f
+                                                    val skew = lineLength * (baseSkewRatio + angleVariation)
+                                                    val endX = x + skew
+                                                    val bottomAlpha = alphaRatio * (0.85f + 0.15f * kotlin.math.sin(t * 11.3f + j * 3.7f))
+                                                    val topAlpha = bottomAlpha * 0.3f
+                                                    val strokeWidth = (1.1f + 0.3f * kotlin.math.sin(t * 17.3f + j * 2.3f)).dp.toPx()
 
-        // Icons Row
-        Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
-            skycons?.forEach { skycon ->
-                val isDay = WeatherUtils.isHourlyDay(skycon.datetime, astro)
-                val info = WeatherUtils.getWeatherInfo(skycon.value, isDay)
-                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                    WeatherIcon(iconType = info.icon, size = 36.dp, animated = false)
-                }
-            }
-        }
-
-        if (showAnyParam) {
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        val tagWidth = 62.dp
-
-        // AQI Row
-        if (showAqi) {
-            Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
-                temperatures.forEachIndexed { index, _ ->
-                    val aqi = aqiValues?.getOrNull(index)?.value?.usa ?: aqiValues?.getOrNull(index)?.value?.chn
-                    val label = aqiLabel(aqi)
-                    val color = aqiColor(aqi, isBrightBg)
-                    Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                        if (label.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .width(tagWidth)
-                                    .clip(ParamTagShape)
-                                    .background(Color.White.copy(alpha = 0.25f))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(androidx.compose.foundation.shape.CircleShape)
-                                        .background(color)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
-                                    color = TextSecondary,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // UV Row
-        if (showUv) {
-            if (showAqi) Spacer(modifier = Modifier.height(7.5.dp))
-            Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
-                temperatures.forEachIndexed { index, _ ->
-                    val uvIndex = uvItems?.getOrNull(index)?.index
-                    val label = uvLabel(uvIndex)
-                    val color = uvColor(uvIndex, isBrightBg)
-                    Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                        if (label.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .width(tagWidth)
-                                    .clip(ParamTagShape)
-                                    .background(Color.White.copy(alpha = 0.25f))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(androidx.compose.foundation.shape.CircleShape)
-                                        .background(color)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
-                                    color = TextSecondary,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Wind Row
-        if (showWind) {
-            if (showAqi || showUv) Spacer(modifier = Modifier.height(7.5.dp))
-            Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
-                temperatures.forEachIndexed { index, _ ->
-                    val wind = winds?.getOrNull(index)
-                    val level = WeatherUtils.formatWindSpeed(wind?.speed)
-                    Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                        if (level != "--") {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .width(tagWidth)
-                                    .clip(ParamTagShape)
-                                    .background(Color.White.copy(alpha = 0.25f))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                if (wind?.direction != null && level != "0") {
-                                    WindDirectionArrow(
-                                        direction = wind.direction,
-                                        modifier = Modifier.size(9.dp),
-                                        color = TextSecondary
-                                    )
-                                    Spacer(modifier = Modifier.width(2.dp))
+                                                    drawLine(
+                                                        brush = Brush.verticalGradient(
+                                                            colors = listOf(
+                                                                rainColor.copy(alpha = topAlpha),
+                                                                rainColor.copy(alpha = bottomAlpha)
+                                                            ),
+                                                            startY = startY,
+                                                            endY = endY
+                                                        ),
+                                                        start = Offset(x, startY),
+                                                        end = Offset(endX, endY),
+                                                        strokeWidth = strokeWidth,
+                                                        cap = StrokeCap.Round
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
+                            }
+
+                            if (points.size >= 2) {
+                                val linePath = Path().apply {
+                                    moveTo(contentLeftLocal, points.first().y)
+                                    lineTo(points.first().x, points.first().y)
+                                    for (i in 0 until points.size - 1) {
+                                        val p0 = points[i]; val p1 = points[i + 1]
+                                        val m0 = tangents[i]; val m1 = tangents[i + 1]; val dx = p1.x - p0.x
+                                        cubicTo(p0.x + dx / 3f, p0.y + m0 * dx / 3f, p1.x - dx / 3f, p1.y - m1 * dx / 3f, p1.x, p1.y)
+                                    }
+                                    lineTo(contentRightLocal, points.last().y)
+                                }
+                                drawPath(path = linePath, color = Color.White, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Butt, join = StrokeJoin.Round))
+                            }
+
+                            if (!fastScrolling) {
+                                for (index in windowStart until windowEnd) {
+                                    val point = points[index]
+                                    if (index == 0) {
+                                        drawCircle(Color.White.copy(alpha = 0.25f), 8.dp.toPx(), point)
+                                        drawCircle(Color.White, 4.5.dp.toPx(), point)
+                                    } else {
+                                        drawCircle(Color.White, 3.5.dp.toPx(), point)
+                                    }
+                                    val tempText = "${tempValues[index].toInt()}°"
+                                    val result = textMeasurer.measure(AnnotatedString(tempText), style = TextStyle(fontSize = 13.sp, color = Color.White))
+                                    drawText(result, topLeft = Offset(point.x - result.size.width / 2, point.y - result.size.height - 6.dp.toPx()))
+                                }
+
+                                val labelStyle = TextStyle(fontSize = 12.sp, color = TextSecondary)
+                                val labelCenterY = curveAreaBottom + (canvasH - curveAreaBottom) * 0.45f
+                                for (i in windowStart until windowEnd) {
+                                    val skycon = skyconValues[i] ?: continue
+                                    val leftX = if (i == 0) contentLeftLocal else (points[i - 1].x + points[i].x) / 2f
+                                    val rightX = if (i == itemCount - 1) contentRightLocal else (points[i].x + points[i + 1].x) / 2f
+                                    val centerX = (leftX + rightX) / 2f
+                                    val isDay = WeatherUtils.isHourlyDay(skycons?.getOrNull(i)?.datetime, astro)
+                                    val weatherInfo = WeatherUtils.getWeatherInfo(skycon, isDay)
+                                    val weatherResult = textMeasurer.measure(AnnotatedString(weatherInfo.description), style = labelStyle)
+                                    val isPrecip = skycon.contains("RAIN") || skycon.contains("STORM") || skycon.contains("SNOW")
+                                    val prob = probValues[i]
+                                    val probText = if (isPrecip && prob >= 1.0) "${prob.toInt()}%" else ""
+                                    val lineSpacing = 2.dp.toPx()
+                                    val totalH = if (probText.isNotEmpty()) weatherResult.size.height + lineSpacing + textMeasurer.measure(AnnotatedString(probText), style = labelStyle).size.height else weatherResult.size.height.toFloat()
+                                    if (rightX - leftX < weatherResult.size.width * 0.7f) continue
+                                    val startY = labelCenterY - totalH / 2f
+                                    drawText(weatherResult, topLeft = Offset(centerX - weatherResult.size.width / 2f, startY))
+                                    if (probText.isNotEmpty()) {
+                                        val probResult = textMeasurer.measure(AnnotatedString(probText), style = labelStyle)
+                                        drawText(probResult, topLeft = Offset(centerX - probResult.size.width / 2f, startY + weatherResult.size.height + lineSpacing))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Icons Row
+                    Row(
+                        modifier = Modifier
+                            .width(windowWidthDp)
+                            .padding(start = leadingPadDp, end = trailingPadDp)
+                    ) {
+                        for (i in windowStart until windowEnd) {
+                            val skycon = skycons?.getOrNull(i)
+                            if (fastScrolling || skycon == null) {
+                                HourlyCellPlaceholder(width = itemWidthDp, height = 36.dp)
+                            } else {
+                                val isDay = WeatherUtils.isHourlyDay(skycon.datetime, astro)
+                                val info = WeatherUtils.getWeatherInfo(skycon.value, isDay)
+                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
+                                    WeatherIcon(iconType = info.icon, size = 36.dp, animated = false)
+                                }
+                            }
+                        }
+                    }
+
+                    if (showAnyParam) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
+                    // AQI Row
+                    if (showAqi) {
+                        Row(
+                            modifier = Modifier
+                                .width(windowWidthDp)
+                                .padding(start = leadingPadDp, end = trailingPadDp)
+                        ) {
+                            for (index in windowStart until windowEnd) {
+                                if (fastScrolling) {
+                                    HourlyCellPlaceholder(width = itemWidthDp)
+                                    continue
+                                }
+                                val aqi = aqiValues?.getOrNull(index)?.value?.usa ?: aqiValues?.getOrNull(index)?.value?.chn
+                                val label = aqiLabel(aqi)
+                                val color = aqiColor(aqi, isBrightBg)
+                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
+                                    if (label.isNotEmpty()) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier
+                                                .width(tagWidth)
+                                                .clip(ParamTagShape)
+                                                .background(Color.White.copy(alpha = 0.25f))
+                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(5.dp)
+                                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                                    .background(color)
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                                color = TextSecondary,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // UV Row
+                    if (showUv) {
+                        if (showAqi) Spacer(modifier = Modifier.height(7.5.dp))
+                        Row(
+                            modifier = Modifier
+                                .width(windowWidthDp)
+                                .padding(start = leadingPadDp, end = trailingPadDp)
+                        ) {
+                            for (index in windowStart until windowEnd) {
+                                if (fastScrolling) {
+                                    HourlyCellPlaceholder(width = itemWidthDp)
+                                    continue
+                                }
+                                val uvIndex = uvItems?.getOrNull(index)?.index
+                                val label = uvLabel(uvIndex)
+                                val color = uvColor(uvIndex, isBrightBg)
+                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
+                                    if (label.isNotEmpty()) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier
+                                                .width(tagWidth)
+                                                .clip(ParamTagShape)
+                                                .background(Color.White.copy(alpha = 0.25f))
+                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(5.dp)
+                                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                                    .background(color)
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                                color = TextSecondary,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Wind Row
+                    if (showWind) {
+                        if (showAqi || showUv) Spacer(modifier = Modifier.height(7.5.dp))
+                        Row(
+                            modifier = Modifier
+                                .width(windowWidthDp)
+                                .padding(start = leadingPadDp, end = trailingPadDp)
+                        ) {
+                            for (index in windowStart until windowEnd) {
+                                if (fastScrolling) {
+                                    HourlyCellPlaceholder(width = itemWidthDp)
+                                    continue
+                                }
+                                val wind = winds?.getOrNull(index)
+                                val level = WeatherUtils.windLevelLabel(wind?.scale, wind?.speed)
+                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
+                                    if (level != "--") {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier
+                                                .width(tagWidth)
+                                                .clip(ParamTagShape)
+                                                .background(Color.White.copy(alpha = 0.25f))
+                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        ) {
+                                            if (wind?.direction != null && level != "0") {
+                                                WindDirectionArrow(
+                                                    direction = wind.direction,
+                                                    modifier = Modifier.size(9.dp),
+                                                    color = TextSecondary
+                                                )
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                            }
+                                            Text(
+                                                text = "${level}级",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                                color = TextSecondary,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Gust Row
+                    if (showWindGust) {
+                        if (showAqi || showUv || showWind) Spacer(modifier = Modifier.height(7.5.dp))
+                        Row(
+                            modifier = Modifier
+                                .width(windowWidthDp)
+                                .padding(start = leadingPadDp, end = trailingPadDp)
+                        ) {
+                            for (index in windowStart until windowEnd) {
+                                if (fastScrolling) {
+                                    HourlyCellPlaceholder(width = itemWidthDp)
+                                    continue
+                                }
+                                val gustSpeed = gustValues?.getOrNull(index)?.value
+                                val label = gustLabel(gustSpeed)
+                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
+                                    if (label.isNotEmpty()) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            modifier = Modifier
+                                                .width(tagWidth)
+                                                .clip(ParamTagShape)
+                                                .background(Color.White.copy(alpha = 0.25f))
+                                                .padding(vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Time Row
+                    Row(
+                        modifier = Modifier
+                            .width(windowWidthDp)
+                            .padding(start = leadingPadDp, end = trailingPadDp)
+                    ) {
+                        for (index in windowStart until windowEnd) {
+                            Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = "${level}级",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                    text = hourlyTimeLabel(temperatures, index),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
                                     color = TextSecondary,
+                                    textAlign = TextAlign.Center,
                                     maxLines = 1
                                 )
                             }
@@ -649,51 +900,34 @@ private fun HourlyTemperatureChart(
                 }
             }
         }
+    }
+}
 
-        // Gust Row
-        if (showWindGust) {
-            if (showAqi || showUv || showWind) Spacer(modifier = Modifier.height(7.5.dp))
-            Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
-                temperatures.forEachIndexed { index, _ ->
-                    val gustSpeed = gustValues?.getOrNull(index)?.value
-                    val label = gustLabel(gustSpeed)
-                    Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                        if (label.isNotEmpty()) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                color = TextSecondary,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                modifier = Modifier
-                                    .width(tagWidth)
-                                    .clip(ParamTagShape)
-                                    .background(Color.White.copy(alpha = 0.25f))
-                                    .padding(vertical = 1.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
+/**
+ * 逐小时时间轴标签：
+ * 首格为「现在」；之后每小时显示时刻；每天 0 点切换为日期标记
+ * （明天 / 后天 / M月d日），便于在长达 10 天的横滑过程中定位。
+ */
+private fun hourlyTimeLabel(temps: List<com.skypulse.weather.model.HourlyValue>, index: Int): String {
+    if (index == 0) return "现在"
+    val datetime = temps[index].datetime
+    val hour = WeatherUtils.extractHour(datetime)
+    if (hour != 0) return WeatherUtils.formatHourShort(datetime)
 
-        Spacer(modifier = Modifier.height(6.dp))
+    val firstDate = temps.firstOrNull { !it.datetime.isNullOrBlank() }?.datetime?.substringBefore("T")
+    val date = datetime?.substringBefore("T")
+    if (firstDate.isNullOrBlank() || date.isNullOrBlank()) return "明天"
 
-        // Time Row
-        Row(modifier = Modifier.width(totalWidth).padding(horizontal = sidePad)) {
-            temperatures.forEachIndexed { index, temp ->
-                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (index == 0) "现在" else {
-                            val h = WeatherUtils.extractHour(temp.datetime)
-                            if (h == 0) "明天" else WeatherUtils.formatHourShort(temp.datetime)
-                        },
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
-                        color = TextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
+    val dayOffset = runCatching {
+        java.time.LocalDate.parse(date).toEpochDay() - java.time.LocalDate.parse(firstDate).toEpochDay()
+    }.getOrNull() ?: return "明天"
+
+    return when (dayOffset) {
+        1L -> "明天"
+        2L -> "后天"
+        else -> runCatching {
+            val d = java.time.LocalDate.parse(date)
+            "${d.monthValue}月${d.dayOfMonth}日"
+        }.getOrDefault("明天")
     }
 }

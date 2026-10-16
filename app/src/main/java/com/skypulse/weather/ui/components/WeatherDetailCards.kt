@@ -64,7 +64,7 @@ fun WeatherDetailCards(
         else -> WbgtColorBlack
     }
 
-    val windSpeedLevel = WeatherUtils.formatWindSpeed(realtime?.wind?.speed)
+    val windSpeedLevel = WeatherUtils.windLevelLabel(realtime?.wind?.scale, realtime?.wind?.speed)
     val windDir = WeatherUtils.formatWindDirection(realtime?.wind?.direction)
     val humidity = WeatherUtils.formatHumidity(realtime?.humidity)
 

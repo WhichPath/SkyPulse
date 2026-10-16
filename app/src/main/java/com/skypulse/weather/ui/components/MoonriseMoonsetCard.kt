@@ -150,6 +150,15 @@ fun MoonriseMoonsetCard(
                     color = TextPrimary
                 )
             }
+
+            // v4.1.3：启用 v1 astro 扩展字段（月亮上/下中天）
+            AstroTimeStrip(
+                items = listOf(
+                    "月上中天" to (todayAstro?.moonTransit?.time ?: "--:--"),
+                    "月下中天" to (todayAstro?.moonUnderfoot?.time ?: "--:--")
+                ),
+                modifier = Modifier.padding(top = 14.dp)
+            )
         }
     }
 }

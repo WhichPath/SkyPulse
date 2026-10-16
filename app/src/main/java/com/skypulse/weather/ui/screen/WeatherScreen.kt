@@ -509,13 +509,15 @@ fun WeatherScreen(
             }
 
             AppScreen.AlertDetail -> {
-                val contents = when (val s = uiState) {
-                    is WeatherUiState.Success -> s.weather.result?.alert?.content.orEmpty().sortedByPublishTimeDescending()
-                    else -> emptyList()
+                val alertMeta = when (val s = uiState) {
+                    is WeatherUiState.Success -> s.weather.result?.alert
+                    else -> null
                 }
+                val contents = alertMeta?.content.orEmpty().sortedByPublishTimeDescending()
                 AlertDetailScreen(
                     alerts = contents,
                     initialSelectedIndex = selectedAlertIndex,
+                    attributions = alertMeta?.attributions,
                     onBack = { viewModel.navigateBack() }
                 )
             }

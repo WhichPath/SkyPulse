@@ -30,7 +30,13 @@ data class WeatherResult(
 @JsonClass(generateAdapter = true)
 data class Alert(
     val status: String? = null,
-    val content: List<AlertContent>? = null
+    val content: List<AlertContent>? = null,
+    /**
+     * 数据归因/声明（来自和风 v1 响应 metadata.attributions）。
+     * 官方要求：使用天气预警的产品必须完整展示其内容且不得修改，
+     * 故此处原样透传，由 UI 逐条原样渲染。
+     */
+    val attributions: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -81,7 +87,12 @@ data class RealtimeWeather(
 data class Wind(
     val speed: Double? = null,
     val direction: Double? = null,
-    val gust: Double? = null
+    val gust: Double? = null,
+    /**
+     * 官方蒲福风级（和风 v1 `wind.scale`，0-12）。
+     * 为 null 时 UI 回退到本地按风速换算。
+     */
+    val scale: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -129,7 +140,9 @@ data class AirQuality(
     val o3Iaqi: Int? = null,
     val so2Iaqi: Int? = null,
     val no2Iaqi: Int? = null,
-    val coIaqi: Int? = null
+    val coIaqi: Int? = null,
+    /** 数据归因/声明（来自和风 v1 响应 metadata.attributions），需与空气质量数据共同展示。 */
+    val attributions: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -212,7 +225,9 @@ data class HourlyValue(
 data class HourlyWind(
     val datetime: String? = null,
     val speed: Double? = null,
-    val direction: Double? = null
+    val direction: Double? = null,
+    /** 官方蒲福风级（和风 v1 `wind.scale`），为 null 时回退本地换算 */
+    val scale: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -265,7 +280,27 @@ data class DailyAstro(
     val sunset: AstroTime? = null,
     val moonrise: AstroTime? = null,
     val moonset: AstroTime? = null,
-    val moonPhase: String? = null
+    val moonPhase: String? = null,
+    /** 正午（太阳上中天）时刻 */
+    val solarNoon: AstroTime? = null,
+    /** 子夜（太阳下中天）时刻 */
+    val solarMidnight: AstroTime? = null,
+    /** 民用晨光始 */
+    val civilDawn: AstroTime? = null,
+    /** 民用暮光终 */
+    val civilDusk: AstroTime? = null,
+    /** 天文晨光始 */
+    val astronomicalDawn: AstroTime? = null,
+    /** 天文暮光终 */
+    val astronomicalDusk: AstroTime? = null,
+    /** 航海晨光始 */
+    val nauticalDawn: AstroTime? = null,
+    /** 航海暮光终 */
+    val nauticalDusk: AstroTime? = null,
+    /** 月亮上中天时刻 */
+    val moonTransit: AstroTime? = null,
+    /** 月亮下中天时刻 */
+    val moonUnderfoot: AstroTime? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -239,6 +239,17 @@ object WeatherUtils {
         }
     }
 
+    /**
+     * 风力等级统一取值：**优先使用和风官方蒲福风级**（v1 `wind.scale`），
+     * 官方缺失时回退到本地按 km/h 换算，保证任何数据源（含 mock）都能正常显示。
+     *
+     * @return 数字等级字符串，取不到时为 "--"
+     */
+    fun windLevelLabel(scale: Int?, speedKmh: Double?): String {
+        if (scale != null && scale >= 0) return scale.toString()
+        return formatWindSpeed(speedKmh)
+    }
+
     fun formatWindDirection(direction: Double?): String {
         if (direction == null) return ""
         return when {

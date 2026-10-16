@@ -1,6 +1,7 @@
 package com.skypulse.weather.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -200,6 +201,69 @@ fun SunriseSunsetCard(
                     ),
                     color = TextPrimary
                 )
+            }
+
+            // v4.1.3：启用 v1 astro 扩展字段（正午 / 子夜 / 民用晨光 / 民用暮光）
+            AstroTimeStrip(
+                items = listOf(
+                    "正午" to (todayAstro?.solarNoon?.time ?: "--:--"),
+                    "子夜" to (todayAstro?.solarMidnight?.time ?: "--:--"),
+                    "天亮" to (todayAstro?.civilDawn?.time ?: "--:--"),
+                    "天黑" to (todayAstro?.civilDusk?.time ?: "--:--")
+                ),
+                modifier = Modifier.padding(top = 14.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 紧凑天文时刻条：把 v1 astro 的扩展字段（正午/子夜/民用晨昏/月亮中天等）
+ * 以「标签 + 时刻」的等宽列形式展示，供日出日落卡与月出月落卡复用。
+ */
+@Composable
+internal fun AstroTimeStrip(
+    items: List<Pair<String, String>>,
+    modifier: Modifier = Modifier
+) {
+    val valid = items.filter { it.second.isNotBlank() && it.second != "--:--" }
+    if (valid.isEmpty()) return
+
+    Column(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.12f))
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            valid.forEach { (label, time) ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
             }
         }
     }

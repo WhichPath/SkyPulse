@@ -72,7 +72,8 @@ class QWeatherApiService @Inject constructor(
         // 核心请求（并行）
         val nowDeferred = async { safeApiCall { api.getWeatherNowV1(latitude, longitude) } }
         val dailyDeferred = async { safeApiCall { api.getWeatherDailyV1(latitude, longitude, days = 10) } }
-        val hourlyDeferred = async { safeApiCall { api.getWeatherHourlyV1(latitude, longitude, hours = if (hourlySteps > 24) 72 else 24) } }
+        // v4.1.3：新版天气 API 支持 1-240 小时逐小时预报（10 天），主界面按需请求
+        val hourlyDeferred = async { safeApiCall { api.getWeatherHourlyV1(latitude, longitude, hours = hourlySteps) } }
 
         // 非核心请求（并行，失败不影响主天气）
         val minutelyDeferred = async { safeApiCall { api.getMinutely(location) } }

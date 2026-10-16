@@ -1,10 +1,15 @@
 package com.skypulse.weather.ui.components
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.skypulse.weather.R
 import com.skypulse.weather.ui.theme.TextSecondary
 
@@ -83,3 +89,58 @@ fun DataSourceAttribution(
 
 private const val TAG = "DataSourceAttribution"
 private const val QWEATHER_HOMEPAGE = "https://www.qweather.com"
+
+/**
+ * 逐条原样展示和风响应 `metadata.attributions` 中的归因声明。
+ *
+ * 官方《注明来源》规范对预警与空气质量有强制要求：必须**完整显示**归因内容，
+ * 且**不能以任何形式修改**。因此这里：
+ * - 不截断、不改写、不翻译，逐条整段渲染；
+ * - 仅对纯 URL 条目额外附加点击跳转（纯增强，不影响原文）；
+ * - 声明类文本（如"当前预警数据可能存在延迟…"）保持可读性优先，透明度不低于 0.6。
+ *
+ * @param attributions 原始 attributions 数组，为空时整个组件不渲染
+ */
+@Composable
+fun AttributionNote(
+    attributions: List<String>?,
+    modifier: Modifier = Modifier,
+    textAlpha: Float = 0.6f
+) {
+    val entries = attributions?.filter { it.isNotBlank() }.orEmpty()
+    if (entries.isEmpty()) return
+
+    val uriHandler = LocalUriHandler.current
+    val color = TextSecondary.copy(alpha = textAlpha)
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        entries.forEach { entry ->
+            val isUrl = entry.startsWith("http://") || entry.startsWith("https://")
+            Text(
+                text = entry,
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+                fontSize = 10.sp,
+                lineHeight = 14.sp
+            )
+            if (isUrl) {
+                // URL 自身作为可点击区域，避免为了可点而改动正文文字
+                Spacer(modifier = Modifier.height(0.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .clip(ContinuousCornerShape(0.5.dp))
+                        .background(color)
+                        .clickable {
+                            try {
+                                uriHandler.openUri(entry)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "failed to open attribution url: ${e.message}")
+                            }
+                        }
+                )
+            }
+        }
+    }
+}

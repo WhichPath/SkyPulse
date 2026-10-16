@@ -114,7 +114,8 @@ object QWeatherMapper {
             wind = Wind(
                 speed = now.wind?.speed?.value?.times(3.6), // m/s -> km/h
                 direction = now.wind?.direction?.degree,
-                gust = now.windGust?.value?.times(3.6) // m/s -> km/h
+                gust = now.windGust?.value?.times(3.6), // m/s -> km/h
+                scale = now.wind?.scale?.toInt() // 官方蒲福风级
             ),
             pressure = now.pressure?.value?.times(100.0), // hPa -> Pa
             apparent_temperature = now.feelsLike?.value,
@@ -239,7 +240,8 @@ object QWeatherMapper {
             o3Iaqi = o3Iaqi,
             so2Iaqi = so2Iaqi,
             no2Iaqi = no2Iaqi,
-            coIaqi = coIaqi
+            coIaqi = coIaqi,
+            attributions = air.metadata?.attributions?.filter { it.isNotBlank() }
         )
     }
 
@@ -301,7 +303,8 @@ object QWeatherMapper {
                 HourlyWind(
                     datetime = it.forecastTime,
                     speed = it.wind?.speed?.value?.times(3.6), // m/s -> km/h
-                    direction = it.wind?.direction?.degree
+                    direction = it.wind?.direction?.degree,
+                    scale = it.wind?.scale?.toInt()
                 )
             },
             gust = items.map {
@@ -342,13 +345,24 @@ object QWeatherMapper {
             status = "ok",
             astro = items.map {
                 val date = it.forecastStartTime?.substringBefore("T")
+                val astro = it.astro
                 DailyAstro(
                     date = date,
-                    sunrise = AstroTime(time = extractTime(it.astro?.sunrise)),
-                    sunset = AstroTime(time = extractTime(it.astro?.sunset)),
-                    moonrise = AstroTime(time = extractTime(it.astro?.moonrise)),
-                    moonset = AstroTime(time = extractTime(it.astro?.moonset)),
-                    moonPhase = it.astro?.moonPhase
+                    sunrise = AstroTime(time = extractTime(astro?.sunrise)),
+                    sunset = AstroTime(time = extractTime(astro?.sunset)),
+                    moonrise = AstroTime(time = extractTime(astro?.moonrise)),
+                    moonset = AstroTime(time = extractTime(astro?.moonset)),
+                    moonPhase = astro?.moonPhase,
+                    solarNoon = AstroTime(time = extractTime(astro?.solarNoon)),
+                    solarMidnight = AstroTime(time = extractTime(astro?.solarMidnight)),
+                    civilDawn = AstroTime(time = extractTime(astro?.civilDawn)),
+                    civilDusk = AstroTime(time = extractTime(astro?.civilDusk)),
+                    astronomicalDawn = AstroTime(time = extractTime(astro?.astronomicalDawn)),
+                    astronomicalDusk = AstroTime(time = extractTime(astro?.astronomicalDusk)),
+                    nauticalDawn = AstroTime(time = extractTime(astro?.nauticalDawn)),
+                    nauticalDusk = AstroTime(time = extractTime(astro?.nauticalDusk)),
+                    moonTransit = AstroTime(time = extractTime(astro?.moonTransit)),
+                    moonUnderfoot = AstroTime(time = extractTime(astro?.moonUnderfoot))
                 )
             },
             precipitation = items.map {
@@ -448,7 +462,10 @@ object QWeatherMapper {
     // ============ Warning (天气预警) ============
 
     private fun mapWarning(warning: QWeatherWarningResponse?): Alert? {
-        val alerts = warning?.alerts ?: return Alert(status = "ok", content = emptyList())
+        // 归因声明即使在无预警时也需随响应透传，供 UI 原样展示
+        val attributions = warning?.metadata?.attributions?.filter { it.isNotBlank() }
+        val alerts = warning?.alerts
+            ?: return Alert(status = "ok", content = emptyList(), attributions = attributions)
         val contents = alerts.map { alert ->
             AlertContent(
                 province = null,
@@ -466,7 +483,7 @@ object QWeatherMapper {
             )
         }.sortedByPublishTimeDescending()
 
-        return Alert(status = "ok", content = contents)
+        return Alert(status = "ok", content = contents, attributions = attributions)
     }
 
     /**

@@ -44,6 +44,13 @@ data class QWeatherWarningResponse(
 
 @JsonClass(generateAdapter = true)
 data class QWeatherWarningMeta(
+    val tag: String? = null,
+    /**
+     * 数据归因/声明，必须与预警数据一同完整展示且不得修改。
+     * 官方样例同时包含 URL 与自然语言声明：
+     * ["https://developer.qweather.com/attribution.html", "当前预警数据可能存在延迟或信息过时，以官方数据发布为准。"]
+     */
+    val attributions: List<String>? = null,
     val zeroResult: Boolean? = null
 )
 
@@ -80,8 +87,16 @@ data class QWeatherAlertColor(
 
 @JsonClass(generateAdapter = true)
 data class QWeatherAirResponse(
+    val metadata: QWeatherAirMeta? = null,
     val indexes: List<QWeatherAirIndex>? = null,
     val pollutants: List<QWeatherPollutant>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirMeta(
+    val tag: String? = null,
+    /** 数据归因信息或声明，官方要求必须与当前数据共同展示。 */
+    val attributions: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -229,10 +244,18 @@ data class QWeatherV1Day(
 data class QWeatherV1Astro(
     val sunrise: String? = null,
     val sunset: String? = null,
+    val astronomicalDawn: String? = null,
+    val nauticalDawn: String? = null,
+    val civilDawn: String? = null,
+    val astronomicalDusk: String? = null,
+    val nauticalDusk: String? = null,
+    val civilDusk: String? = null,
     val solarNoon: String? = null,
     val solarMidnight: String? = null,
     val moonrise: String? = null,
     val moonset: String? = null,
+    val moonTransit: String? = null,
+    val moonUnderfoot: String? = null,
     val moonPhase: String? = null
 )
 
@@ -271,7 +294,12 @@ data class QWeatherV1Metric(
 @JsonClass(generateAdapter = true)
 data class QWeatherV1Wind(
     val direction: QWeatherV1WindDirection? = null,
-    val speed: QWeatherV1WindSpeed? = null
+    val speed: QWeatherV1WindSpeed? = null,
+    /**
+     * 蒲福风级。官方 v1 响应中 `scale` 与 `speed` **同级**（位于 wind 内），
+     * 早期版本误建在 wind.speed.scale，导致该字段永远解析不到。
+     */
+    val scale: Double? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -283,8 +311,7 @@ data class QWeatherV1WindDirection(
 @JsonClass(generateAdapter = true)
 data class QWeatherV1WindSpeed(
     val value: Double? = null,
-    val unit: String? = null,
-    val scale: Double? = null
+    val unit: String? = null
 )
 
 @JsonClass(generateAdapter = true)

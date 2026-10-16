@@ -50,14 +50,16 @@ class WeatherRemoteDataSource @Inject constructor(
         val totalStartMs = SystemClock.elapsedRealtime()
         weatherI("remote_get_weather_start: lon=$longitude, lat=$latitude, includeYesterday=$includeYesterday")
         return try {
-            weatherI("primary_weather_start: lon=$longitude, lat=$latitude, alert=true, hourlySteps=${if (includeYesterday) 72 else 24}")
+            // v4.1.3：主界面拉满 10 天逐小时（240h）；Widget/同步链路只需覆盖昨日窗口，仍用 72h 以节省流量
+            val hourlySteps = if (includeYesterday) 72 else 240
+            weatherI("primary_weather_start: lon=$longitude, lat=$latitude, alert=true, hourlySteps=$hourlySteps")
             val response = api.getWeather(
                 longitude = longitude,
                 latitude = latitude,
                 span = 16,
                 alert = true,
                 dailyStart = null,
-                hourlySteps = if (includeYesterday) 72 else 24
+                hourlySteps = hourlySteps
             )
             weatherI("primary_weather_done: elapsed=${elapsedSince(totalStartMs)}ms, status=${response.status}, serverTime=${response.server_time}, tzshift=${response.tzshift}")
             if (response.status != "ok") {

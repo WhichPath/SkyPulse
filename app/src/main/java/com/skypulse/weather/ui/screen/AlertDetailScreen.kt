@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.skypulse.weather.ui.components.AttributionNote
 import com.skypulse.weather.ui.components.LucideIcon
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -26,6 +27,7 @@ import com.skypulse.weather.ui.theme.alertLevelColor
 internal fun AlertDetailScreen(
     alerts: List<AlertContent>,
     initialSelectedIndex: Int = 0,
+    attributions: List<String>? = null,
     onBack: () -> Unit = {}
 ) {
     val page = LocalSecondaryPageTheme.current
@@ -117,6 +119,19 @@ internal fun AlertDetailScreen(
                                     color = page.textPrimary
                                 )
                             }
+                        }
+                    }
+                }
+
+                // 和风《注明来源》要求：使用天气预警的产品必须完整展示归因声明且不得修改
+                if (!attributions.isNullOrEmpty()) {
+                    item(key = "qweather_attribution") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            AttributionNote(attributions = attributions)
                         }
                     }
                 }

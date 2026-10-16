@@ -35,6 +35,17 @@
 - **仅 `/v7/grid-weather/*` 与 `/v7/weather/*` 于 2027-08-01 停服**，本项目全部天气接口早已迁移至 v1（`/weather/v1/current|daily|hourly`、`/weatheralert/v1/*`、`/airquality/v1/*`、`/geo/v2/*`）；
 - **唯一保留的 v7 端点是 `/v7/minutely/5m`**（和风至今未提供分钟级降水 v1 版本，官方文档当前仍为该路径），**不在停服范围内，无需迁移**。
 
+### v1 字段层陷阱（v4.1.3 修正）
+- **`wind.scale`（蒲福风级）位于 `wind` 内、与 `speed` 同级**，**不是** `wind.speed.scale`。曾建错层级导致该字段永远解析不到，现已修正并全链路启用：`QWeatherMapper` → `Wind.scale` / `HourlyWind.scale` → `WeatherUtils.windLevelLabel(scale, speed)`（官方优先、本地换算兜底），实况卡与逐小时行均已接入；
+- **`metadata.attributions` 是强制展示项**：和风《注明来源》要求使用预警/空气质量的产品**完整展示且不得修改**其内容；预警响应里该数组可能同时包含 URL 与自然语言声明。已由 `AttributionNote` 组件逐条原样渲染（预警详情页底部 + 空气质量卡片底部），禁止截断/改写；
+- **astro 扩展字段已全量建模并投入使用**：日出日落卡新增「正午/子夜/天亮(民用晨光)/天黑(民用暮光)」，月出月落卡新增「月上中天/月下中天」。
+
+### 逐小时预报渲染规范（240h 窗口化）
+- **数据请求**：主界面 `hours=240`（10 天拉满）；Widget/同步链路仍用 `72`（只需覆盖昨日窗口，省流量）；
+- **严禁整条长 Canvas 一次性构建**：240 × 64dp = 15,360dp 宽，必须**窗口化**——`HourlyTemperatureChart` 仅构建视口 ±2 格缓冲范围内的元素，Canvas 用 `translate` 把内容坐标系映射到窗口画布坐标系（步长恒为全局 `HOUR_WIDTH`，不得按窗口缩放）；
+- **快速滑动降级**：滚动速度 > 2200px/s 视为快速滑动，Canvas 只画曲线骨架、各行渲染 `HourlyCellPlaceholder` 占位，停止 ~140ms 后恢复完整渲染；
+- **回到现在**：滑出 72h 后在卡片标题下方浮出按钮，点击 `animateScrollTo(0)`；时间轴在每天 0 点切换为「明天/后天/M月d日」标记。
+
 ## UI 架构与设计规范
 
 ### 1. 苹果连续平滑圆角（Continuous Corner / Squircle）
