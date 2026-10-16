@@ -9,7 +9,7 @@ import java.util.Locale
 /**
  * 完全离线/缓存损坏时的最终回退模拟数据（以**火星·奥林帕斯山**为基准）。
  *
- * 设计目的：Fall back 时必须给用户一个"明确不是正常地球天气"的样样，
+ * 设计目的：Fall back 时必须给用户一个"明确不是正常地球天气"的样态，
  * 且所有字段值尽量符合该地真实物理条件（极低压、极低温、尘暴、无液态水），
  * 使用户一眼就能理解这是演示/兜底数据而非真实地球气象。涵盖：
  *  实况、24h逐小时、7天逐日、天文、风速、舒适度等全卡片数据。
@@ -20,8 +20,8 @@ object MockWeatherData {
 
     const val DEFAULT_CITY_NAME = "火星·奥林帕斯山"
     const val DEFAULT_CITY_ID = "mars_sample_olympus_mons"
-    const val MARS_OYMOPO_LON = 226.2
-    const val MARS_OYMOPO_LAT = 18.65
+    const val MARS_OLYMPUS_MONS_LON = 226.2
+    const val MARS_OLYMPUS_MONS_LAT = 18.65
 
     private val fictionalDailyHigh = listOf(-48.0, -50.0, -46.0, -50.0, -52.0, -47.0, -49.0)
     private val fictionalDailyLow = listOf(-78.0, -80.0, -76.0, -80.0, -82.0, -75.0, -79.0)
@@ -150,10 +150,10 @@ object MockWeatherData {
             status = "ok",
             lang = "zh-CN",
             unit = "metric",
-            // 火 Planet 无时区整体概念，沿用 UTC 标识避免 Earth 时区误用
+            // 火星无统一时区概念，沿用 UTC 标识避免 Earth 时区误用
             timezone = "UTC+00:00",
             server_time = System.currentTimeMillis() / 1000L,
-            location = listOf(MARS_OYMOPO_LAT, MARS_OYMOPO_LON),
+            location = listOf(MARS_OLYMPUS_MONS_LAT, MARS_OLYMPUS_MONS_LON),
             result = WeatherResult(
                 realtime = RealtimeWeather(
                     status = "ok",
