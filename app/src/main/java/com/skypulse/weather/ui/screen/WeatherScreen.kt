@@ -839,19 +839,13 @@ private fun WeatherContentBody(
                 )
             }
 
-            Row(
+            // 数据来源署名：和风天气官方图形标 + 可点击超链接（合规要求，见 DataSourceAttribution）
+            DataSourceAttribution(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 22.dp, bottom = 22.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "\u6c14\u8c61\u6570\u636e\u6765\u81ea \u548c\u98ce\u5929\u6c14",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary.copy(alpha = 0.4f)
-                )
-            }
+                    .padding(top = 17.dp, bottom = 22.dp),
+                textAlpha = 0.55f
+            )
             Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
         }
     }
