@@ -2,7 +2,7 @@ package com.skypulse.weather.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -137,7 +137,7 @@ fun AirQualityDetailCard(
                 Box(
                     modifier = Modifier
                         .widthIn(min = 168.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(SkyPulseDesignSystem.Shapes.small)
                         .clickable { explanationController.showAqi(aqiValue) }
                 ) {
                     Text(
@@ -161,7 +161,7 @@ fun AirQualityDetailCard(
                     Spacer(modifier = Modifier.width(10.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(SkyPulseDesignSystem.Shapes.small)
                             .clickable { explanationController.showAqhi(aqhi) }
                     ) {
                         Text(
@@ -212,7 +212,7 @@ private fun PollutantCell(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(ContinuousCornerShape(com.skypulse.weather.ui.theme.SkyPulseDesignSystem.Radius.subCard))
             .background(backgroundColor)
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {

@@ -9,7 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -65,7 +64,7 @@ fun SwipeableCityListRow(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.cityCard))
+                .clip(SkyPulseDesignSystem.Shapes.cityCard)
                 .background(Color(0xFFFF3B30)),
             contentAlignment = Alignment.CenterEnd
         ) {
@@ -100,7 +99,7 @@ fun SwipeableCityListRow(
                         }
                     )
                 }
-                .clip(RoundedCornerShape(SkyPulseDesignSystem.Radius.cityCard))
+                .clip(SkyPulseDesignSystem.Shapes.cityCard)
                 .background(
                     Brush.linearGradient(colors = gradientColors)
                 )

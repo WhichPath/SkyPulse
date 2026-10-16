@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import com.skypulse.weather.ui.components.LucideIcon
 import androidx.compose.material3.*
@@ -60,7 +59,9 @@ fun SettingsScreen(
     hasBuildInjectedCredentials: Boolean,
     onSaveQWeatherCredentials: (String, String, String, String) -> Unit,
     onClearQWeatherCredentials: () -> Unit,
-    onTestQWeatherCredentials: suspend (QWeatherCredentials) -> QWeatherConnectionResult
+    onTestQWeatherCredentials: suspend (QWeatherCredentials) -> QWeatherConnectionResult,
+    onGetKeyPair: () -> com.skypulse.weather.data.remote.qweather.Ed25519KeyPairPem = { com.skypulse.weather.data.remote.qweather.Ed25519KeyPairPem("", "", "") },
+    onRegenerateKeyPair: () -> com.skypulse.weather.data.remote.qweather.Ed25519KeyPairPem = { com.skypulse.weather.data.remote.qweather.Ed25519KeyPairPem("", "", "") }
 ) {
     val context = LocalContext.current
     val page = LocalSecondaryPageTheme.current
@@ -225,7 +226,9 @@ fun SettingsScreen(
                     buildInjectedAvailable = hasBuildInjectedCredentials,
                     onSave = onSaveQWeatherCredentials,
                     onClear = onClearQWeatherCredentials,
-                    onTest = onTestQWeatherCredentials
+                    onTest = onTestQWeatherCredentials,
+                    onGetKeyPair = onGetKeyPair,
+                    onRegenerateKeyPair = onRegenerateKeyPair
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

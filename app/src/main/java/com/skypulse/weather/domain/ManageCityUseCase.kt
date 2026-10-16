@@ -63,7 +63,7 @@ class ManageCityUseCase @Inject constructor(
 
         val currentLocationCity = City(
             id = "current_location",
-            name = cachedLocation?.name ?: "定位中...",
+            name = cachedLocation?.name ?: "北京市",
             longitude = cachedLocation?.longitude ?: LocationManager.DEFAULT_LONGITUDE,
             latitude = cachedLocation?.latitude ?: LocationManager.DEFAULT_LATITUDE,
             isCurrentLocation = true

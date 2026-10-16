@@ -5,8 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -140,7 +140,7 @@ private fun gustLabel(speed: Double?): String {
 }
 
 
-private val ParamTagShape = RoundedCornerShape(4.dp)
+private val ParamTagShape = SkyPulseDesignSystem.Shapes.extraSmall
 
 @Composable
 fun HourlyForecastCard(

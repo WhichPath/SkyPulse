@@ -1,27 +1,24 @@
 # SkyPulse Weather - local properties template
 # Copy this file to `local.properties` and fill in the values you need.
-# In GitHub Actions CI, `local.properties` is generated automatically from repository secrets.
-# All values are optional unless marked [REQUIRED].
+# All values are optional.
 
-# ===== QWeather (和风天气) API =====
-# The app uses QWeather (和风天气) as the weather data provider.
-# QWeather offers 50,000 free requests per month (weather & basic services).
-#
-# Authentication uses JWT (Ed25519). You need to:
-# 1. Register at https://dev.qweather.com/ and create a project
-# 2. Generate an Ed25519 key pair:
-#      openssl genpkey -algorithm ED25519 -out ed25519-private.pem
-#      openssl pkey -pubout -in ed25519-private.pem > ed25519-public.pem
-# 3. Upload the public key (ed25519-public.pem) to the QWeather console
-# 4. Fill in the following values from your project's credential page:
-#
-# QWEATHER_PROJECT_ID=   # Project ID (JWT "sub" field)
-# QWEATHER_KEY_ID=       # Credential/Key ID (JWT "kid" field)
-# QWEATHER_PRIVATE_KEY=  # Full PEM content of ed25519-private.pem (including BEGIN/END markers)
-# QWEATHER_API_HOST=     # Your project's API Host, e.g. https://abc123.qweatherapi.com/
+# ===== SDK =====
+# Required by the Android Gradle Plugin to locate the Android SDK.
+sdk.dir=
 
-# ===== AMap (高德地图) - all optional =====
-# Without these keys the app falls back to Android system location & geocoder (slightly less precise in China).
-# To enable AMap, register at https://lbs.amap.com/ and bind the key to your package name + signing cert SHA-1.
+# ===== QWeather (和风天气) =====
+# v4.1.1 起项目已彻底移除编译期密钥注入：build.gradle.kts 不再读取任何
+# QWEATHER_* 项，构建产物绝对零密钥，因此这里无需填写 Project ID /
+# Key ID / 私钥。全部凭据改由用户在 App 设置页「和风天气 API」分区录入，
+# 仅保存在本机应用私有存储中。
+#
+# API Host 同理在设置页填写；若希望提供开箱即用的兜底值，请把真实专属
+# Host 写进 QWeatherCredentials.DEFAULT_API_HOST 常量
+# （app/src/main/java/com/skypulse/weather/data/remote/qweather/QWeatherCredentials.kt），
+# 并替换其中的 REPLACE_WITH_YOUR_API_HOST 占位串。专属 Host 形如
+# xxxxxx.xx.qweatherapi.com，在 https://console.qweather.com/setting 查看。
+# 该常量非机密，编译进包体也无风险。
+
+# ===== AMap (高德地图) - 历史遗留，当前版本未使用 =====
 # AMAP_API_KEY=
 # AMAP_WEB_API_KEY=

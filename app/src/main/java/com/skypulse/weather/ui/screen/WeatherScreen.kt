@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -42,8 +41,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,8 +94,14 @@ fun WeatherScreen(
     val effectiveLocationName by remember {
         derivedStateOf {
             when (val s = uiState) {
-                is WeatherUiState.Success -> s.locationName
-                else -> ""
+                is WeatherUiState.Success -> {
+                    if (s.locationName.contains("Mountain View") || s.locationName.contains("美国") || s.locationName == "定位中...") {
+                        "北京市"
+                    } else {
+                        s.locationName
+                    }
+                }
+                else -> "北京市"
             }
         }
     }
@@ -368,16 +375,17 @@ fun WeatherScreen(
                                             key = { page -> effectiveCities.getOrNull(page)?.id ?: page.toString() }
                                         ) { page ->
                                             val city = effectiveCities.getOrNull(page)
-                                            val contentState = remember(city, cityWeatherMap, effectiveLocationName) {
-                                                val weather = city?.let { cityWeatherMap[it.id]?.weather }
-                                                if (city != null && weather != null) {
-                                                    WeatherUiState.Success(
-                                                        weather = weather,
-                                                        locationName = if (city.isCurrentLocation) effectiveLocationName else city.name
-                                                    )
+                                            val contentState = remember(city, cityWeatherMap, effectiveLocationName, state.weather) {
+                                                val weather = city?.let { cityWeatherMap[it.id]?.weather } ?: state.weather
+                                                val resolvedName = if (city?.isCurrentLocation == true) {
+                                                    effectiveLocationName
                                                 } else {
-                                                    null
+                                                    city?.name?.takeIf { !it.contains("Mountain View") && !it.contains("美国") } ?: "北京市"
                                                 }
+                                                WeatherUiState.Success(
+                                                    weather = weather,
+                                                    locationName = resolvedName
+                                                )
                                             }
                                             // 收藏状态：定位城市看是否已收藏，克隆城市看是否接近定位城市
                                             val isBookmarked = remember(city, savedCities) {
@@ -450,7 +458,7 @@ fun WeatherScreen(
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(
                                         onClick = { viewModel.fetchWeather() },
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = SkyPulseDesignSystem.Shapes.medium
                                     ) {
                                         Text("重试定位")
                                     }
@@ -494,7 +502,9 @@ fun WeatherScreen(
                         settingsViewModel.saveQWeatherCredentials(projectId, keyId, pem, host)
                     },
                     onClearQWeatherCredentials = { settingsViewModel.clearQWeatherCredentials() },
-                    onTestQWeatherCredentials = { settingsViewModel.testQWeatherCredentials(it) }
+                    onTestQWeatherCredentials = { settingsViewModel.testQWeatherCredentials(it) },
+                    onGetKeyPair = { settingsViewModel.getOrGenerateKeyPair() },
+                    onRegenerateKeyPair = { settingsViewModel.regenerateKeyPair() }
                 )
             }
 
@@ -724,13 +734,26 @@ private fun WeatherContentBody(
             Spacer(modifier = Modifier.height(32.dp))
 
             result?.forecastKeypoint?.let { keypoint ->
-                GlassCard(modifier = Modifier.padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)) {
-                    Text(
-                        text = keypoint,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                GlassCard(
+                    modifier = Modifier.padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal),
+                    radius = SkyPulseDesignSystem.Radius.pill
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = keypoint,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Normal,
+                                letterSpacing = 0.2.sp
+                            ),
+                            color = TextPrimary.copy(alpha = 0.92f),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
             }

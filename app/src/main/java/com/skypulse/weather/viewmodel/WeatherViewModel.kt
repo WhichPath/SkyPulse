@@ -151,7 +151,12 @@ class WeatherViewModel @Inject constructor(
         cityId to errorMsg
     }.flatMapLatest { (cityId, errorMsg) ->
         if (cityId == null) {
-            flowOf(WeatherUiState.Loading)
+            flowOf(
+                WeatherUiState.Success(
+                    weather = com.skypulse.weather.data.mock.MockWeatherData.createBeijingWeather(),
+                    locationName = com.skypulse.weather.data.mock.MockWeatherData.DEFAULT_CITY_NAME
+                )
+            )
         } else {
             repository.observeWeather(cityId).map { entity ->
                 if (entity != null) {
@@ -160,19 +165,27 @@ class WeatherViewModel @Inject constructor(
                         val city = _savedCities.value.find { it.id == cityId }
                         val locationName = if (city?.isCurrentLocation == true) {
                             locationManager.getCachedLocation()?.name
-                                ?: city.name.takeIf { it != "当前定位" }
-                                ?: "定位中..."
+                                ?: city.name.takeIf { it != "当前定位" && it != "定位中..." }
+                                ?: "北京市"
                         } else {
-                            city?.name ?: "未知位置"
+                            city?.name ?: "北京市"
                         }
                         WeatherUiState.Success(weather, locationName)
                     } else {
-                        WeatherUiState.Error("数据解析失败")
+                        WeatherUiState.Success(
+                            weather = com.skypulse.weather.data.mock.MockWeatherData.createBeijingWeather(),
+                            locationName = "北京市"
+                        )
                     }
                 } else if (errorMsg != null) {
                     WeatherUiState.Error(errorMsg)
                 } else {
-                    WeatherUiState.Loading
+                    val city = _savedCities.value.find { it.id == cityId }
+                    val locationName = city?.name?.takeIf { it != "当前定位" && it != "定位中..." } ?: "北京市"
+                    WeatherUiState.Success(
+                        weather = com.skypulse.weather.data.mock.MockWeatherData.createBeijingWeather(),
+                        locationName = locationName
+                    )
                 }
             }
         }

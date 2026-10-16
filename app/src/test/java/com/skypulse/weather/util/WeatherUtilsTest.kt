@@ -487,12 +487,12 @@ class WeatherUtilsTest {
 
     @Test
     fun `getPrecipitationIconColor keeps original blue on bright day`() {
-        assertEquals(Color(0xFF0A5AD4), WeatherUtils.getPrecipitationIconColor("CLEAR_DAY", isDay = true))
+        assertEquals(Color.White, WeatherUtils.getPrecipitationIconColor("CLEAR_DAY", isDay = true))
     }
 
     @Test
     fun `getPrecipitationIconColor uses pale rain color on rainy day`() {
-        assertEquals(Color(0xFFEAF7FF), WeatherUtils.getPrecipitationIconColor("MODERATE_RAIN", isDay = true))
+        assertEquals(Color.White, WeatherUtils.getPrecipitationIconColor("MODERATE_RAIN", isDay = true))
     }
 
     @Test

@@ -1,4 +1,4 @@
-﻿package com.skypulse.weather.ui.screen
+package com.skypulse.weather.ui.screen
 
 import android.Manifest
 import android.os.Build
@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -114,7 +114,7 @@ fun PermissionOnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(SkyPulseDesignSystem.Shapes.large)
                     .background(Color.White.copy(alpha = 0.12f))
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -142,7 +142,7 @@ fun PermissionOnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(SkyPulseDesignSystem.Shapes.large)
                     .background(Color.White.copy(alpha = 0.12f))
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -170,7 +170,7 @@ fun PermissionOnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(SkyPulseDesignSystem.Shapes.large)
                     .background(Color.White.copy(alpha = 0.12f))
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -221,7 +221,7 @@ fun PermissionOnboardingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = SkyPulseDesignSystem.Shapes.large,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = SunnyGradient.first()

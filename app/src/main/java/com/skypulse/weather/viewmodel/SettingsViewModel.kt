@@ -71,6 +71,12 @@ class SettingsViewModel @Inject constructor(
 
     fun clearQWeatherCredentials() = credentialStore.clear()
 
+    fun getOrGenerateKeyPair(): com.skypulse.weather.data.remote.qweather.Ed25519KeyPairPem =
+        credentialStore.getOrGenerateKeyPair()
+
+    fun regenerateKeyPair(): com.skypulse.weather.data.remote.qweather.Ed25519KeyPairPem =
+        credentialStore.regenerateKeyPair()
+
     /** 用候选凭据做一次连通性验证，不写入任何存储。 */
     suspend fun testQWeatherCredentials(
         credentials: QWeatherCredentials

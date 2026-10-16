@@ -23,7 +23,7 @@ enum class QWeatherCredentialSource {
  * @param projectId 项目 ID（JWT payload 的 sub 字段）
  * @param keyId 凭据 ID（JWT header 的 kid 字段）
  * @param privateKeyPem Ed25519 私钥（PEM 文本，含 BEGIN/END 标记）
- * @param apiHost 项目 API Host
+ * @param apiHost API Host，用户留空时回退到 [DEFAULT_API_HOST]
  * @param source 该凭据的来源
  */
 data class QWeatherCredentials(
@@ -39,7 +39,7 @@ data class QWeatherCredentials(
         get() = projectId.isNotBlank() &&
             keyId.isNotBlank() &&
             privateKeyPem.isNotBlank() &&
-            apiHost.isNotBlank()
+            isApiHostUsable(apiHost)
 
     /** 经过规范化（补 scheme、补尾斜杠）的 API Host，可直接作为 Retrofit baseUrl。 */
     val normalizedApiHost: String
@@ -57,11 +57,45 @@ data class QWeatherCredentials(
         get() = privateKeyPem.contains("BEGIN") && privateKeyPem.contains("END")
 
     companion object {
-        /** 和风官方开发/体验 Host，用户未填写 API Host 时的兜底。 */
-        const val DEFAULT_API_HOST = "https://devapi.qweatherapi.com/"
+        /**
+         * 用户未填写 API Host 时的兜底值。
+         *
+         * 和风天气的 API Host 是**开发者账号级随机分配的唯一地址**（形如
+         * `h2a9cf3mhs.xy.qweatherapi.com`），并且是身份认证的一部分，既无法由 Project ID
+         * 推导，也不存在任何官方通用域名——获取方式见 https://console.qweather.com/setting 。
+         *
+         * 因此这里只保留一个显眼的占位串：请把下方 `REPLACE_WITH_YOUR_API_HOST` 替换为
+         * 你在控制台看到的真实 Host（此值非机密，编译进包体也无风险）。
+         *
+         * 历史教训（v4.1.1）：曾把臆造的 `https://devapi.qweatherapi.com/` 扶正为唯一来源，
+         * 而该域名并不存在，导致移除编译期注入后全部请求 DNS 解析失败。
+         */
+        const val DEFAULT_API_HOST = "https://REPLACE_WITH_YOUR_API_HOST.qweatherapi.com/"
+
+        /** 占位串标记，用于识别「内置兜底值尚未替换」。 */
+        private const val PLACEHOLDER_MARK = "REPLACE_WITH_YOUR_API_HOST"
+
+        /** 内置兜底值是否已替换为真实 Host。 */
+        val isBuiltInHostConfigured: Boolean
+            get() = !DEFAULT_API_HOST.contains(PLACEHOLDER_MARK)
+
+        /**
+         * API Host 是否可用于发起请求：
+         * - 必须是 https（官方 2016 年起已关闭全部非 HTTPS 访问）；
+         * - 必须是 `*.qweatherapi.com` 专属域，旧公共域名（api.qweather.com /
+         *   devapi.qweather.com / geoapi.qweather.com）已陆续停服；
+         * - 占位串未替换时一律视为不可用，避免发出注定失败的请求。
+         */
+        fun isApiHostUsable(raw: String): Boolean {
+            val host = raw.trim()
+            if (host.isEmpty() || host.contains(PLACEHOLDER_MARK)) return false
+            val normalized = normalizeApiHost(host)
+            return normalized.startsWith("https://") && normalized.contains(".qweatherapi.com/")
+        }
 
         /**
          * 规范化 API Host：
+         * - 空串回退到 [DEFAULT_API_HOST]
          * - 补全缺失的 https:// 前缀
          * - 补全结尾斜杠（Retrofit 要求 baseUrl 以 / 结尾）
          * - 去掉首尾空白

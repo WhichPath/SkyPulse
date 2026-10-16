@@ -10,9 +10,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 和风天气 API 实例提供器（v4.0.2 新增）。
+ * 和风天气 API 实例提供器。
  *
- * Retrofit 的 baseUrl 在构建后不可变，而 v4.0.2 允许用户在设置页切换到自己的 API Host，
+ * Retrofit 的 baseUrl 在构建后不可变，而 API Host 允许用户在设置页自定义，
  * 因此这里按 Host 缓存 Retrofit/API 实例：Host 不变时复用同一实例，
  * Host 变化时重建并替换缓存。
  *
@@ -35,7 +35,7 @@ class QWeatherApiProvider @Inject constructor(
     @Volatile
     private var cachedApi: QWeatherApi? = null
 
-    /** 当前生效凭据对应的 API 实例。 */
+    /** 当前生效凭据对应的 API 实例（按 API Host 缓存）。 */
     fun api(): QWeatherApi {
         val host = credentialStore.resolveCurrent().normalizedApiHost
         val cached = cachedApi
@@ -67,7 +67,7 @@ class QWeatherApiProvider @Inject constructor(
             .addInterceptor(interceptor)
             .build()
         return Retrofit.Builder()
-            .baseUrl(host)
+            .baseUrl(QWeatherCredentials.normalizeApiHost(host))
             .client(client)
             .addConverterFactory(moshiConverterFactory)
             .build()

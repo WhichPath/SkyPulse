@@ -27,51 +27,43 @@ import com.skypulse.weather.ui.theme.WeatherTheme
  */
 fun WeatherTheme.homeGlassLightField(): GlassLightField {
     val horizon = backgroundGradient.lastOrNull() ?: Color.White
-    val edgeLight = lerp(horizon, Color.White, if (isDay) 0.55f else 0.70f)
+    val edgeLight = lerp(horizon, Color.White, if (isDay) 0.65f else 0.75f)
 
     return GlassLightField(
         base = glass.tint,
-        bloom = lerp(Color.White, edgeLight, 0.30f),
-        sheen = Color.White,
+        bloom = Color.White,
         edge = edgeLight,
-        edgeWidth = 1.2.dp,
-        bloomStrength = if (isDay) 1.0f else 0.55f,
-        sheenStrength = if (isDay) 1.0f else 0.65f,
-        edgeStrength = if (isDay) 1.0f else 0.85f
+        edgeWidth = 1.0.dp,
+        bloomStrength = if (isDay) 0.85f else 0.50f,
+        edgeStrength = if (isDay) 0.90f else 0.75f
     )
 }
 
 /**
  * 次级页面（设置 / 城市管理 / 预警详情）分组卡片的光场参数。
  *
- * 次级页底色已改为天气着色的渐变，卡片改为**半透玻璃**，让底色透上来——
- * 这正是"液态玻璃底部有颜色"的来源。alpha 不能过低，否则卡片与页面底色糊成一片；
- * 也不能过高，否则失去通透感。
+ * 遵循 Material 3 Expressive 分段容器标准。
  */
 fun SecondaryPageColors.surfaceLightField(): GlassLightField =
     if (isDark) {
         GlassLightField(
-            // 深色卡片：压暗并保留页面底色的色相透出
-            base = Color.Black.copy(alpha = 0.30f),
+            // M3 深色模式 Surface Container High
+            base = Color(0xFF1C1E21).copy(alpha = 0.55f),
             bloom = Color.White,
-            sheen = Color.White,
-            edge = Color.White,
-            edgeWidth = 0.9.dp,
-            bloomStrength = 0.30f,
-            sheenStrength = 0.45f,
+            edge = Color.White.copy(alpha = 0.85f),
+            edgeWidth = 1.0.dp,
+            bloomStrength = 0.35f,
             edgeStrength = 0.45f
         )
     } else {
         GlassLightField(
-            // 浅色卡片：乳白玻璃，保证深色文字对比度
-            base = Color.White.copy(alpha = 0.58f),
+            // M3 浅色模式 Surface Container
+            base = Color.White.copy(alpha = 0.68f),
             bloom = Color.White,
-            sheen = Color.White,
-            edge = Color.White,
-            edgeWidth = 0.9.dp,
+            edge = Color.White.copy(alpha = 0.95f),
+            edgeWidth = 1.0.dp,
             bloomStrength = 0.45f,
-            sheenStrength = 0.40f,
-            edgeStrength = 0.70f
+            edgeStrength = 0.60f
         )
     }
 

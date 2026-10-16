@@ -18,3 +18,7 @@ scripts/tools/
 *.apk
 
 scripts/generate_code.py
+
+# Local-only development assets (device screenshots & design reference material)
+/screenshots/
+/references/

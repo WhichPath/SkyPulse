@@ -3,7 +3,7 @@ package com.skypulse.weather.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import com.skypulse.weather.ui.theme.SkyPulseDesignSystem
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -171,13 +171,14 @@ private fun DetailSquareCard(
     modifier: Modifier = Modifier
 ) {
     val cardModifier = if (onClick != null) {
-        modifier.aspectRatio(1f).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)
+        modifier.aspectRatio(1.22f).clip(SkyPulseDesignSystem.Shapes.subCard).clickable(onClick = onClick)
     } else {
-        modifier.aspectRatio(1f)
+        modifier.aspectRatio(1.22f)
     }
 
     GlassCard(
-        modifier = cardModifier
+        modifier = cardModifier,
+        radius = SkyPulseDesignSystem.Radius.subCard
     ) {
         if (cardBgColor != null) {
             Box(
@@ -189,7 +190,7 @@ private fun DetailSquareCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+                .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.Center
         ) {
             LucideIcon(
@@ -197,9 +198,9 @@ private fun DetailSquareCard(
                 contentDescription = label,
                 tint = iconTint,
                 fillColor = iconFillColor,
-                size = 24.dp
+                size = 22.dp
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium.copy(
@@ -210,7 +211,7 @@ private fun DetailSquareCard(
                 softWrap = false,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             if (unit.isNotBlank() || error.isNotBlank()) {
                 Row(
                     verticalAlignment = Alignment.Bottom,

@@ -17,39 +17,45 @@
 - **天气数据源**: 使用 QWeather API 提供天气/预警/空气质量/分钟降水数据
 - **认证方式**: JWT (Ed25519 签名)，比 API Key 更安全
 - **免费额度**: 每月 50,000 次请求（天气和基础服务）
-- **API 配置位置（v4.0.2 起两级解析）**: 
-  1. **运行时优先**：用户在设置页「和风天气 API」分区填写，存于 `QWeatherCredentialStore`（应用私有 SharedPreferences，不随构建产物分发）；
-  2. **编译期回退**：`local.properties` / CI secrets 注入的 `QWEATHER_PROJECT_ID`、`QWEATHER_KEY_ID`、`QWEATHER_PRIVATE_KEY`、`QWEATHER_API_HOST`（BuildConfig）。
-  - 两级都为空时 App 仍可启动并进入设置页补全，不再硬依赖编译期密钥
-  - 换密钥无需重启：`QWeatherCredentials.fingerprint` 变化会使 JWT 缓存立即失效重签
-  - 换 API Host 无需重启：`QWeatherApiProvider` 按 Host 缓存 Retrofit 实例（baseUrl 构建后不可变）
-  - **彻底隔离密钥**：删除仓库 Actions secrets 后 CI 仍可编译发布（生成的 `local.properties` 容忍空值），包体不含任何密钥
+- **API 配置位置（v4.1.1 起完全运行时解析，彻底零内置密钥）**: 
+  1. **运行时专享**：用户在设置页「和风天气 API」分区填写，存于 `QWeatherCredentialStore`（应用私有 SharedPreferences，不随构建产物分发）；
+  2. **本地密钥生成**：App 本地自动生成 RFC 8410 标准 Ed25519 密钥对，支持在设置页一键复制标准 X.509 SPKI 公钥与核对 SHA-256 指纹，方便上传至和风控制台；
+  3. **沙盒安全防丢**：凭据仅保存在应用私有内部存储与专属外部沙盒 `getExternalFilesDir("credentials")`，严禁在手机根目录产生孤立文件；应用覆盖安装升级自动完整保留；
+  4. **编译期零密钥**：`build.gradle.kts` 与编译产物彻底清除 `QWEATHER_*` 注入，包体绝对零密钥。
 - **JWT 生成**: App 运行时使用 BouncyCastle (Ed25519) 在本地签名生成 JWT，私钥由用户保管
-- **依赖库**: `org.bouncycastle:bcprov-jdk18on` (Ed25519 签名支持 minSdk 26)
+- **依赖库**: `org.bouncycastle:bcprov-jdk18on` (Ed25519 签名支持 minSdk 26；ProGuard 与打包已裁剪排除无关加密套件与 pqc 资源)
 
-### 已使用的 API 能力（每次刷新 6 个请求）
-- **天气预报**: `/weather/v1/current/{lat}/{lon}`（实况，v1，含 uvIndex）、`/weather/v1/daily/{lat}/{lon}`（逐日，v1，最多 10 天）、`/weather/v1/hourly/{lat}/{lon}`（逐小时，v1，含真实逐小时 uvIndex）
-- **分钟降水**: `/v7/minutely/5m`（未来 2 小时分钟级降水，和风无 v1 版本，保留 v7）
-- **天气预警**: `/weatheralert/v1/current/{lat}/{lon}`
-- **空气质量**: `/airquality/v1/current/{lat}/{lon}`（官方 v1 接口，返回 indexes 综合指数、pollutants 污染物浓度与各分指数 subIndexes）
-  - **污染物单位动态规范 (concentration.unit)**:
-    - 接口按站点标准动态返回单位：国内常规站点 PM2.5、PM10、O3、NO2、SO2 为 `μg/m3`，CO 为 `mg/m3`；部分境外站点气态污染物可能为 `ppb`，CO 为 `ppm`
-    - 代码（`QWeatherMapper`、`AqiCalculator`、`AqhiCalculator` 及 UI 卡片）必须动态透传与解析真实单位，杜绝硬编码假定
-    *(注: 全面统一采用美国 EPA 标准。分项仅采集客观浓度数据与真实单位，综合 AQI 与各分项 IAQI 统一由本地 AqiCalculator 依据美标计算，以保障综合评级与各分项颜色评价标准完全一致)*
-  - **新一代健康指数储备 - 香港 AQHI (空气质素健康指数)**:
-    - 官方公开标准: 香港环境保护署 (EPD) 官方算法
-    - 计算公式: `%AR = %AR(NO2) + %AR(SO2) + %AR(O3) + max(%AR(PM2.5), %AR(PM10))`
-    - 各污染物风险增幅: `%AR = [exp(β * C) - 1] * 100%` (浓度 C 官方基准单位为 `μg/m3`)
-    - 官方回归系数 β: NO2=`0.0004462559`, SO2=`0.0001393235`, O3=`0.0004888034`, PM10=`0.0002821751`, PM2.5=`0.0002180567`
-    - 气体 ppb 转 μg/m3 系数: O3 ≈ 1.96, NO2 ≈ 1.88, SO2 ≈ 2.62
-- **GeoAPI**: `/geo/v2/city/lookup`（城市搜索，用户输入城市名时触发）
-- **天文（部分）**: 日出日落数据从 v1 逐日预报响应的 `astro` 中提取，映射到 `DailyAstro`，无需单独请求。v1 实况、逐小时、逐日均含 UV 数据（实况为实时值，逐小时为逐小时值，逐日为 `uvIndexMax` 当日最大值）
+### API Host 规范（v4.1.2 血泪教训，严禁重犯）
+- **API Host 是开发者账号级随机分配的专属地址**，形如 `xxxxxx.xx.qweatherapi.com`，且**属于身份认证的一部分**，无法由 Project ID 推导，只能从控制台 [设置页](https://console.qweather.com/setting) 复制；
+- **官方不存在任何通用/开发域名**：旧公共域名 `api.qweather.com`(2026-06-01 停服)、`devapi.qweather.com`(2026-01-01 停服)、`geoapi.qweather.com`(2026-06-01 停服) 已全部陆续停服；
+- **兜底常量只能放显眼占位串**：`QWeatherCredentials.DEFAULT_API_HOST` 保留 `REPLACE_WITH_YOUR_API_HOST` 占位（开发者替换为真实 Host），并在 `isApiHostUsable()` 中拦截——**严禁臆造任何 `*.qweatherapi.com` 之外的域名作为默认值**，v4.1.1 事故即源于臆造出并不存在的 `devapi.qweatherapi.com`；
+- **存储层双重兜底**：启动时 `dropInvalidApiHostEntry()` 清除历史遗留的无效 Host，沙盒恢复时 `restoredApiHostOrDefault()` 拒绝带病恢复。
 
-### 未使用的 API 能力（下一步计划）
-- **天气指数** (`/v7/indices/1d`): 和风提供穿衣、洗车、感冒、运动、钓鱼、旅游、花粉、舒适度等 16+ 种生活指数。当前仅从日报 `uvIndex` 映射了紫外线。计划调用此端点补充完整生活指数卡片。
-- **天文 - 月相**: 逐日预报响应已含 `moonrise`/`moonset`/`moonPhase`/`moonPhaseIcon`，但未映射到模型和 UI。计划在日出日落卡片中增加月相展示。
-- **GeoAPI 扩展**: 当前仅用城市搜索。和风还提供 POI 搜索（`/geo/v2/poi/lookup`，搜索地标景区）、热门城市（`/geo/v2/city/top`）、POI 范围搜索（`/geo/v2/poi/range`）。按需添加。
-- **时光机**: 历史天气数据，可视需要添加历史天气回顾功能。
+### v7 端点现状（停服公告 2026-07-31）
+- **仅 `/v7/grid-weather/*` 与 `/v7/weather/*` 于 2027-08-01 停服**，本项目全部天气接口早已迁移至 v1（`/weather/v1/current|daily|hourly`、`/weatheralert/v1/*`、`/airquality/v1/*`、`/geo/v2/*`）；
+- **唯一保留的 v7 端点是 `/v7/minutely/5m`**（和风至今未提供分钟级降水 v1 版本，官方文档当前仍为该路径），**不在停服范围内，无需迁移**。
+
+## UI 架构与设计规范
+
+### 1. 苹果连续平滑圆角（Continuous Corner / Squircle）
+- **架构级统一**：全项目严禁硬编码普通 `RoundedCornerShape`（曲率突变会导致机械生硬感），统一收敛至 `SkyPulseDesignSystem.Shapes` 与 `ContinuousCornerShape`；
+- **数学模型**：采用 Apple 工业级超椭圆公式（Lamé Superellipse）：$|x/a|^n + |y/b|^n = 1$（采用苹果黄金指数 $n = 4.2$）；
+- **覆盖范围**：不仅首页卡片，搜索页城市列表框、对话框、设置页、底部面板与所有裁剪组件全量使用超椭圆圆角；
+- **M3 主题联动**：`SkyPulseShapes` (MaterialTheme) 深度集成连续圆角，基础 M3 组件自动继承。
+
+### 2. 首页六项实时气象指标卡片尺寸与留白
+- **比例优化**：空气质量下方的 6 个实时信息块（紫外线、湿球黑球温度、湿度、风向/风速、气压、能见度）采用 `aspectRatio(1.22f)`；
+- **消除空旷**：摒弃传统 1:1 正方形造成的上下大面积无意义留白，内边距规范为 `start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp`，保持垂直与水平留白视觉均衡适中。
+
+### 3. 全局屏幕空间统一光场（Unified Light Field）
+- **物理光源**：屏幕空间全局虚拟光源锚定在左上方（$X \approx 28\% W, Y = -380\text{dp}$）；
+- **视差衰减**：各卡片依据在视口中的绝对坐标同心发散受光，上下深度随列表垂直滑动动态演变高光聚散度与轮廓微光。
+
+### 4. 按钮组排版规范（v4.1.2 修复「重新生成」按钮重绘换行）
+- **同排按钮一律等分宽度**：按钮放入 `Row` 时每个按钮必须带 `modifier = Modifier.weight(1f)`，父 `Row` 必须 `fillMaxWidth()`；
+- **按钮文字单行省略**：`Text` 必须设 `maxLines = 1` + `softWrap = false` + `overflow = TextOverflow.Ellipsis`，**严禁让按钮文案换行撑高**；
+- **状态切换文案不得改变宽度**：文案由「复制公钥」变为「已复制 ✓」这类变长时，因为等分宽度才不会引发兄弟按钮重新测量与抖动；
+- **加载态用显式参数**：`GlassActionButton(loading = true)`，**严禁用 `text == "xxx"` 这类字符串比较来判断是否展示 loading**。
 
 ## 离线逆地理编码 (Offline Geocoding)
 - **定位与编码方案**: 采用全离线两阶段空间查询体系（阶段一：天地图 2,900 个法定区县多边形射线法命中；阶段二：民政部 2026 最新 39,188 个乡镇街道驻地最近邻匹配）
@@ -64,10 +70,12 @@
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
 - **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
 
-## 发版规则
-- **默认发版**: 每次代码改动完成并验证后，bump 版本并推送到 GitHub（普通 push 只做编译验证、不产出 APK），随后手动触发 CI 构建；构建成功后把 APK 下载回本工作区作为发版包体，并立即删除远端 artifact；除非用户明确要求暂不发版
-- **CI 产物流程**: 只有手动触发（`workflow_dispatch`）才会上传 artifact，普通 push 不产包。发版时用 `gh workflow run "Build APK" -R WhichPath/SkyPulse --ref main` 触发构建，构建成功后用 `gh run download <run-id> -R WhichPath/SkyPulse` 将 APK 下载到工作区根目录并重命名为 `skypulse-v<versionName>.apk`；随后必须立即用 `gh api -X DELETE repos/WhichPath/SkyPulse/actions/artifacts/<artifact-id>` 删除远端 artifact，避免内嵌密钥的包长期挂在公开仓库上、被任何 GitHub 账号下载。注意本仓库另有 `upstream` 远端，所有 `gh` 命令必须显式带 `-R WhichPath/SkyPulse`，否则会误指向 upstream
-- **GitHub 发版（永久禁止）**: release APK 通过 BuildConfig 内嵌了 QWeather Ed25519 私钥、PROJECT_ID/KEY_ID 和高德 API Key，反编译即可提取；且 `app/release-keystore.jks` 已入库、密码公开在本文档，任何人拿到包都能提取密钥、冒签重打包。因此 APK（含 CI artifact）只可私下分发，永远不要创建公开的 GitHub Release
+## 发版与构建规则
+- **本地编译优先**: 以后所有 Release 版本采用本地优先编译验证（`./gradlew assembleRelease`），不再推送到 GitHub Actions 远程编译；
+- **GitHub 只提交代码，不编译（v4.1.2 起）**: 仓库不再保留任何 CI 编译工作流（`.github/workflows/build.yml` 已删除），push 仅用于同步源码，任何 APK 一律由本地编译产出；
+- **编译产物归档**: 本地编译成功后，将 `app/build/outputs/apk/release/app-release.apk` 复制重命名为工作区根目录的 `skypulse-v<versionName>.apk`；
+- **包体安全性**: 由于已彻底清除编译期密钥注入，发布包不包含任何敏感信息，但仍保持私下分发规范；
+- **GitHub 发版（永久禁止）**: 永远不要创建公开的 GitHub Release。
 
 ## Git 操作规范
 - **git操作**: 除非用户主动要求提交/推送（必须每次对话明确提出发版-不能根据上下文内容自己推测），否则不要提交/推送代码到远程仓库

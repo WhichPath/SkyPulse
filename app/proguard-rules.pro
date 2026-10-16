@@ -35,8 +35,13 @@
 -dontwarn okio.**
 -dontwarn javax.annotation.**
 
-# === BouncyCastle (Ed25519 JWT signing for QWeather) ===
--keep class org.bouncycastle.** { *; }
+# === BouncyCastle (Ed25519 JWT signing & KeyPair management for QWeather) ===
+-keep class org.bouncycastle.crypto.generators.Ed25519** { *; }
+-keep class org.bouncycastle.crypto.params.Ed25519** { *; }
+-keep class org.bouncycastle.crypto.signers.Ed25519** { *; }
+-keep class org.bouncycastle.crypto.util.PrivateKeyInfoFactory { *; }
+-keep class org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory { *; }
+-keep class org.bouncycastle.asn1.** { *; }
 -dontwarn org.bouncycastle.**
 
 # === Accompanist ===

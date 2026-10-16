@@ -48,11 +48,11 @@ fun SetLightStatusBarEffect(lightStatusBar: Boolean) {
 }
 
 val SkyPulseShapes = androidx.compose.material3.Shapes(
-    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.extraSmall),
-    small = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.small),
-    medium = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.medium),
-    large = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.large),
-    extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(SkyPulseDesignSystem.Radius.extraLarge)
+    extraSmall = SkyPulseDesignSystem.Shapes.extraSmall,
+    small = SkyPulseDesignSystem.Shapes.small,
+    medium = SkyPulseDesignSystem.Shapes.medium,
+    large = SkyPulseDesignSystem.Shapes.large,
+    extraLarge = SkyPulseDesignSystem.Shapes.extraLarge
 )
 
 @Composable

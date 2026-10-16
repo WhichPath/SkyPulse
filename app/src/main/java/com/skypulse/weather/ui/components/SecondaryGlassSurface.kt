@@ -3,7 +3,6 @@ package com.skypulse.weather.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.Dp
 import com.skypulse.weather.ui.glass.floatingModalLightField
 import com.skypulse.weather.ui.glass.glassLightField
@@ -23,7 +22,7 @@ fun Modifier.secondaryGlassSurface(radius: Dp): Modifier {
     val page = LocalSecondaryPageTheme.current
     val field = page.surfaceLightField()
     return this
-        .clip(RoundedCornerShape(radius))
+        .clip(ContinuousCornerShape(radius))
         .glassLightField(radius = radius, field = field)
 }
 
@@ -36,6 +35,6 @@ fun Modifier.secondaryGlassSurface(radius: Dp): Modifier {
 fun Modifier.floatingGlassSurface(radius: Dp): Modifier {
     val field = floatingModalLightField()
     return this
-        .clip(RoundedCornerShape(radius))
+        .clip(ContinuousCornerShape(radius))
         .glassLightField(radius = radius, field = field)
 }

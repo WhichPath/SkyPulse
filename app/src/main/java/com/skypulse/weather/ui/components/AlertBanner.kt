@@ -10,7 +10,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,7 +74,7 @@ internal fun AlertBanner(alerts: List<AlertItem>, onClick: (Int) -> Unit = {}) {
     Surface(
         onClick = { onClick(if (alerts.size == 1) 0 else safeAlertIndex) },
         modifier = Modifier.padding(start = 20.dp).offset(y = (-4).dp),
-        shape = RoundedCornerShape(6.dp),
+        shape = SkyPulseDesignSystem.Shapes.continuous(6.dp),
         color = Color.White.copy(alpha = 0.08f)
     ) {
         Row(

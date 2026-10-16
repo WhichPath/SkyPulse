@@ -39,19 +39,37 @@ class QWeatherCredentialTester @Inject constructor(
 
     suspend fun test(credentials: QWeatherCredentials): QWeatherConnectionResult =
         withContext(Dispatchers.IO) {
+            val hostError = validateApiHost(credentials.apiHost)
             when {
-                !credentials.isComplete ->
-                    QWeatherConnectionResult.Failure("凭据不完整，请填写 Project ID、Key ID、私钥与 API Host")
-
-                !credentials.hasPemShape ->
-                    QWeatherConnectionResult.Failure("私钥格式不正确，需要包含 BEGIN / END 标记的完整 PEM 文本")
+                hostError != null ->
+                    QWeatherConnectionResult.Failure(hostError)
 
                 credentials.apiHost.trim().startsWith("http://") ->
                     QWeatherConnectionResult.Failure("API Host 请使用 https:// 明文协议")
 
+                !credentials.isComplete ->
+                    QWeatherConnectionResult.Failure("凭据不完整，请填写 Project ID、Key ID 与私钥")
+
+                !credentials.hasPemShape ->
+                    QWeatherConnectionResult.Failure("私钥格式不正确，需要包含 BEGIN / END 标记的完整 PEM 文本")
+
                 else -> request(credentials)
             }
         }
+
+    /** API Host 校验，返回面向用户的中文提示；合法时返回 null。 */
+    private fun validateApiHost(raw: String): String? {
+        val host = raw.trim()
+        return when {
+            host.isEmpty() -> "请填写 API Host（和风控制台-设置页）"
+            host.contains("REPLACE_WITH_YOUR_API_HOST") ->
+                "API Host 仍是占位默认值，请填入控制台-设置页的专属 Host"
+            host.contains("qweather.com") && !host.contains("qweatherapi.com") ->
+                "api.qweather.com / devapi.qweather.com 等公共域名已停服，请改用控制台-设置页的专属 API Host"
+            host.contains(".qweatherapi.com") -> null
+            else -> "API Host 格式有误，应为控制台-设置页的专属域名（形如 xxxxxx.xx.qweatherapi.com）"
+        }
+    }
 
     private suspend fun request(credentials: QWeatherCredentials): QWeatherConnectionResult {
         return try {
@@ -91,7 +109,7 @@ class QWeatherCredentialTester @Inject constructor(
             }
         }
 
-        is java.net.UnknownHostException -> "域名解析失败：请检查 API Host 拼写与网络"
+        is java.net.UnknownHostException -> "域名解析失败：请检查 API Host 拼写与网络（控制台-设置页的专属 Host）"
         is java.net.SocketTimeoutException -> "连接超时：请检查网络或 API Host"
         is javax.net.ssl.SSLException -> "TLS 握手失败：API Host 必须是有效的 https 地址"
         else -> error.message?.takeIf { it.isNotBlank() } ?: "未知错误，请稍后重试"

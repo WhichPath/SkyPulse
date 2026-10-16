@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.skypulse.weather.ui.components.ContinuousCornerShape
 
 /**
  * SkyPulse 设计系统规范 (基于 Material 3 Expressive 演进)
@@ -13,6 +14,7 @@ import androidx.compose.ui.unit.sp
  * 结合 Android 16/17 规范与项目专属沉浸式天气视觉：
  * - 物理感知弹簧动效 (Physics-based Spring Motion)
  * - M3 10 级圆角尺度容器系统 (Corner Radius Scale)
+ * - 全局 Apple 超椭圆连续平滑圆角（Continuous Corner / Squircle n=4.2）
  * - Surface Container 容器色阶
  * - 无障碍触控与标准呼吸间距 (Spacing & Insets)
  */
@@ -44,12 +46,46 @@ object SkyPulseDesignSystem {
         val extraExtraLarge = 48.dp
         val full = 50.dp                  // 胶囊 / 药丸
 
-        // 业务组件语义映射
-        val card = 20.dp
-        val cityCard = 18.dp
-        val settingsCard = 16.dp
-        val pill = 50.dp
-        val modal = 28.dp                 // 浮动毛玻璃面板基准
+        // Material 3 Expressive 业务组件语义映射
+        val card = 28.dp                  // M3 Extra Large 容器标准 (28dp)
+        val subCard = 16.dp               // M3 Medium 内嵌指标槽位标准 (16dp)
+        val cityCard = 24.dp              // M3 Large 城市列表卡片 (24dp)
+        val settingsCard = 24.dp          // M3 Large 设置分组卡片 (24dp)
+        val pill = 50.dp                  // M3 Full 胶囊药丸标准 (50dp)
+        val modal = 28.dp                 // M3 Dialog & Sheet 基准 (28dp)
+    }
+
+    /**
+     * 全局统一超椭圆连续形状体系（Apple Continuous Squircle / Lamé n=4.2）。
+     *
+     * 架构级根除普通机械圆角，所有业务组件、卡片、对话框与裁剪统一由此提供，
+     * 消除直曲切线突变，呈现极致丝滑温润质感。
+     */
+    object Shapes {
+        val none = androidx.compose.ui.graphics.RectangleShape
+        val extraSmall = ContinuousCornerShape(Radius.extraSmall)
+        val small = ContinuousCornerShape(Radius.small)
+        val medium = ContinuousCornerShape(Radius.medium)
+        val large = ContinuousCornerShape(Radius.large)
+        val largeIncreased = ContinuousCornerShape(Radius.largeIncreased)
+        val extraLarge = ContinuousCornerShape(Radius.extraLarge)
+        val extraLargeIncreased = ContinuousCornerShape(Radius.extraLargeIncreased)
+        val extraExtraLarge = ContinuousCornerShape(Radius.extraExtraLarge)
+        val full = ContinuousCornerShape(Radius.full)
+
+        // 业务语义形状
+        val card = ContinuousCornerShape(Radius.card)
+        val subCard = ContinuousCornerShape(Radius.subCard)
+        val cityCard = ContinuousCornerShape(Radius.cityCard)
+        val settingsCard = ContinuousCornerShape(Radius.settingsCard)
+        val pill = ContinuousCornerShape(Radius.pill)
+        val modal = ContinuousCornerShape(Radius.modal)
+
+        /**
+         * 动态连续平滑圆角构造器。
+         */
+        fun continuous(radius: Dp, exponent: Float = 4.2f): ContinuousCornerShape =
+            ContinuousCornerShape(radius, exponent)
     }
 
     object Border {

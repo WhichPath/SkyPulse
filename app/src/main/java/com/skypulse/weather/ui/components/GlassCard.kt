@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -33,13 +33,13 @@ import dev.chrisbanes.haze.hazeChild
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
+    radius: androidx.compose.ui.unit.Dp = SkyPulseDesignSystem.Radius.card,
     content: @Composable BoxScope.() -> Unit
 ) {
     val theme = LocalWeatherTheme.current
     val glass = theme.glass
     val hazeState = LocalGlassHazeState.current
-    val radius = SkyPulseDesignSystem.Radius.card
-    val shape = RoundedCornerShape(radius)
+    val shape = remember(radius) { ContinuousCornerShape(radius, exponent = 4.2f) }
     val lightField = theme.homeGlassLightField()
 
     Box(
@@ -48,17 +48,13 @@ fun GlassCard(
             .clip(shape)
             .then(
                 if (hazeState != null) {
-                    // 已在外层 clip(shape)，使用非弃用的 hazeChild(state, style) 重载。
-                    // 注意：haze 1.0.2 模糊路径（API 32+）强制要求 backgroundColor，
-                    // 作为模糊层底色填充（缺省会抛 IllegalArgumentException）。
-                    // 取天气渐变中段不透明色，保证模糊边缘与天空无缝融合。
                     Modifier.hazeChild(
                         state = hazeState,
                         style = HazeStyle(
                             backgroundColor = theme.backgroundGradient[theme.backgroundGradient.size / 2],
                             tint = HazeTint(glass.tint),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0.08f,
+                            blurRadius = 16.dp,
+                            noiseFactor = 0.05f,
                             fallbackTint = HazeTint(glass.tintFallback)
                         )
                     )

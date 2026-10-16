@@ -14,7 +14,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -349,14 +348,14 @@ internal fun LevelItemRow(
     val bgModifier = if (isHighlighted) {
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SkyPulseDesignSystem.Shapes.medium)
             .background(color.copy(alpha = 0.22f))
-            .border(1.dp, color.copy(alpha = 0.50f), RoundedCornerShape(12.dp))
+            .border(1.dp, color.copy(alpha = 0.50f), SkyPulseDesignSystem.Shapes.medium)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     } else {
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SkyPulseDesignSystem.Shapes.medium)
             .background(Color.White.copy(alpha = 0.04f))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     }

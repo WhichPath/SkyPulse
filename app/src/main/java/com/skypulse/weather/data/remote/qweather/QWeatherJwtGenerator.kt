@@ -4,7 +4,6 @@ import android.util.Base64
 import com.skypulse.weather.util.FileLogger
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
-import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,7 +30,8 @@ class QWeatherJwtGenerator @Inject constructor() {
 
     fun generateToken(projectId: String, keyId: String, privateKeyPem: String): String? {
         return try {
-            val rawKeyBytes = extractRawKeyBytes(privateKeyPem)
+            val rawKeyBytes = QWeatherKeyManager.extractRawPrivateKeyBytes(privateKeyPem)
+                ?: extractRawKeyBytes(privateKeyPem)
                 ?: run {
                     FileLogger.e(TAG, "Failed to extract Ed25519 private key from PEM")
                     return null
@@ -40,22 +40,15 @@ class QWeatherJwtGenerator @Inject constructor() {
             val privateKeyParams = Ed25519PrivateKeyParameters(rawKeyBytes, 0)
 
             // Header
-            val header = JSONObject().apply {
-                put("alg", "EdDSA")
-                put("kid", keyId)
-            }
+            val headerJson = """{"alg":"EdDSA","kid":"${keyId.replace("\"", "\\\"")}"}"""
 
             // Payload
             val now = System.currentTimeMillis() / 1000
-            val payload = JSONObject().apply {
-                put("sub", projectId)
-                put("iat", now - 30) // 偏移 30 秒防止时钟误差
-                put("exp", now + TOKEN_TTL_SECONDS)
-            }
+            val payloadJson = """{"sub":"${projectId.replace("\"", "\\\"")}","iat":${now - 30},"exp":${now + TOKEN_TTL_SECONDS}}"""
 
             // Base64URL 编码
-            val headerEncoded = base64UrlEncode(header.toString().toByteArray(Charsets.UTF_8))
-            val payloadEncoded = base64UrlEncode(payload.toString().toByteArray(Charsets.UTF_8))
+            val headerEncoded = base64UrlEncode(headerJson.toByteArray(Charsets.UTF_8))
+            val payloadEncoded = base64UrlEncode(payloadJson.toByteArray(Charsets.UTF_8))
             val signingInput = "$headerEncoded.$payloadEncoded"
 
             // Ed25519 签名
@@ -103,9 +96,6 @@ class QWeatherJwtGenerator @Inject constructor() {
     }
 
     private fun base64UrlEncode(data: ByteArray): String {
-        return Base64.encodeToString(
-            data,
-            Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
-        )
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(data)
     }
 }

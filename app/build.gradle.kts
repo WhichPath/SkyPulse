@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,37 +5,6 @@ plugins {
     alias(libs.plugins.ksp)
     id("com.google.dagger.hilt.android")
 }
-
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) {
-        file.inputStream().use(::load)
-    }
-}
-
-val qweatherProjectId = providers.gradleProperty("QWEATHER_PROJECT_ID")
-    .orElse(localProperties.getProperty("QWEATHER_PROJECT_ID", ""))
-    .get()
-val escapedQweatherProjectId = qweatherProjectId.replace("\\", "\\\\").replace("\"", "\\\"")
-
-val qweatherKeyId = providers.gradleProperty("QWEATHER_KEY_ID")
-    .orElse(localProperties.getProperty("QWEATHER_KEY_ID", ""))
-    .get()
-val escapedQweatherKeyId = qweatherKeyId.replace("\\", "\\\\").replace("\"", "\\\"")
-
-val qweatherPrivateKey = providers.gradleProperty("QWEATHER_PRIVATE_KEY")
-    .orElse(localProperties.getProperty("QWEATHER_PRIVATE_KEY", ""))
-    .get()
-// PEM 私钥可能含换行符，需转义为 \n 以正确嵌入 BuildConfig 字符串字面量
-val escapedQweatherPrivateKey = qweatherPrivateKey
-    .replace("\\", "\\\\")
-    .replace("\"", "\\\"")
-    .replace("\n", "\\n")
-    .replace("\r", "")
-
-val qweatherApiHost = providers.gradleProperty("QWEATHER_API_HOST")
-    .orElse(localProperties.getProperty("QWEATHER_API_HOST", "https://devapi.qweatherapi.com/"))
-    .get()
 
 android {
     namespace = "com.skypulse.weather"
@@ -47,17 +14,12 @@ android {
         applicationId = "com.skypulse.weather"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1008
-        versionName = "4.0.3"
+        versionCode = 1011
+        versionName = "4.1.2"
 
         vectorDrawables {
             useSupportLibrary = true
         }
-
-        buildConfigField("String", "QWEATHER_PROJECT_ID", "\"$escapedQweatherProjectId\"")
-        buildConfigField("String", "QWEATHER_KEY_ID", "\"$escapedQweatherKeyId\"")
-        buildConfigField("String", "QWEATHER_PRIVATE_KEY", "\"$escapedQweatherPrivateKey\"")
-        buildConfigField("String", "QWEATHER_API_HOST", "\"${qweatherApiHost.replace("\"", "\\\"")}\"")
     }
 
     signingConfigs {
@@ -101,6 +63,8 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            excludes += "org/bouncycastle/pqc/**"
+            excludes += "org/bouncycastle/x509/*.properties"
         }
     }
 }
