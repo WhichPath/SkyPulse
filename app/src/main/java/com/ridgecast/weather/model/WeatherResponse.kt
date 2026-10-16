@@ -88,7 +88,6 @@ data class RealtimeWeather(
     val wind: Wind? = null,
     val pressure: Double? = null,
     val apparent_temperature: Double? = null,
-    val dew_point: Double? = null,
     val precipitation: Precipitation? = null,
     val air_quality: AirQuality? = null,
     val life_index: LifeIndex? = null
@@ -382,11 +381,7 @@ data class DailyAqiValue(
 
 @JsonClass(generateAdapter = true)
 data class DailyLifeIndex(
-    val ultraviolet: List<LifeIndexDay>? = null,
-    val carWashing: List<LifeIndexDay>? = null,
-    val dressing: List<LifeIndexDay>? = null,
-    val comfort: List<LifeIndexDay>? = null,
-    val coldRisk: List<LifeIndexDay>? = null
+    val ultraviolet: List<LifeIndexDay>? = null
 )
 
 @JsonClass(generateAdapter = true)

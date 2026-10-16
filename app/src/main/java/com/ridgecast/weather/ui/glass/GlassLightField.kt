@@ -16,7 +16,18 @@ import androidx.compose.ui.unit.dp
 import com.ridgecast.weather.ui.components.createContinuousCornerPath
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.PI
 import kotlin.math.sin
+
+/** 光场渐变量化档位：深度 16 级、光照角 32 级，视觉不可感知且缓存命中率高 */
+private const val BrushDepthSteps = 16
+private const val BrushAngleSteps = 32
+
+/** 渐变 Brush 缓存键：尺寸 + 量化后的视口深度与光照角 */
+private data class BrushCacheKey(val width: Float, val height: Float, val qDepth: Int, val qAngle: Int)
+
+/** 三个光场渐变 Brush 的缓存三元组 */
+private data class GlassBrushes(val base: Brush, val bloom: Brush, val edge: Brush)
 
 /**
  * 非 Snapshot 的视口位置持有者（视口位置唯一可变的跨帧数据）。
@@ -76,6 +87,8 @@ fun Modifier.glassLightField(
 ): Modifier = composed {
     // 非 Snapshot holder：滚动时只写普通字段，绘制阶段惰性读取。
     val position = remember { GlassLightFieldPosition() }
+    // 渐变 Brush 缓存（键含尺寸 + 量化深度/光照角；field 变化时整体重建）
+    val brushCache = remember(field) { mutableMapOf<BrushCacheKey, GlassBrushes>() }
 
     this
         .onGloballyPositioned { coordinates ->
@@ -120,58 +133,67 @@ fun Modifier.glassLightField(
 
                 // 纵向内容流归一化深度（0.0 处于屏幕顶，1.0 处于常规视口底）
                 val screenDepth = (cardCenterY / screenDepthDenominator).coerceIn(0f, 2.5f)
-                val distanceAttenuation = 1f / (1f + screenDepth * 0.45f)
 
-                val bloomK = bloomStrengthK * distanceAttenuation
+                // 三个渐变 Brush 只随「尺寸 + 视口深度 + 光照角」变化：把后两者量化到
+                // 有限档位后缓存，同一档位重复绘制直接复用（量化误差视觉不可感知）
+                val qDepth = (screenDepth * BrushDepthSteps / 2.5f).toInt().coerceIn(0, BrushDepthSteps - 1)
+                val qAngle = (lightAngle * BrushAngleSteps / PI.toFloat()).toInt().coerceIn(0, BrushAngleSteps - 1)
+                val brushKey = BrushCacheKey(size.width, size.height, qDepth, qAngle)
+                val brushes = brushCache.getOrPut(brushKey) {
+                    val distanceAttenuation = 1f / (1f + screenDepth * 0.45f)
 
-                // 3. 底色色调层：依据全局光照向量进行微角度线性渐变（受光面微明，背光面沉稳）
-                val baseBrush = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.00f to field.base.brighten(0.07f * distanceAttenuation),
-                        0.50f to field.base,
-                        1.00f to field.base.dim(0.05f)
-                    ),
-                    start = Offset(size.width * 0.15f, 0f),
-                    end = Offset(size.width * 0.85f, size.height)
-                )
+                    val bloomK = bloomStrengthK * distanceAttenuation
 
-                // 4. 天光高度漫射（Bloom）：随纵向深度平滑演变
-                // 顶部容器受光中心靠左上、聚焦；下部容器受光更平缓、扩散半径更大
-                val bloomCenterX =
-                    size.width * (0.50f - 0.22f * (1f - screenDepth * 0.4f).coerceIn(0f, 1f))
-                val bloomCenterY = -size.height * (0.16f * distanceAttenuation)
-                val bloomRadius = maxOf(size.width, size.height) * (0.80f + screenDepth * 0.30f)
+                    // 3. 底色色调层：依据全局光照向量进行微角度线性渐变（受光面微明，背光面沉稳）
+                    val baseBrush = Brush.linearGradient(
+                        colorStops = arrayOf(
+                            0.00f to field.base.brighten(0.07f * distanceAttenuation),
+                            0.50f to field.base,
+                            1.00f to field.base.dim(0.05f)
+                        ),
+                        start = Offset(size.width * 0.15f, 0f),
+                        end = Offset(size.width * 0.85f, size.height)
+                    )
 
-                val bloomBrush = Brush.radialGradient(
-                    colors = listOf(
-                        field.bloom.withAlpha(0.18f * bloomK),
-                        field.bloom.withAlpha(0.05f * bloomK),
-                        Color.Transparent
-                    ),
-                    center = Offset(bloomCenterX, bloomCenterY),
-                    radius = bloomRadius
-                )
+                    // 4. 天光高度漫射（Bloom）：随纵向深度平滑演变
+                    // 顶部容器受光中心靠左上、聚焦；下部容器受光更平缓、扩散半径更大
+                    val bloomCenterX =
+                        size.width * (0.50f - 0.22f * (1f - screenDepth * 0.4f).coerceIn(0f, 1f))
+                    val bloomCenterY = -size.height * (0.16f * distanceAttenuation)
+                    val bloomRadius = maxOf(size.width, size.height) * (0.80f + screenDepth * 0.30f)
 
-                // 5. M3 Outline Variant 轮廓线：方向严格对齐屏幕空间全局入射光向量
-                // 所有容器同一朝向受光，左上方亮线、右下方暗线，具有绝对的物理整体感
-                val edgeEndX =
-                    (size.width * cos(lightAngle).toFloat()).coerceIn(size.width * 0.25f, size.width)
-                val edgeEndY =
-                    (size.height * sin(lightAngle).toFloat()).coerceIn(size.height * 0.50f, size.height)
+                    val bloomBrush = Brush.radialGradient(
+                        colors = listOf(
+                            field.bloom.withAlpha(0.18f * bloomK),
+                            field.bloom.withAlpha(0.05f * bloomK),
+                            Color.Transparent
+                        ),
+                        center = Offset(bloomCenterX, bloomCenterY),
+                        radius = bloomRadius
+                    )
 
-                val edgeBrush = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.00f to field.edge.withAlpha(0.42f * edgeK * (0.75f + 0.25f * distanceAttenuation)),
-                        0.35f to field.edge.withAlpha(0.22f * edgeK),
-                        1.00f to field.edge.withAlpha(0.09f * edgeK)
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(edgeEndX, edgeEndY)
-                )
+                    // 5. M3 Outline Variant 轮廓线：方向严格对齐屏幕空间全局入射光向量
+                    // 所有容器同一朝向受光，左上方亮线、右下方暗线，具有绝对的物理整体感
+                    val edgeEndX =
+                        (size.width * cos(lightAngle).toFloat()).coerceIn(size.width * 0.25f, size.width)
+                    val edgeEndY =
+                        (size.height * sin(lightAngle).toFloat()).coerceIn(size.height * 0.50f, size.height)
 
-                drawPath(path, baseBrush)
-                drawPath(path, bloomBrush)
-                drawPath(path, edgeBrush, style = Stroke(width = edgePx, join = StrokeJoin.Round))
+                    val edgeBrush = Brush.linearGradient(
+                        colorStops = arrayOf(
+                            0.00f to field.edge.withAlpha(0.42f * edgeK * (0.75f + 0.25f * distanceAttenuation)),
+                            0.35f to field.edge.withAlpha(0.22f * edgeK),
+                            1.00f to field.edge.withAlpha(0.09f * edgeK)
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(edgeEndX, edgeEndY)
+                    )
+                    GlassBrushes(baseBrush, bloomBrush, edgeBrush)
+                }
+
+                drawPath(path, brushes.base)
+                drawPath(path, brushes.bloom)
+                drawPath(path, brushes.edge, style = Stroke(width = edgePx, join = StrokeJoin.Round))
             }
         }
 }

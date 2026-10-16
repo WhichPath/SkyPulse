@@ -3,6 +3,7 @@ package com.ridgecast.weather.ui.screen
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.GradientDrawable
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -199,14 +200,13 @@ private fun createTyphoonMapContainer(
             setSupportZoom(true)
             builtInZoomControls = true
             displayZoomControls = false
-            // 允许 HTTPS 页面加载 HTTP 资源（页面部分资源可能是 http）
+            // 安全加固：禁止混合内容 / 本地文件 / 内容 URI 访问，防止沙盒内数据外泄
             @Suppress("DEPRECATION")
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            // 允许加载本地文件（页面可能需要）
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             @Suppress("DEPRECATION")
-            allowFileAccess = true
+            allowFileAccess = false
             @Suppress("DEPRECATION")
-            allowContentAccess = true
+            allowContentAccess = false
             cacheMode = WebSettings.LOAD_DEFAULT
         }
         // 明确要求硬件渲染层（避免个别设备回退到软件渲染导致手势卡顿）
@@ -285,7 +285,14 @@ private fun createTyphoonMapContainer(
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                // 页面内的链接（如地图、详情页）在 WebView 内打开
+                // 仅放行台风主站的 https 导航；其余（其他域名 / http）一律拦截并告警，
+                // 防止页面被注入引导至钓鱼站点，造成 WebView 沙盒内数据外泄
+                val url = request?.url ?: return true
+                val allowed = url.scheme == "https" && url.host == "tf.istrongcloud.com"
+                if (!allowed) {
+                    Log.w("RadarMapScreen", "拦截非法导航: $url")
+                    return true
+                }
                 return false
             }
         }

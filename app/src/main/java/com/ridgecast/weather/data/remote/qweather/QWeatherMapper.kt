@@ -121,7 +121,6 @@ object QWeatherMapper {
             ),
             pressure = now.pressure?.value?.times(100.0), // hPa -> Pa
             apparent_temperature = now.feelsLike?.value,
-            dew_point = now.dewPoint?.value ?: calculateDewPoint(now.temperature?.value, now.humidity),
             precipitation = Precipitation(
                 local = PrecipitationLocal(
                     status = "ok",
@@ -137,12 +136,6 @@ object QWeatherMapper {
                 )
             } else null
         )
-    }
-
-    private fun calculateDewPoint(temp: Double?, humidity: Double?): Double? {
-        if (temp == null || humidity == null) return null
-        val rh = humidity * 100.0
-        return temp - ((100.0 - rh) / 5.0)
     }
 
     // ============ Air Quality (空气质量) ============
@@ -452,11 +445,7 @@ object QWeatherMapper {
                         index = it.uvIndexMax?.toInt()?.toString(),
                         desc = null
                     )
-                },
-                carWashing = null,
-                dressing = null,
-                comfort = null,
-                coldRisk = null
+                }
             )
         )
     }

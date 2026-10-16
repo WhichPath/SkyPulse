@@ -1,10 +1,27 @@
-# SkyPulse Weather - local properties template
+# RidgeCast (脊线天气) - local properties template
 # Copy this file to `local.properties` and fill in the values you need.
-# All values are optional.
+# `local.properties` is git-ignored and must never be committed.
+#
+# All values are optional for debug builds. The RELEASE_* signing values are
+# required only when building a release APK (see below).
 
 # ===== SDK =====
 # Required by the Android Gradle Plugin to locate the Android SDK.
 sdk.dir=
+
+# ===== Release Signing (RELEASE builds only) =====
+# Required by `./gradlew assembleRelease`. A release build FAILS if the store
+# password is missing, so an unsigned APK is never produced.
+#
+# Values are read in this priority order:
+#   Gradle property (-P) > this file (local.properties) > environment variable
+#
+# NEVER commit these values or the keystore file itself.
+#
+# RELEASE_STORE_FILE=release-keystore.jks
+# RELEASE_STORE_PASSWORD=
+# RELEASE_KEY_ALIAS=weather-app
+# RELEASE_KEY_PASSWORD=
 
 # ===== QWeather (和风天气) =====
 # v4.1.1 起项目已彻底移除编译期密钥注入：build.gradle.kts 不再读取任何
@@ -14,7 +31,7 @@ sdk.dir=
 #
 # API Host 同理在设置页填写；若希望提供开箱即用的兜底值，请把真实专属
 # Host 写进 QWeatherCredentials.DEFAULT_API_HOST 常量
-# （app/src/main/java/com/skypulse/weather/data/remote/qweather/QWeatherCredentials.kt），
+# （app/src/main/java/com/ridgecast/weather/data/remote/qweather/QWeatherCredentials.kt），
 # 并替换其中的 REPLACE_WITH_YOUR_API_HOST 占位串。专属 Host 形如
 # xxxxxx.xx.qweatherapi.com，在 https://console.qweather.com/setting 查看。
 # 该常量非机密，编译进包体也无风险。

@@ -306,10 +306,12 @@ private fun rememberFastScrollFlag(scrollState: ScrollState): Boolean {
             lastNanos = now
             if (velocity > FAST_SCROLL_PX_PER_SEC) {
                 if (!fast) fast = true
-                holder.job?.cancel()
-                holder.job = scope.launch {
-                    delay(FAST_SCROLL_SETTLE_MS)
-                    fast = false
+                // 已有恢复协程在跑时不重复启动：避免每个滚动帧都取消/重建协程
+                if (holder.job?.isActive != true) {
+                    holder.job = scope.launch {
+                        delay(FAST_SCROLL_SETTLE_MS)
+                        fast = false
+                    }
                 }
             }
         }
@@ -394,6 +396,19 @@ private fun HourlyTemperatureChart(
 
     val probValues = precipitation?.map { it.probability ?: 0.0 } ?: List(itemCount) { 0.0 }
     val skyconValues = skycons?.map { it.value }?.take(itemCount) ?: List(itemCount) { null }
+
+    // 预计算每小时的昼夜标记与天气描述：仅在数据变化时计算一次，
+    // 避免 Canvas 绘制循环与图标行逐格重复解析日期字符串、线性扫描 astro 列表
+    val isDayFlags = remember(skycons, skyconValues, astro) {
+        IntArray(itemCount) { i ->
+            if (WeatherUtils.isHourlyDay(skycons?.getOrNull(i)?.datetime, astro)) 1 else 0
+        }
+    }
+    val weatherInfos = remember(skycons, skyconValues, astro) {
+        List(itemCount) { i ->
+            WeatherUtils.getWeatherInfo(skyconValues.getOrNull(i), isDayFlags[i] == 1)
+        }
+    }
 
     // 标签位于玻璃卡片之上，对比度随卡片玻璃明暗自适应（亮玻璃用深色文字色，深玻璃用浅色文字色）
     val isBrightBg = theme.glass.isLight
@@ -706,8 +721,8 @@ private fun HourlyTemperatureChart(
                                     val leftX = if (i == 0) contentLeftLocal else (points[i - 1].x + points[i].x) / 2f
                                     val rightX = if (i == itemCount - 1) contentRightLocal else (points[i].x + points[i + 1].x) / 2f
                                     val centerX = (leftX + rightX) / 2f
-                                    val isDay = WeatherUtils.isHourlyDay(skycons?.getOrNull(i)?.datetime, astro)
-                                    val weatherInfo = WeatherUtils.getWeatherInfo(skycon, isDay)
+                                    // 昼夜标记与天气描述已在组合期预计算，这里直接索引，不再逐格解析日期
+                                    val weatherInfo = weatherInfos[i]
                                     val weatherResult = textMeasurer.measure(AnnotatedString(weatherInfo.description), style = labelStyle)
                                     val isPrecip = skycon.contains("RAIN") || skycon.contains("STORM") || skycon.contains("SNOW")
                                     val prob = probValues[i]
@@ -739,8 +754,7 @@ private fun HourlyTemperatureChart(
                             if (fastScrolling || skycon == null) {
                                 HourlyCellPlaceholder(width = itemWidthDp, height = 36.dp)
                             } else {
-                                val isDay = WeatherUtils.isHourlyDay(skycon.datetime, astro)
-                                val info = WeatherUtils.getWeatherInfo(skycon.value, isDay)
+                                val info = weatherInfos[i]
                                 Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
                                     WeatherIcon(iconType = info.icon, size = 36.dp, animated = false)
                                 }

@@ -206,10 +206,16 @@ private fun DrawScope.drawRainStreak(
     if (angle == 0f) {
         drawStreak(sprite, x, y, width, length, alpha)
     } else {
-        withTransform({
-            rotate(degrees = angle * RadToDeg, pivot = Offset(x, y))
-        }) {
+        // 用原生 Canvas 旋转替代 withTransform：每帧每雨滴零 lambda 分配
+        val canvas = drawContext.canvas
+        canvas.save()
+        canvas.translate(x, y)
+        canvas.rotate(angle * RadToDeg)
+        canvas.translate(-x, -y)
+        try {
             drawStreak(sprite, x, y, width, length, alpha)
+        } finally {
+            canvas.restore()
         }
     }
 }
