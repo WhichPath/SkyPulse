@@ -42,48 +42,74 @@ import com.ridgecast.weather.ui.theme.TextSecondary
 @Composable
 fun DataSourceAttribution(
     modifier: Modifier = Modifier,
-    textAlpha: Float = 0.55f
+    textAlpha: Float = 0.55f,
+    attributions: List<String>? = null
 ) {
     val uriHandler = LocalUriHandler.current
     val attributionColor = TextSecondary.copy(alpha = textAlpha)
+    val targetUrl = attributions?.firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
+        ?: QWEATHER_HOMEPAGE
+    val nonUrlEntries = attributions?.filter {
+        it.isNotBlank() && !it.startsWith("http://") && !it.startsWith("https://")
+    }.orEmpty()
 
-    Row(
-        modifier = modifier
-            .clip(ContinuousCornerShape(10.dp))
-            .clickable {
-                try {
-                    uriHandler.openUri(QWEATHER_HOMEPAGE)
-                } catch (e: Exception) {
-                    Log.w(TAG, "failed to open QWeather homepage: ${e.message}")
-                }
-            }
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "气象数据来自",
-            style = MaterialTheme.typography.bodySmall,
-            color = attributionColor
-        )
+        Row(
+            modifier = Modifier
+                .clip(ContinuousCornerShape(10.dp))
+                .clickable {
+                    try {
+                        uriHandler.openUri(targetUrl)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "failed to open attribution url: ${e.message}")
+                    }
+                }
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "数据来自",
+                style = MaterialTheme.typography.bodySmall,
+                color = attributionColor
+            )
 
-        Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(4.dp))
 
-        // 官方图形标：12dp 与 12sp 正文等高对齐，图标高度约为大写字母高的 1.2 倍
-        Icon(
-            painter = painterResource(R.drawable.ic_qweather_logo),
-            contentDescription = null,
-            tint = attributionColor,
-            modifier = Modifier.size(12.dp)
-        )
+            // 官方图形标：12dp 与 12sp 正文等高对齐，图标高度约为大写字母高的 1.2 倍
+            Icon(
+                painter = painterResource(R.drawable.ic_qweather_logo),
+                contentDescription = null,
+                tint = attributionColor,
+                modifier = Modifier.size(12.dp)
+            )
 
-        Spacer(modifier = Modifier.width(3.dp))
+            Spacer(modifier = Modifier.width(3.dp))
 
-        Text(
-            text = "和风天气",
-            style = MaterialTheme.typography.bodySmall,
-            color = attributionColor
-        )
+            Text(
+                text = "和风天气",
+                style = MaterialTheme.typography.bodySmall,
+                color = attributionColor
+            )
+        }
+
+        if (nonUrlEntries.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            nonUrlEntries.forEach { entry ->
+                Text(
+                    text = entry,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = attributionColor.copy(alpha = textAlpha * 0.85f),
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
     }
 }
 

@@ -30,12 +30,12 @@ fun WeatherTheme.homeGlassLightField(): GlassLightField {
     val edgeLight = lerp(horizon, Color.White, if (isDay) 0.65f else 0.75f)
 
     return GlassLightField(
-        base = glass.tint,
+        base = glass.tint.copy(alpha = glass.tint.alpha * 0.45f),
         bloom = Color.White,
         edge = edgeLight,
         edgeWidth = 1.0.dp,
-        bloomStrength = if (isDay) 0.85f else 0.50f,
-        edgeStrength = if (isDay) 0.90f else 0.75f
+        bloomStrength = if (isDay) 0.40f else 0.25f,
+        edgeStrength = if (isDay) 0.85f else 0.70f
     )
 }
 

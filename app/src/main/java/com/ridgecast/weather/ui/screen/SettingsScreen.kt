@@ -46,7 +46,7 @@ fun SettingsScreen(
     onTempChangeAlertChange: (Boolean) -> Unit,
     onWindAlertChange: (Boolean) -> Unit,
     onTyphoonAlertChange: (Boolean) -> Unit,
-    onShowHourlyAqiChange: (Boolean) -> Unit,
+    onShowHourlyAqiChange: (Boolean) -> Unit = {},
     onShowHourlyUvChange: (Boolean) -> Unit,
     onShowHourlyWindChange: (Boolean) -> Unit,
     onShowHourlyWindGustChange: (Boolean) -> Unit,
@@ -154,13 +154,6 @@ fun SettingsScreen(
                 // Hourly display settings
                 SectionHeader("逐小时显示")
                 IosCard {
-                    ToggleItem(
-                        title = "空气质量",
-                        checked = settings.showHourlyAqi,
-                        onCheckedChange = onShowHourlyAqiChange,
-
-                    )
-                    IosDivider()
                     ToggleItem(
                         title = "紫外线",
                         checked = settings.showHourlyUv,

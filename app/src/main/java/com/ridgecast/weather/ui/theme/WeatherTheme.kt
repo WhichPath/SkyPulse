@@ -56,8 +56,8 @@ val LocalWeatherTheme = staticCompositionLocalOf {
         isDay = true,
         backgroundGradient = SunnyGradient,
         glass = GlassColors(
-            tint = Color(0xFFA5C9E6).copy(alpha = 0.32f),
-            tintFallback = Color(0xFFA5C9E6).copy(alpha = 0.45f),
+            tint = Color(0xFFA5C9E6).copy(alpha = 0.22f),
+            tintFallback = Color(0xFFA5C9E6).copy(alpha = 0.35f),
             isLight = true
         ),
         chartColors = WeatherChartColors(

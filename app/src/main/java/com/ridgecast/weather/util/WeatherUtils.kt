@@ -63,17 +63,17 @@ object WeatherUtils {
             it.contains("RAIN") || it.contains("STORM") || it.contains("SNOW")
         } == true
         val glass = if (isDay && !precipOrSnow) {
-            val light = lerpColor(saturateColor(hue, 1.4f), Color.White, 0.55f)
+            val light = lerpColor(saturateColor(hue, 1.35f), Color.White, 0.35f)
             GlassColors(
-                tint = light.copy(alpha = 0.32f),
-                tintFallback = light.copy(alpha = 0.45f),
+                tint = light.copy(alpha = 0.22f),
+                tintFallback = light.copy(alpha = 0.35f),
                 isLight = true
             )
         } else {
-            val dark = lerpColor(saturateColor(hue, 1.2f), Color.Black, 0.55f)
+            val dark = lerpColor(saturateColor(hue, 1.2f), Color.Black, 0.50f)
             GlassColors(
-                tint = dark.copy(alpha = 0.32f),
-                tintFallback = dark.copy(alpha = 0.45f),
+                tint = dark.copy(alpha = 0.22f),
+                tintFallback = dark.copy(alpha = 0.35f),
                 isLight = false
             )
         }

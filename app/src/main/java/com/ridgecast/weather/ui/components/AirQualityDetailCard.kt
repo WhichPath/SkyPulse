@@ -194,12 +194,6 @@ fun AirQualityDetailCard(
                     PollutantCell(item, Modifier.weight(1f))
                 }
             }
-
-            // 和风《注明来源》要求：使用空气质量数据的产品必须展示其归因声明
-            AttributionNote(
-                attributions = airQuality.attributions,
-                modifier = Modifier.padding(top = 12.dp)
-            )
         }
     }
 }

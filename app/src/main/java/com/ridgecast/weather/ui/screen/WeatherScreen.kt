@@ -854,7 +854,8 @@ private fun WeatherContentBody(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 17.dp, bottom = 22.dp),
-                textAlpha = 0.55f
+                textAlpha = 0.55f,
+                attributions = realtime?.air_quality?.attributions
             )
             Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
         }

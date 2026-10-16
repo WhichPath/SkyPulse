@@ -168,7 +168,7 @@ private val ParamTagShape = SkyPulseDesignSystem.Shapes.extraSmall
 fun HourlyForecastCard(
     hourly: HourlyForecast?,
     astro: List<DailyAstro>? = null,
-    showAqi: Boolean = true,
+    showAqi: Boolean = false,
     showUv: Boolean = true,
     showWind: Boolean = true,
     showWindGust: Boolean = false,
@@ -364,12 +364,12 @@ private fun HourlyTemperatureChart(
     scrollState: ScrollState,
     hourlyData: HourlyForecast,
     astro: List<DailyAstro>? = null,
-    showAqi: Boolean = true,
+    showAqi: Boolean = false,
     showUv: Boolean = true,
     showWind: Boolean = true,
     showWindGust: Boolean = true
 ) {
-    val showAnyParam = showAqi || showUv || showWind || showWindGust
+    val showAnyParam = showUv || showWind || showWindGust
     val temperatures = hourlyData.temperature?.filter { it.value != null } ?: return
     if (temperatures.size < 2) return
     val itemCount = temperatures.size
@@ -528,7 +528,7 @@ private fun HourlyTemperatureChart(
         ) {
             // 仅用于声明横向内容总宽度，使 ScrollState 的 maxValue 正确
             Box(modifier = Modifier.width(totalWidth)) {
-                Box(modifier = Modifier.offset { IntOffset(windowStartPx, 0) }) {
+                Column(modifier = Modifier.offset { IntOffset(windowStartPx, 0) }) {
                     Canvas(
                         modifier = Modifier
                             .width(windowWidthDp)
@@ -762,179 +762,141 @@ private fun HourlyTemperatureChart(
                         }
                     }
 
-                    if (showAnyParam) {
+                    val showParams = showUv || showWind || showWindGust
+                    if (showParams) {
                         Spacer(modifier = Modifier.height(6.dp))
-                    }
-
-                    // AQI Row
-                    if (showAqi) {
-                        Row(
-                            modifier = Modifier
-                                .width(windowWidthDp)
-                                .padding(start = leadingPadDp, end = trailingPadDp)
-                        ) {
-                            for (index in windowStart until windowEnd) {
-                                if (fastScrolling) {
-                                    HourlyCellPlaceholder(width = itemWidthDp)
-                                    continue
-                                }
-                                val aqi = aqiValues?.getOrNull(index)?.value?.usa ?: aqiValues?.getOrNull(index)?.value?.chn
-                                val label = aqiLabel(aqi)
-                                val color = aqiColor(aqi, isBrightBg)
-                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                                    if (label.isNotEmpty()) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier
-                                                .width(tagWidth)
-                                                .clip(ParamTagShape)
-                                                .background(Color.White.copy(alpha = 0.25f))
-                                                .padding(horizontal = 4.dp, vertical = 1.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(5.dp)
-                                                    .clip(androidx.compose.foundation.shape.CircleShape)
-                                                    .background(color)
-                                            )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(
-                                                text = label,
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
-                                                color = TextSecondary,
-                                                maxLines = 1
-                                            )
+                        Column(verticalArrangement = Arrangement.spacedBy(7.5.dp)) {
+                            // UV Row
+                            if (showUv) {
+                                Row(
+                                    modifier = Modifier
+                                        .width(windowWidthDp)
+                                        .padding(start = leadingPadDp, end = trailingPadDp)
+                                ) {
+                                    for (index in windowStart until windowEnd) {
+                                        if (fastScrolling) {
+                                            HourlyCellPlaceholder(width = itemWidthDp)
+                                            continue
                                         }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // UV Row
-                    if (showUv) {
-                        if (showAqi) Spacer(modifier = Modifier.height(7.5.dp))
-                        Row(
-                            modifier = Modifier
-                                .width(windowWidthDp)
-                                .padding(start = leadingPadDp, end = trailingPadDp)
-                        ) {
-                            for (index in windowStart until windowEnd) {
-                                if (fastScrolling) {
-                                    HourlyCellPlaceholder(width = itemWidthDp)
-                                    continue
-                                }
-                                val uvIndex = uvItems?.getOrNull(index)?.index
-                                val label = uvLabel(uvIndex)
-                                val color = uvColor(uvIndex, isBrightBg)
-                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                                    if (label.isNotEmpty()) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier
-                                                .width(tagWidth)
-                                                .clip(ParamTagShape)
-                                                .background(Color.White.copy(alpha = 0.25f))
-                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        val uvIndex = uvItems?.getOrNull(index)?.index
+                                        val label = uvLabel(uvIndex)
+                                        val color = uvColor(uvIndex, isBrightBg)
+                                        Box(
+                                            modifier = Modifier.width(itemWidthDp).height(16.dp),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(5.dp)
-                                                    .clip(androidx.compose.foundation.shape.CircleShape)
-                                                    .background(color)
-                                            )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(
-                                                text = label,
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
-                                                color = TextSecondary,
-                                                maxLines = 1
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Wind Row
-                    if (showWind) {
-                        if (showAqi || showUv) Spacer(modifier = Modifier.height(7.5.dp))
-                        Row(
-                            modifier = Modifier
-                                .width(windowWidthDp)
-                                .padding(start = leadingPadDp, end = trailingPadDp)
-                        ) {
-                            for (index in windowStart until windowEnd) {
-                                if (fastScrolling) {
-                                    HourlyCellPlaceholder(width = itemWidthDp)
-                                    continue
-                                }
-                                val wind = winds?.getOrNull(index)
-                                val level = WeatherUtils.windLevelLabel(wind?.scale, wind?.speed)
-                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                                    if (level != "--") {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier
-                                                .width(tagWidth)
-                                                .clip(ParamTagShape)
-                                                .background(Color.White.copy(alpha = 0.25f))
-                                                .padding(horizontal = 4.dp, vertical = 1.dp)
-                                        ) {
-                                            if (wind?.direction != null && level != "0") {
-                                                WindDirectionArrow(
-                                                    direction = wind.direction,
-                                                    modifier = Modifier.size(9.dp),
-                                                    color = TextSecondary
-                                                )
-                                                Spacer(modifier = Modifier.width(2.dp))
+                                            if (label.isNotEmpty()) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    modifier = Modifier
+                                                        .width(tagWidth)
+                                                        .clip(ParamTagShape)
+                                                        .background(Color.White.copy(alpha = 0.25f))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                                            .background(color)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(3.dp))
+                                                    Text(
+                                                        text = label,
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                                        color = TextSecondary,
+                                                        maxLines = 1
+                                                    )
+                                                }
                                             }
-                                            Text(
-                                                text = "${level}级",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
-                                                color = TextSecondary,
-                                                maxLines = 1
-                                            )
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    // Gust Row
-                    if (showWindGust) {
-                        if (showAqi || showUv || showWind) Spacer(modifier = Modifier.height(7.5.dp))
-                        Row(
-                            modifier = Modifier
-                                .width(windowWidthDp)
-                                .padding(start = leadingPadDp, end = trailingPadDp)
-                        ) {
-                            for (index in windowStart until windowEnd) {
-                                if (fastScrolling) {
-                                    HourlyCellPlaceholder(width = itemWidthDp)
-                                    continue
+                            // Wind Row
+                            if (showWind) {
+                                Row(
+                                    modifier = Modifier
+                                        .width(windowWidthDp)
+                                        .padding(start = leadingPadDp, end = trailingPadDp)
+                                ) {
+                                    for (index in windowStart until windowEnd) {
+                                        if (fastScrolling) {
+                                            HourlyCellPlaceholder(width = itemWidthDp)
+                                            continue
+                                        }
+                                        val wind = winds?.getOrNull(index)
+                                        val level = WeatherUtils.windLevelLabel(wind?.scale, wind?.speed)
+                                        Box(
+                                            modifier = Modifier.width(itemWidthDp).height(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (level != "--") {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    modifier = Modifier
+                                                        .width(tagWidth)
+                                                        .clip(ParamTagShape)
+                                                        .background(Color.White.copy(alpha = 0.25f))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    if (wind?.direction != null && level != "0") {
+                                                        WindDirectionArrow(
+                                                            direction = wind.direction,
+                                                            modifier = Modifier.size(9.dp),
+                                                            color = TextSecondary
+                                                        )
+                                                        Spacer(modifier = Modifier.width(2.dp))
+                                                    }
+                                                    Text(
+                                                        text = "${level}级",
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                                        color = TextSecondary,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                                val gustSpeed = gustValues?.getOrNull(index)?.value
-                                val label = gustLabel(gustSpeed)
-                                Box(modifier = Modifier.width(itemWidthDp), contentAlignment = Alignment.Center) {
-                                    if (label.isNotEmpty()) {
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                            color = TextSecondary,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            modifier = Modifier
-                                                .width(tagWidth)
-                                                .clip(ParamTagShape)
-                                                .background(Color.White.copy(alpha = 0.25f))
-                                                .padding(vertical = 1.dp)
-                                        )
+                            }
+
+                            // Gust Row
+                            if (showWindGust) {
+                                Row(
+                                    modifier = Modifier
+                                        .width(windowWidthDp)
+                                        .padding(start = leadingPadDp, end = trailingPadDp)
+                                ) {
+                                    for (index in windowStart until windowEnd) {
+                                        if (fastScrolling) {
+                                            HourlyCellPlaceholder(width = itemWidthDp)
+                                            continue
+                                        }
+                                        val gustSpeed = gustValues?.getOrNull(index)?.value
+                                        val label = gustLabel(gustSpeed)
+                                        Box(
+                                            modifier = Modifier.width(itemWidthDp).height(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (label.isNotEmpty()) {
+                                                Text(
+                                                    text = label,
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                    color = TextSecondary,
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 1,
+                                                    modifier = Modifier
+                                                        .width(tagWidth)
+                                                        .clip(ParamTagShape)
+                                                        .background(Color.White.copy(alpha = 0.25f))
+                                                        .padding(vertical = 1.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }

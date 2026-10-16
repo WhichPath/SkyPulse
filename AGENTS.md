@@ -81,14 +81,17 @@
 ## 版本管理
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
 - **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
-- **当前发布状态（v1.0.1 / 2026-10-16）**: 已完成安全审计，仓库与发布包体均**不含任何密钥/私钥/口令**（签名物料与 `local.properties` 仅存本地；`*.jks` / `*.keystore` / `keystore.properties` 已 gitignore 且未跟踪）；APK 由本地 `assembleRelease` 产出，签名密钥 CN=RidgeCast（4096-bit RSA/PKCS12）。该版本为 RidgeCast 身份下的第一份公开可发布版本：源码已公开，正式 APK 附带于 GitHub Release（v1.0.1）私下分发。
+- **当前发布状态（v1.0.2 / 2026-10-16）**: 修复逐小时预报元素重叠与间距坍塌，移除设置中无效的逐小时空气质量开关，空气质量归因链接下移并整合至底部署名，优化主页卡片底色白度与透明度。正式 APK 经本地签名后附带于 GitHub Release（v1.0.2）分发。
 
 ## 发版与构建规则
 - **本地编译优先**: 以后所有 Release 版本采用本地优先编译验证（`./gradlew assembleRelease`），不再推送到 GitHub Actions 远程编译；
 - **GitHub 只提交代码，不编译（v4.1.2 起）**: 仓库不再保留任何 CI 编译工作流（`.github/workflows/build.yml` 已删除），push 仅用于同步源码，任何 APK 一律由本地编译产出；
 - **编译产物归档**: 本地编译成功后，将 `app/build/outputs/apk/release/app-release.apk` 复制重命名为工作区根目录的 `ridgecast-v<versionName>.apk`；
 - **包体安全性**: 由于已彻底清除编译期密钥注入，发布包不包含任何敏感信息，但仍保持私下分发规范；
-- **GitHub 发版（v1.0.1 起允许）**: 历史禁止公开 GitHub Release 的原因是构建时注入密钥、逆向可提 key。现在 APK 全量 key-free、并由本地 `assembleRelease` 产出（签名 CN=RidgeCast / 4096-bit RSA），因此允许基于已推送的 tag 创建公开 GitHub Release 并附带 `ridgecast-v<versionName>.apk`；Release notes 必须声明 key-free 与本地构建来源（详见下方 v1.0.1 简介）。上传 APK 前必须完成安全审计（见「版本管理 - 当前发布状态」）。
+- **同步推送到 GitHub Release（v1.0.2 起确立标准流程）**: 每次版本更新在本地构建验证通过后，**必须同步推送到 GitHub Release**：
+  1. 提交代码并推送至 `origin main`；
+  2. 创建对应版本 tag 并推送：`git tag v<versionName> && git push origin v<versionName>`；
+  3. 通过 `gh release create v<versionName> ridgecast-v<versionName>.apk --title "RidgeCast (脊线天气) v<versionName>" --notes "..."` 将本地归档产物同步上传至 GitHub Release。Release notes 须包含变更说明并声明 key-free 与本地构建来源。上传前确保通过安全审计。
 
 ## Git 操作规范
 - **git操作**: 除非用户主动要求提交/推送（必须每次对话明确提出发版-不能根据上下文内容自己推测），否则不要提交/推送代码到远程仓库
