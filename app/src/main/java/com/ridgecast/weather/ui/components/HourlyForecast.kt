@@ -402,6 +402,68 @@ private fun HourlyTemperatureChart(
     val sidePad = SIDE_PADDING.dp
     val totalWidth = (itemCount * HOUR_WIDTH).dp + sidePad * 2
     val chartHeight = 120.dp
+
+    // ---------- 几何预计算（组合期 remember，不随滚动窗口重建）----------
+    // 曲线几何与颜色表只依赖「数据 + 密度 + 固定尺寸」，与滚动窗口无关。
+    // 提升到组合期后，每滚动一步不再重建 240 个 Offset + 2 个 FloatArray + 240 次字符串扫描。
+    val chartStepPx = with(density) { itemWidthDp.toPx() }
+    val curveTopPx = with(density) { 20.dp.toPx() }
+    val curveBottomPx = with(density) { chartHeight.toPx() } * 0.70f
+    val halfStepPx = chartStepPx / 2f
+
+    val splinePoints = remember(
+        tempValues, paddedMin, tempRange, chartStepPx, curveTopPx, curveBottomPx, itemCount
+    ) {
+        (0 until itemCount).map { i ->
+            val x = halfStepPx + i * chartStepPx
+            val normalizedY = ((tempValues[i] - paddedMin) / tempRange).toFloat()
+            val y = curveBottomPx - normalizedY * (curveBottomPx - curveTopPx)
+            androidx.compose.ui.geometry.Offset(x, y.coerceIn(curveTopPx, curveBottomPx))
+        }
+    }
+
+    val splineTangents = remember(splinePoints, itemCount) {
+        if (itemCount < 2) {
+            FloatArray(itemCount)
+        } else {
+            val seg = FloatArray(itemCount - 1)
+            for (i in 0 until itemCount - 1) {
+                seg[i] = (splinePoints[i + 1].y - splinePoints[i].y) / (splinePoints[i + 1].x - splinePoints[i].x)
+            }
+            val tan = FloatArray(itemCount)
+            for (i in 0 until itemCount) {
+                tan[i] = when {
+                    i == 0 -> seg[0]
+                    i == itemCount - 1 -> seg[itemCount - 2]
+                    else -> {
+                        val s0 = seg[i - 1]
+                        val s1 = seg[i]
+                        if (s0 * s1 <= 0f) 0f else (s0 + s1) / 2f
+                    }
+                }
+            }
+            tan
+        }
+    }
+
+    val barColorPairs = remember(skyconValues, theme) {
+        val chartColors = theme.chartColors
+        skyconValues.map { skycon ->
+            when {
+                skycon == null -> chartColors.clear
+                skycon.contains("STORM") -> chartColors.storm
+                skycon.contains("HEAVY_RAIN") || skycon.contains("HEAVY_SNOW") -> chartColors.rain
+                skycon.contains("RAIN") || skycon.contains("SNOW") -> chartColors.rain
+                skycon.contains("LIGHT_RAIN") || skycon.contains("LIGHT_SNOW") -> chartColors.rain
+                skycon.contains("PARTLY_CLOUDY") -> chartColors.partlyCloudy
+                skycon.contains("CLOUDY") -> chartColors.cloudy
+                skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> chartColors.haze
+                skycon == "WIND" -> chartColors.wind
+                skycon.contains("CLEAR") -> chartColors.clear
+                else -> chartColors.clear
+            }
+        }
+    }
     val horizontalEdgeGuard = rememberHorizontalScrollEdgeGuard()
 
     // 快速滑动时降级为占位渲染，避免一次性构建大量文本与雨丝
@@ -462,38 +524,13 @@ private fun HourlyTemperatureChart(
 
                         // 内容坐标系 -> 窗口画布坐标系
                         val translateX = -windowStartPx + leadingPadPx
-                        val step = itemWidthPx // 全局步长，不随窗口缩放
-                        val halfStep = step / 2f
+                        val step = chartStepPx // 全局步长，不随窗口缩放
                         val contentLeftLocal = translateX
                         val contentRightLocal = itemCount * step + sidePadPx + translateX
 
-                        val curveAreaBottom = canvasH * 0.70f
-                        val curveTop = 20.dp.toPx()
-
-                        val points = (0 until itemCount).map { i ->
-                            val x = halfStep + i * step
-                            val normalizedY = ((tempValues[i] - paddedMin) / tempRange).toFloat()
-                            val y = curveAreaBottom - normalizedY * (curveAreaBottom - curveTop)
-                            Offset(x, y.coerceIn(curveTop, curveAreaBottom))
-                        }
-
-                        val tangents = FloatArray(itemCount)
-                        val segmentSlopes = FloatArray(itemCount - 1)
-                        for (i in 0 until itemCount - 1) {
-                            segmentSlopes[i] = (points[i + 1].y - points[i].y) / (points[i + 1].x - points[i].x)
-                        }
-
-                        for (i in 0 until itemCount) {
-                            when {
-                                i == 0 -> tangents[i] = segmentSlopes[0]
-                                i == itemCount - 1 -> tangents[i] = segmentSlopes[itemCount - 2]
-                                else -> {
-                                    val s0 = segmentSlopes[i - 1]
-                                    val s1 = segmentSlopes[i]
-                                    tangents[i] = if (s0 * s1 <= 0) 0f else (s0 + s1) / 2f
-                                }
-                            }
-                        }
+                        // 几何与颜色表已在组合期预计算，这里直接引用
+                        val points = splinePoints
+                        val tangents = splineTangents
 
                         fun findSegmentIndex(x: Float): Int {
                             var lo = 0; var hi = points.size - 2
@@ -507,7 +544,7 @@ private fun HourlyTemperatureChart(
                         }
 
                         fun sampleSplineY(x: Float): Float {
-                            if (points.isEmpty()) return curveAreaBottom
+                            if (points.isEmpty()) return curveBottomPx
                             if (x <= points.first().x) return points.first().y
                             if (x >= points.last().x) return points.last().y
                             val i = findSegmentIndex(x)
@@ -519,23 +556,6 @@ private fun HourlyTemperatureChart(
                             val h01 = -2 * t3 + 3 * t2; val h11 = t3 - t2
                             val dx = p1.x - p0.x
                             return h00 * p0.y + h10 * m0 * dx + h01 * p1.y + h11 * m1 * dx
-                        }
-
-                        val chartColors = theme.chartColors
-                        val barColorPairs = skyconValues.map { skycon ->
-                            when {
-                                skycon == null -> chartColors.clear
-                                skycon.contains("STORM") -> chartColors.storm
-                                skycon.contains("HEAVY_RAIN") || skycon.contains("HEAVY_SNOW") -> chartColors.rain
-                                skycon.contains("RAIN") || skycon.contains("SNOW") -> chartColors.rain
-                                skycon.contains("LIGHT_RAIN") || skycon.contains("LIGHT_SNOW") -> chartColors.rain
-                                skycon.contains("PARTLY_CLOUDY") -> chartColors.partlyCloudy
-                                skycon.contains("CLOUDY") -> chartColors.cloudy
-                                skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> chartColors.haze
-                                skycon == "WIND" -> chartColors.wind
-                                skycon.contains("CLEAR") -> chartColors.clear
-                                else -> chartColors.clear
-                            }
                         }
 
                         translate(translateX, 0f) {
@@ -680,7 +700,7 @@ private fun HourlyTemperatureChart(
                                 }
 
                                 val labelStyle = TextStyle(fontSize = 12.sp, color = TextSecondary)
-                                val labelCenterY = curveAreaBottom + (canvasH - curveAreaBottom) * 0.45f
+                                val labelCenterY = curveBottomPx + (canvasH - curveBottomPx) * 0.45f
                                 for (i in windowStart until windowEnd) {
                                     val skycon = skyconValues[i] ?: continue
                                     val leftX = if (i == 0) contentLeftLocal else (points[i - 1].x + points[i].x) / 2f

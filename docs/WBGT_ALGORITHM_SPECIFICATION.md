@@ -1,7 +1,7 @@
 # SkyPulse 湿球黑球温度 (WBGT) 算法与不确定度传导规范
 
 > **文档版本**: 1.0.0 (2026-10-11)  
-> **适用模块**: `com.skypulse.weather.util.WbgtCalculator` / `WeatherDetailCards`  
+> **适用模块**: `com.ridgecast.weather.util.WbgtCalculator` / `WeatherDetailCards`  
 > **算法地位**: SkyPulse 首个完全基于本地微气象机理推算的高级热舒适与热应激核心指标。
 
 ---
@@ -125,6 +125,6 @@ $$\text{WBGT}_{\text{display}} = \text{round}(\text{WBGT}, 1)^\circ \pm \text{ro
 
 ## 7. 结语与代码追溯
 
-- **核心实现类**: [`com.skypulse.weather.util.WbgtCalculator`](file:///home/beta/MyCangku/SkyPulse/app/src/main/java/com/skypulse/weather/util/WbgtCalculator.kt)
-- **单元测试套件**: [`com.skypulse.weather.util.WbgtCalculatorTest`](file:///home/beta/MyCangku/SkyPulse/app/src/test/java/com/skypulse/weather/util/WbgtCalculatorTest.kt)
-- **UI展示组件**: [`com.skypulse.weather.ui.components.WeatherDetailCards`](file:///home/beta/MyCangku/SkyPulse/app/src/main/java/com/skypulse/weather/ui/components/WeatherDetailCards.kt)
+- **核心实现类**: [`com.ridgecast.weather.util.WbgtCalculator`](file:///home/beta/MyCangku/SkyPulse/app/src/main/java/com/ridgecast/weather/util/WbgtCalculator.kt)
+- **单元测试套件**: [`com.ridgecast.weather.util.WbgtCalculatorTest`](file:///home/beta/MyCangku/SkyPulse/app/src/test/java/com/ridgecast/weather/util/WbgtCalculatorTest.kt)
+- **UI展示组件**: [`com.ridgecast.weather.ui.components.WeatherDetailCards`](file:///home/beta/MyCangku/SkyPulse/app/src/main/java/com/ridgecast/weather/ui/components/WeatherDetailCards.kt)

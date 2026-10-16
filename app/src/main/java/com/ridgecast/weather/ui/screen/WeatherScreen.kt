@@ -70,6 +70,11 @@ import kotlinx.coroutines.launch
 
 val LocalSkipCardAnimation = compositionLocalOf { false }
 
+// 预警标题清洗正则：编译一次，避免在 WeatherContentBody 每次重组时重复编译
+private val AlertTitleBracketRegex = Regex("\\[.*?\\]")
+private val AlertTitleVerbRegex = Regex("^.*(?:\u53D1\u5E03|\u53D8\u66F4|\u89E3\u9664|\u7EE7\u7EED|\u66F4\u65B0)")
+private val AlertTitleSuffixRegex = Regex("\u9884\u8B66.*$")
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun WeatherScreen(
@@ -676,9 +681,9 @@ private fun WeatherContentBody(
     }
     val alerts = alertContents.mapNotNull { content ->
         val title = content.title
-            ?.replace(Regex("\\[.*?\\]"), "")
-            ?.replace(Regex("^.*(?:\u53D1\u5E03|\u53D8\u66F4|\u89E3\u9664|\u7EE7\u7EED|\u66F4\u65B0)"), "")
-            ?.replace(Regex("\u9884\u8B66.*$"), "\u9884\u8B66")
+            ?.replace(AlertTitleBracketRegex, "")
+            ?.replace(AlertTitleVerbRegex, "")
+            ?.replace(AlertTitleSuffixRegex, "\u9884\u8B66")
             ?.trim()
         if (!title.isNullOrBlank()) AlertItem(title, content.level) else null
     }

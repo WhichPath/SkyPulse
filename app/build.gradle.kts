@@ -58,16 +58,15 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // 口令缺失时直接报错，绝不产出用弱口令/空口令签名的包
+            // 口令缺失时直接失败，绝不产出未签名/弱口令签名的 APK
             signingConfig = if (releaseStorePassword != null) {
                 signingConfigs.getByName("release")
             } else {
-                logger.warn(
-                    "[SkyPulse] 未找到 release 签名口令：请在 local.properties 配置 " +
-                        "RELEASE_STORE_PASSWORD / RELEASE_KEY_PASSWORD / RELEASE_KEY_ALIAS，" +
+                throw GradleException(
+                    "[RidgeCast] 缺少 release 签名口令。请在 local.properties 配置 " +
+                        "RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD，" +
                         "或提供同名环境变量。详见 local.properties.example。"
                 )
-                null
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android.txt"),
@@ -130,11 +129,9 @@ dependencies {
 
     // Location
     implementation(libs.play.services.location)
-    implementation(libs.accompanist.permissions)
 
     // UI
     implementation(libs.androidsvg)
-    implementation(libs.browser)
     implementation(libs.haze)
     implementation(libs.splashscreen)
 

@@ -8,10 +8,11 @@
 - **Java Version**: 17
 
 ## 签名信息 (Release)
-- **Keystore 文件**: `app/release-keystore.jks`
-- **Store Password**: `weather123`
-- **Key Alias**: `weather-app`
-- **Key Password**: `weather123`
+- **Keystore 文件**: `app/release-keystore.jks`（**不入库**，`.gitignore` 已忽略 `*.jks`）
+- **Key Alias**: `weather-app`（默认值，可用 `RELEASE_KEY_ALIAS` 覆盖）
+- **口令来源**: 仅从 `local.properties` / 环境变量读取（`RELEASE_STORE_FILE` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_PASSWORD`），**严禁写入仓库或文档**
+- **构建行为**: 口令缺失时 `assembleRelease` 直接失败，绝不产出未签名 APK
+- **更新注意**: 换 key 必须同步本地 `local.properties` 并重新构建，否则覆盖安装会因签名不一致失败
 
 ## QWeather (和风天气)
 - **天气数据源**: 使用 QWeather API 提供天气/预警/空气质量/分钟降水数据

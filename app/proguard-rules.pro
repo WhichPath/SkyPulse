@@ -44,10 +44,6 @@
 -keep class org.bouncycastle.asn1.** { *; }
 -dontwarn org.bouncycastle.**
 
-# === Accompanist ===
--keep class com.google.accompanist.** { *; }
--dontwarn com.google.accompanist.**
-
 # === Google Play Services ===
 -keep class com.google.android.gms.** { *; }
 -dontwarn com.google.android.gms.**

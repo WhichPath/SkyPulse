@@ -60,6 +60,13 @@ class RefreshManager @Inject constructor(
         }
 
         return syncMutex.withLock {
+            // 锁内复查：isSyncing 的读取在锁外，两个并发请求可能都看到 false。
+            // 这里在持有锁时复查，确保同一时间只有一个同步任务真正执行。
+            if (isSyncing && !force) {
+                FileLogger.i(TAG, "requestSync($reason): [检查1b] 锁内复查：已有同步任务在执行，跳过")
+                return@withLock SyncResult.RateLimited
+            }
+
             // 2. 全局限流：距离上次同步不足 120 秒
             if (!force) {
                 val now = System.currentTimeMillis()

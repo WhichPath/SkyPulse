@@ -41,6 +41,8 @@ class WeatherSyncManager @Inject constructor(
         private const val LOCATING_NAME = "定位中..."
         private const val UNKNOWN_LOCATION = "未知位置"
         private const val MAX_RETRIES = 2
+        /** 永久性 HTTP 错误：重试无意义，直接短路以避免浪费请求额度。 */
+        private val PERMANENT_ERROR_CODES = setOf(401, 403, 429)
         private const val WEATHER_FETCH_ATTEMPT_TIMEOUT_MS = 12_000L
         private const val WEATHER_FETCH_TOTAL_TIMEOUT_MS = 40_000L
         private const val WIDGET_WEATHER_FETCH_MAX_RETRIES = 0
@@ -65,6 +67,9 @@ class WeatherSyncManager @Inject constructor(
     )
 
     private val lastFetchRecordsByCityId = ConcurrentHashMap<String, FetchRecord>()
+
+    /** 最近一次「尝试」取数的时间（无论成功失败），用于覆盖慢请求/失败请求的去重窗口。 */
+    private val lastAttemptByCityId = ConcurrentHashMap<String, FetchRecord>()
     private val locationMutex = Mutex()
     private val cityMutexes = ConcurrentHashMap<String, Mutex>()
     @Volatile
@@ -120,19 +125,32 @@ class WeatherSyncManager @Inject constructor(
         return mutex.withLock {
             locI("city_mutex_acquired: cityId=$cityId, wait=${elapsedSince(waitStartMs)}ms")
             val startMs = android.os.SystemClock.elapsedRealtime()
-            // 只对同一城市、同一坐标的短时间重复请求做去重；定位坐标变化时必须刷新。
             // 获锁后进行二次检查：防止在排队等待期间，前一个请求已经成功刷新了天气，当前请求可直接复用缓存。
+            // 两个窗口互补：
+            //   - 5s 成功窗口：快速去重几乎同时到达的请求；
+            //   - 取数预算窗口：覆盖慢请求/失败请求，避免排队者在前一次尝试仍在预算内时重复发 API。
             val lastFetch = lastFetchRecordsByCityId[cityId]
-            if (
-                lastFetch != null &&
-                RefreshPolicy.isSameCoordinateDedupeWindow(System.currentTimeMillis(), lastFetch.timeMillis) &&
-                isSameCoordinate(lastFetch, longitude, latitude)
-            ) {
-                Log.i(TAG, "doRefreshWeather: $cityId 排队后检查：5秒内同坐标已获取，跳过重复请求")
+            val lastAttempt = lastAttemptByCityId[cityId]
+            val dedupeNow = System.currentTimeMillis()
+            val recentSuccess = lastFetch != null &&
+                isSameCoordinate(lastFetch, longitude, latitude) &&
+                RefreshPolicy.isSameCoordinateDedupeWindow(dedupeNow, lastFetch.timeMillis)
+            val recentAttempt = lastAttempt != null &&
+                isSameCoordinate(lastAttempt, longitude, latitude) &&
+                (dedupeNow - lastAttempt.timeMillis) < fetchOptions.totalTimeoutMillis
+            if (recentSuccess || recentAttempt) {
+                Log.i(TAG, "doRefreshWeather: $cityId 排队后检查：近期同坐标已尝试，跳过重复请求 " +
+                    "(success=$recentSuccess, attempt=$recentAttempt)")
                 val cached = repository.getWeatherFromCache(cityId)
                 locI("city_refresh_deduped_after_wait: cityId=$cityId, elapsed=${elapsedSince(startMs)}ms, hasCache=${cached != null}")
                 if (cached != null) return@withLock SyncResult.Success(cached)
             }
+            // 记录本次尝试（无论成功失败），供后续排队者在取数预算窗口内去重
+            lastAttemptByCityId[cityId] = FetchRecord(
+                timeMillis = System.currentTimeMillis(),
+                longitude = longitude,
+                latitude = latitude
+            )
             FileLogger.i(TAG, "doRefreshWeather: cityId=$cityId, lon=$longitude, lat=$latitude")
             Log.i(TAG, "refreshWeather: $cityId 开始网络请求 lon=$longitude lat=$latitude")
             locI("weather_fetch_start: cityId=$cityId, lon=$longitude, lat=$latitude")
@@ -672,7 +690,10 @@ class WeatherSyncManager @Inject constructor(
                         lastException = e as? Exception ?: Exception(e)
                         locW("weather_fetch_attempt_failed: attempt=${attempt + 1}, elapsed=${elapsedSince(attemptStartMs)}ms, error=${mapError(e)}")
                         weatherW("weather_fetch_attempt_failed: attempt=${attempt + 1}, elapsed=${elapsedSince(attemptStartMs)}ms, error=${mapError(e)}")
-                        if (e is HttpException && e.code() == 429) {
+                        if (e is HttpException && e.code() in PERMANENT_ERROR_CODES) {
+                            // 401/403/429 都是永久性错误，重试只会浪费请求额度，直接短路
+                            locW("weather_fetch_permanent_error_no_retry: code=${e.code()}, attempt=${attempt + 1}")
+                            weatherW("weather_fetch_permanent_error_no_retry: code=${e.code()}, attempt=${attempt + 1}")
                             return@withTimeoutOrNull Result.failure(e)
                         }
                     }

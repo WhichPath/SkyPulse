@@ -155,6 +155,9 @@ class LocationRequestCoordinator @Inject constructor(
             } else {
                 cacheEntry = null
                 lastFailureTimeMs = 0L
+                // force 会覆盖 pendingRequest：先唤醒旧 pending 的等待者，
+                // 否则它们会永久 await() 并使调用方持有的 locationMutex 一起挂死。
+                pendingRequest?.deferreds?.forEach { if (!it.isCompleted) it.complete(null) }
             }
 
             // 1d. 没有可合并的请求或强制刷新，创建新的 pending 请求
