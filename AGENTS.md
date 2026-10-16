@@ -81,6 +81,7 @@
 ## 版本管理
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
 - **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
+- **当前发布状态（v1.0.1 / 2026-10-16）**: 已完成安全审计，仓库与发布包体均**不含任何密钥/私钥/口令**（签名物料与 `local.properties` 仅存本地；`*.jks` / `*.keystore` / `keystore.properties` 已 gitignore 且未跟踪）；APK 由本地 `assembleRelease` 产出，签名密钥 CN=RidgeCast（4096-bit RSA/PKCS12）。该版本为 RidgeCast 身份下首次可发布源码状态（正式 APK 仍按本文件规则私下分发，不创建 GitHub Release）。
 
 ## 发版与构建规则
 - **本地编译优先**: 以后所有 Release 版本采用本地优先编译验证（`./gradlew assembleRelease`），不再推送到 GitHub Actions 远程编译；
