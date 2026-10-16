@@ -17,6 +17,11 @@ scripts/tools/
 # Build artifacts
 *.apk
 
+# Release signing material（v4.1.3 起签名密钥轮换，仓库不再跟踪任何 keystore）
+*.jks
+*.keystore
+keystore.properties
+
 scripts/generate_code.py
 
 # Local-only development assets (device screenshots & design reference material)

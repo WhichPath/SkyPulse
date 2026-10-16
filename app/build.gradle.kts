@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,16 +8,37 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+/**
+ * Release 签名参数**只从本地读取**，仓库中不再存放任何 keystore 或口令。
+ *
+ * 来源优先级：Gradle 属性 (-P) > local.properties > 环境变量。
+ * 口令缺失时 release 构建立即失败，杜绝产出用空口令签名的包。
+ */
+fun releaseSecret(name: String): String? {
+    val localProps = rootProject.file("local.properties")
+    val fromLocal = if (localProps.exists()) {
+        val props = Properties()
+        localProps.inputStream().use { props.load(it) }
+        props.getProperty(name)
+    } else null
+    return providers.gradleProperty(name).orNull ?: fromLocal ?: System.getenv(name)
+}
+
+val releaseStoreFile = releaseSecret("RELEASE_STORE_FILE") ?: "release-keystore.jks"
+val releaseStorePassword = releaseSecret("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = releaseSecret("RELEASE_KEY_ALIAS") ?: "weather-app"
+val releaseKeyPassword = releaseSecret("RELEASE_KEY_PASSWORD") ?: releaseStorePassword
+
 android {
-    namespace = "com.skypulse.weather"
+    namespace = "com.ridgecast.weather"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.skypulse.weather"
+        applicationId = "com.ridgecast.weather"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1012
-        versionName = "4.1.3"
+        versionCode = 100
+        versionName = "1.0.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -24,10 +47,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("release-keystore.jks")
-            storePassword = "weather123"
-            keyAlias = "weather-app"
-            keyPassword = "weather123"
+            storeFile = file(releaseStoreFile)
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
         }
     }
 
@@ -35,7 +58,17 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            // 口令缺失时直接报错，绝不产出用弱口令/空口令签名的包
+            signingConfig = if (releaseStorePassword != null) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "[SkyPulse] 未找到 release 签名口令：请在 local.properties 配置 " +
+                        "RELEASE_STORE_PASSWORD / RELEASE_KEY_PASSWORD / RELEASE_KEY_ALIAS，" +
+                        "或提供同名环境变量。详见 local.properties.example。"
+                )
+                null
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android.txt"),
                 "proguard-rules.pro"

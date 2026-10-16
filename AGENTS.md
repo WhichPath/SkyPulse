@@ -2,9 +2,9 @@
 
 ## 构建环境
 - **JAVA_HOME**: `C:\Program Files\Android\Android Studio\jbr`
-- **Gradle Wrapper**: `gradlew.bat` (Gradle 8.5)
+- **Gradle Wrapper**: `gradlew.bat` (Gradle 8.13)
 - **compileSdk / targetSdk**: 35
-- **minSdk**: 26
+- **minSdk**: 34
 - **Java Version**: 17
 
 ## 签名信息 (Release)
@@ -84,7 +84,7 @@
 ## 发版与构建规则
 - **本地编译优先**: 以后所有 Release 版本采用本地优先编译验证（`./gradlew assembleRelease`），不再推送到 GitHub Actions 远程编译；
 - **GitHub 只提交代码，不编译（v4.1.2 起）**: 仓库不再保留任何 CI 编译工作流（`.github/workflows/build.yml` 已删除），push 仅用于同步源码，任何 APK 一律由本地编译产出；
-- **编译产物归档**: 本地编译成功后，将 `app/build/outputs/apk/release/app-release.apk` 复制重命名为工作区根目录的 `skypulse-v<versionName>.apk`；
+- **编译产物归档**: 本地编译成功后，将 `app/build/outputs/apk/release/app-release.apk` 复制重命名为工作区根目录的 `ridgecast-v<versionName>.apk`；
 - **包体安全性**: 由于已彻底清除编译期密钥注入，发布包不包含任何敏感信息，但仍保持私下分发规范；
 - **GitHub 发版（永久禁止）**: 永远不要创建公开的 GitHub Release。
 
@@ -95,9 +95,9 @@
 
 
 ## 包体命名
-- **APK 命名**: `skypulse-v<versionName>.apk`
+- **APK 命名**: `ridgecast-v<versionName>.apk`
 - 下载到工作区的 APK 必须使用该格式
-- **APK 清理**: 每次构建成功并生成新的 APK 后，清理根目录中旧的 `skypulse-v*.apk` 包，仅保留最新构建产物；除非用户明确要求保留历史 APK
+- **APK 清理**: 每次构建成功并生成新的 APK 后，清理根目录中旧的 `ridgecast-v*.apk` 包，仅保留最新构建产物；除非用户明确要求保留历史 APK
 
 ## 编码规范
 - **所有源码文件统一使用 UTF-8 编码（无 BOM）**

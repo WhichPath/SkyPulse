@@ -7,7 +7,7 @@
 -keepattributes RuntimeVisibleParameterAnnotations
 
 # Keep ALL model data classes and their members
--keep class com.skypulse.weather.model.** { *; }
+-keep class com.ridgecast.weather.model.** { *; }
 
 # Keep ALL Moshi classes (required for codegen adapter discovery via @JsonClass annotation)
 -keep class com.squareup.moshi.** { *; }
@@ -26,8 +26,8 @@
     @retrofit2.http.* <methods>;
 }
 # Keep API interface with ALL members and signatures (R8 strips Signature from interfaces)
--keep,allowobfuscation class com.skypulse.weather.data.remote.** { *; }
--keepclassmembers,allowobfuscation class com.skypulse.weather.data.remote.** { *; }
+-keep,allowobfuscation class com.ridgecast.weather.data.remote.** { *; }
+-keepclassmembers,allowobfuscation class com.ridgecast.weather.data.remote.** { *; }
 -dontwarn retrofit2.**
 
 # === OkHttp ===
