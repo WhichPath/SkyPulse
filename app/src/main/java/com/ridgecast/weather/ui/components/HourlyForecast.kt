@@ -465,7 +465,8 @@ private fun HourlyTemperatureChart(
         val chartColors = theme.chartColors
         skyconValues.map { skycon ->
             when {
-                skycon == null -> chartColors.clear
+                // 缺失天气现象时不要伪造晴天色，否则连续未知时段会变成整块黄色
+                skycon == null -> Color.Transparent to Color.Transparent
                 skycon.contains("STORM") -> chartColors.storm
                 skycon.contains("HEAVY_RAIN") || skycon.contains("HEAVY_SNOW") -> chartColors.rain
                 skycon.contains("RAIN") || skycon.contains("SNOW") -> chartColors.rain
@@ -475,7 +476,8 @@ private fun HourlyTemperatureChart(
                 skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> chartColors.haze
                 skycon == "WIND" -> chartColors.wind
                 skycon.contains("CLEAR") -> chartColors.clear
-                else -> chartColors.clear
+                // 未识别的天气代码同样不要落成晴天色块
+                else -> Color.Transparent to Color.Transparent
             }
         }
     }

@@ -63,7 +63,36 @@
 - **物理光源**：屏幕空间全局虚拟光源锚定在左上方（$X \approx 28\% W, Y = -380\text{dp}$）；
 - **视差衰减**：各卡片依据在视口中的绝对坐标同心发散受光，上下深度随列表垂直滑动动态演变高光聚散度与轮廓微光。
 
-### 4. 按钮组排版规范（v4.1.2 修复「重新生成」按钮重绘换行）
+### 4. 统一液态玻璃框架（v1.0.5）
+- **唯一入口**：所有玻璃面板统一使用 `Modifier.liquidGlass(...)`（`ui/components/LiquidGlass.kt`）；
+  主页用 `GlassCard`，次级页用 `secondaryGlassSurface`，弹窗用 `floatingGlassSurface`，
+  引导页直接用 `liquidGlass`。**严禁再为单个面板手写材质 / blur / AGSL。**
+- **背景源**：页面背景层必须加 `Modifier.layerBackdrop(backdrop)`，并通过
+  `LocalGlassBackdrop` 下发给内容；背景层与内容层分离，玻璃只采样实时背景，
+  不采样自身内容。
+- **库来源**：`app/src/main/java/com/kyant/backdrop/` 是 Kyant0/AndroidLiquidGlass
+  （Backdrop，Apache-2.0）的 Android-only vendored 子集。上游 2.x 依赖 Kotlin 2.4/Compose 1.12，
+  本项目 Kotlin 2.0/Compose 1.7，故 vendored 并做了兼容适配；升级前先验证构建。
+- **形状**：玻璃统一用 `RoundedCornerShape`，与 Backdrop 的 rounded-rect SDF 一致；
+  不要再把超椭圆 Shape 传给 lens（会因 SDF 不匹配产生缺角/黑角）。
+- **表面色**：v1.0.5 默认**不铺白色罩色**（Clear 玻璃），可读性由背景模糊、边缘高光、
+  内外阴影提供；如果后续确实需要压暗/提亮，使用中性 dim 或自适应亮度，不要回退成
+  大面积白罩。`onDrawSurface` 若启用，必须与背景层一样被 clip 到面板形状。
+- **动态高光**：`LocalGlassLight` / `rememberGlassLight(daily)` 按当天太阳/月亮轨迹
+  计算高光轴向与强度；白天太阳主导，夜间月亮/夜光更弱。新增玻璃面板只要走
+  `liquidGlass` 就自动继承，不要单独写死高光角度。
+- **关键坑（严禁重犯）**：
+  1. `drawBackdrop` 为了采样模糊/折射，会把背景层向四周扩 `padding`；
+     **必须把该背景层 clip 到面板形状再合成**，否则后绘制的面板会用扩边背景
+     覆盖前一个面板的内容（v1.0.5 修过）。
+  2. vendored `Lens.kt` 在 `onAttach()` 时 `size` 尚未就绪，必须先判 `size.isSpecified` 再应用；
+     否则会抛 `Size is unspecified` 崩溃。
+  3. 不要在 Compose 1.7 下恢复 `DrawBackdropNode` 的 `placeWithLayer`/LayoutModifier 方案；
+     会触发 `LayoutNode should be attached to an owner`。
+- **验证方式**：临时在背景层画高对比网格，滚动页面确认网格在面板内外保持同一屏幕位置
+  （背景不随面板粘滞），并检查四角无黑洞、相邻面板内容不被覆盖；验证后删除网格。
+
+### 5. 按钮组排版规范（v4.1.2 修复「重新生成」按钮重绘换行）
 - **同排按钮一律等分宽度**：按钮放入 `Row` 时每个按钮必须带 `modifier = Modifier.weight(1f)`，父 `Row` 必须 `fillMaxWidth()`；
 - **按钮文字单行省略**：`Text` 必须设 `maxLines = 1` + `softWrap = false` + `overflow = TextOverflow.Ellipsis`，**严禁让按钮文案换行撑高**；
 - **状态切换文案不得改变宽度**：文案由「复制公钥」变为「已复制 ✓」这类变长时，因为等分宽度才不会引发兄弟按钮重新测量与抖动；
@@ -81,7 +110,7 @@
 ## 版本管理
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
 - **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
-- **当前发布状态（v1.0.2 / 2026-10-16）**: 修复逐小时预报元素重叠与间距坍塌，移除设置中无效的逐小时空气质量开关，空气质量归因链接下移并整合至底部署名，优化主页卡片底色白度与透明度。正式 APK 经本地签名后附带于 GitHub Release（v1.0.2）分发。
+- **当前发布状态（v1.0.5 / 2026-10-19）**: 全 UI 切换至统一 Backdrop 液态玻璃框架（主页、设置、城市管理、预警详情、引导页、浮动弹窗）；Clear 玻璃无白罩，太阳/月亮轨迹驱动动态高光，阴影收敛；修复扩边背景覆盖相邻面板、直角白遮罩、黑角与背景采样粘滞。正式 APK 经本地签名后附带于 GitHub Release（v1.0.5）分发。
 
 ## 发版与构建规则
 - **本地编译优先**: 以后所有 Release 版本采用本地优先编译验证（`./gradlew assembleRelease`），不再推送到 GitHub Actions 远程编译；

@@ -37,8 +37,8 @@ android {
         applicationId = "com.ridgecast.weather"
         minSdk = 34
         targetSdk = 35
-        versionCode = 104
-        versionName = "1.0.4"
+        versionCode = 105
+        versionName = "1.0.5"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -132,7 +132,6 @@ dependencies {
 
     // UI
     implementation(libs.androidsvg)
-    implementation(libs.haze)
     implementation(libs.splashscreen)
 
     // DI

@@ -32,7 +32,6 @@ import com.ridgecast.weather.data.ThemeMode
 import com.ridgecast.weather.data.WeatherSettings
 import com.ridgecast.weather.data.remote.qweather.QWeatherConnectionResult
 import com.ridgecast.weather.data.remote.qweather.QWeatherCredentials
-import com.ridgecast.weather.ui.components.LocalGlassHazeState
 import com.ridgecast.weather.ui.components.liquidGlass
 import com.ridgecast.weather.ui.components.QWeatherApiSettingsSection
 import com.ridgecast.weather.ui.components.secondaryGlassSurface
@@ -250,7 +249,6 @@ private fun IosCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val page = LocalSecondaryPageTheme.current
-    val hazeState = LocalGlassHazeState.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -258,8 +256,11 @@ private fun IosCard(
             .liquidGlass(
                 radius = SkyPulseDesignSystem.Radius.settingsCard,
                 isDark = page.isDark,
-                hazeState = hazeState,
-                backgroundColor = page.cardBackground
+                backgroundColor = page.cardBackground,
+                tintAlpha = if (page.isDark) 0.30f else 0.24f,
+                blurRadius = 8.dp,
+                refractionHeight = 16.dp,
+                refractionAmount = 20.dp
             ),
         content = content
     )

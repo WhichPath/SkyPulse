@@ -49,8 +49,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ridgecast.weather.ui.glass.weatherPageBackground
 import com.ridgecast.weather.data.WeatherSettings
 import com.ridgecast.weather.data.ThemeMode
@@ -231,26 +231,30 @@ fun WeatherScreen(
         return
     }
 
+    // 全局玻璃光源：当前城市当天的太阳/月亮轨迹 → 高光轴向与强度
+    val glassLight = rememberGlassLight(daily)
+
     // 次级页面（城市管理/预警详情/设置）深浅色配色，主页与小组件不受影响
     val secondaryPageColors = if (resolvedDark) SecondaryPageDarkColors else SecondaryPageLightColors
 
     CompositionLocalProvider(
         LocalWeatherTheme provides weatherTheme,
-        LocalSecondaryPageTheme provides secondaryPageColors
+        LocalSecondaryPageTheme provides secondaryPageColors,
+        LocalGlassLight provides glassLight
     ) {
-        // 次级页（城市管理/设置/预警详情）玻璃模糊源：屏幕底色刷（天气着色渐变）。
-        // 主页 CityDetail 分支内层 WeatherBackground 会用自己的 HazeState 覆盖 LocalGlassHazeState，
-        // 因此两层互不干扰。
-        val rootGlassHaze = remember { HazeState() }
+        // 次级页（城市管理/设置/预警详情）玻璃背景源：屏幕底色刷（天气着色渐变）。
+        // 主页 CityDetail 分支内层 WeatherBackground 会用自己的 LayerBackdrop 覆盖
+        // LocalGlassBackdrop，因此两层互不干扰。
+        val rootGlassBackdrop = rememberLayerBackdrop()
         val rootPowerSave = rememberPowerSaveMode()
         CompositionLocalProvider(
-            LocalGlassHazeState provides (if (rootPowerSave) null else rootGlassHaze)
+            LocalGlassBackdrop provides (if (rootPowerSave) null else rootGlassBackdrop)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .haze(rootGlassHaze)
+                        .layerBackdrop(rootGlassBackdrop)
                         .background(currentScreen.screenBackgroundBrush(weatherTheme, secondaryPageColors))
                 )
                 AnimatedContent(
@@ -281,9 +285,9 @@ fun WeatherScreen(
 
             AppScreen.CityDetail -> {
                 var activeExplanation by remember { mutableStateOf<ActiveExplanation?>(null) }
-                // 弹窗与主页共用同一个模糊源：玻璃采样的是弹窗背后真实的天气内容，
-                // 而不是根级次级页底色（否则浅色主页上的深色弹窗会变成一块黑板）。
-                val cityGlassHaze = remember { HazeState() }
+                // 弹窗与主页共用同一个背景源：玻璃采样的是弹窗背后真实的天气内容，
+                // 而不是根级次级页底色。
+                val cityGlassBackdrop = rememberLayerBackdrop()
                 val explanationController = remember {
                     object : ExplanationController {
                         override fun showAqi(aqi: Int?) {
@@ -319,7 +323,7 @@ fun WeatherScreen(
                             daily = daily,
                             wind = wind,
                             modifier = if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier,
-                            hazeState = cityGlassHaze
+                            backdrop = cityGlassBackdrop
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 when (val state = uiState) {
@@ -503,7 +507,7 @@ fun WeatherScreen(
                 }
 
                 // 浮动毛玻璃详情面板 Overlay (同层渲染，底层完美硬件高斯模糊)
-                CompositionLocalProvider(LocalGlassHazeState provides cityGlassHaze) {
+                CompositionLocalProvider(LocalGlassBackdrop provides cityGlassBackdrop) {
                     ExplanationModalOverlay(
                         active = activeExplanation,
                         onDismiss = { activeExplanation = null }

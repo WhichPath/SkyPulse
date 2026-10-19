@@ -15,7 +15,7 @@
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)]()
 [![Material 3](https://img.shields.io/badge/Design-Material%203-005A9C?style=flat-square)]()
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)]()
-[![Release](https://img.shields.io/badge/Version-1.0.0-brightgreen?style=flat-square)]()
+[![Release](https://img.shields.io/badge/Version-1.0.5-brightgreen?style=flat-square)]()
 [![Min SDK](https://img.shields.io/badge/Min%20SDK-34-orange?style=flat-square)]()
 
 A beautifully crafted, feature-rich Android weather app built with **Kotlin** and **Jetpack Compose**, featuring Apple-style continuous rounded corners, glassmorphism UI, animated weather backgrounds, and smooth animations.
@@ -161,7 +161,7 @@ This project is licensed under the MIT License.
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)]()
 [![Material 3](https://img.shields.io/badge/Design-Material%203-005A9C?style=flat-square)]()
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)]()
-[![Release](https://img.shields.io/badge/Version-1.0.0-brightgreen?style=flat-square)]()
+[![Release](https://img.shields.io/badge/Version-1.0.5-brightgreen?style=flat-square)]()
 [![Min SDK](https://img.shields.io/badge/Min%20SDK-34-orange?style=flat-square)]()
 
 一款精心打造的 Android 天气应用，使用 **Kotlin** + **Jetpack Compose** 构建，采用苹果风格连续平滑圆角、毛玻璃 UI、天气主题动态背景与丝滑动画。

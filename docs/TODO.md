@@ -1,4 +1,4 @@
-# RidgeCast 待办清单（2026-10-19 / v1.0.4）
+# RidgeCast 待办清单（2026-10-19 / v1.0.5）
 
 > 本文件只记录待办，不代表已经排期或开始实现。
 > 状态图例：⬜ 未开始 / 🟡 进行中 / ⏸ 等待外部条件 / 💬 待讨论 / ✅ 已完成
@@ -8,13 +8,13 @@
 
 ---
 
-## A. 液态玻璃（v1.0.4 后续）
+## A. 液态玻璃（v1.0.5 后续）
 
 ### A1. 真实物理折射模型（替代经验参数）
 
 - 状态：⬜
-- 现状：`LiquidGlass` 使用 SDF + `lensCurve` + `depthEffect` / `dispersion` 的经验公式，
-  视觉上接近 IT之家/QmDeve，但**不是严格的 3D 玻璃光学计算**。
+- 现状：v1.0.5 使用 Backdrop 的 2D SDF lens（circleMap + 折射位移），视觉上已统一，
+  但仍**不是严格的 3D 玻璃光学计算**；本条目继续保留为材质升级方向。
 - 目标：把玻璃当作有厚度的三维固体，用可解释的物理量驱动边缘折射：
   - 由玻璃厚度与倒角高度场（bevel height field）求表面法线；
   - 用 Snell 定律 `n1·sinθ1 = n2·sinθ2` 计算视线进入/离开玻璃的偏折；
@@ -28,7 +28,8 @@
 
 ### A2. 移除或可选化等压线纹理
 
-- 状态：⬜（用户倾向移除）
+- 状态：✅（v1.0.5 已移除）
+- 说明：主页背景不再绘制等压线；背景采样由 Backdrop `LayerBackdrop` 实时提供。
 - 现状：`WeatherBackground.IsobarVeil` 是为平滑天气渐变补充的低频纹理，
   目的是让玻璃边缘的折射“有东西可弯”；它不是物理必需项。
 - 待办：确认是否默认移除；若保留，建议做成开发者/设置开关，默认关闭。
@@ -112,16 +113,22 @@
 
 - `AUDIT_BACKLOG.md` 第一批 1-21 项：✅ 已完成（安全、性能、文档清理）。
 - `AUDIT_BACKLOG.md` 中提到的旧行号、旧包名、旧版本号：已过时，以当前代码/AGENTS.md 为准。
-- v1.0.4 本轮已完成：背景采样液态玻璃、卡片内容与 shader 分离、投影、
+- v1.0.4 已完成：背景采样液态玻璃、卡片内容与 shader 分离、投影、
   设置/城市搜索/WBGT 弹窗接入、灰矩形修复、uniform 创建顺序修复。
+- v1.0.5 已完成：全 UI 切换至 vendored Backdrop（Apache-2.0）统一玻璃框架；
+  引导页/主页/设置/城市管理/预警详情/浮动弹窗接入；Clear 玻璃无白罩；
+  太阳/月亮轨迹驱动动态高光与夜间强度衰减；阴影收敛；移除等压线与 Haze；
+  修复扩边背景覆盖相邻面板、直角白遮罩、黑角、背景采样粘滞；修正未知天气色块。
 - 参考素材/逆向过程已归档到 `ref/`（gitignored）：`ref/ithome/`、`ref/qmdeve/`。
 
 ---
 
-## D. v1.0.4 发布状态
+## D. v1.0.5 发布状态
 
-- ✅ 本地 `assembleRelease` 已成功，产物：`ridgecast-v1.0.4.apk`
-  （`versionCode=104`，`versionName=1.0.4`，已用本地 keystore 签名）。
-- ✅ release APK 已在 Pixel_8_API_35 模拟器安装启动验证：无闪退，液态玻璃正常。
-- ⬜ GitHub tag / push / Release 上传：未执行（本轮只要求本地提交与本地编译）。
-- ⬜ `AGENTS.md` 的“当前发布状态”仍写 v1.0.2：等 v1.0.4 正式发布后再更新，避免把本地构建误写成已发布。
+- ✅ 本地 `assembleRelease` 已成功，产物：`ridgecast-v1.0.5.apk`
+  （`versionCode=105`，`versionName=1.0.5`，已用本地 keystore 签名）。
+- ✅ release APK 已在 Pixel_8_API_35 模拟器安装启动验证：引导页/主页/设置/滚动无闪退，
+  面板内容无遮挡、四角无黑洞。
+- ✅ GitHub tag / push / Release 上传：v1.0.5。
+  APK：`https://github.com/WhichPath/SkyPulse/releases/download/v1.0.5/ridgecast-v1.0.5.apk`
+- ✅ `AGENTS.md` 的“当前发布状态”已更新为 v1.0.5。

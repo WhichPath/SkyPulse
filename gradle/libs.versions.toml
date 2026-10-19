@@ -13,7 +13,6 @@ bouncycastle = "1.80"
 play-services-location = "21.3.0"
 
 androidsvg = "1.4"
-haze = "1.0.2"
 splashscreen = "1.0.1"
 hilt = "2.53.1"
 hilt-navigation-compose = "1.2.0"
@@ -49,7 +48,6 @@ bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.re
 
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
 androidsvg = { group = "com.caverock", name = "androidsvg-aar", version.ref = "androidsvg" }
-haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
