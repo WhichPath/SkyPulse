@@ -1,0 +1,169 @@
+// SkyPulse 液态玻璃 RuntimeShader（v1.0.4）。
+//
+// 折射/色散的 SDF 数学参考 MIT 许可的 QmDeve AndroidLiquidGlassView
+// （IT之家同款 vendored 库，"Modified By iruanmi.com"），
+// 光学轮廓（整周连续折射带 + 暗色发丝线 + 左上高光 + 对侧阴影）
+// 参考其底栏选择器透镜。代码为本项目自带实现：
+// 内区仅饱和/对比/染色，环形折射带做位移采样 + RGB 色散 + 光学 rim。
+//
+// 注意：uniform shader 名称必须与
+// RenderEffect.createRuntimeShaderEffect(shader, "content") 的第二个参数一致。
+
+uniform shader content;
+
+uniform float2 size;
+uniform float2 offset;
+uniform float4 cornerRadii;
+uniform float refractionHeight;
+uniform float refractionAmount;
+uniform float depthEffect;
+uniform float dispersion;
+
+uniform float isDark;
+uniform float rimStrength;
+uniform float contrast;
+uniform float whitePoint;
+uniform float chromaMultiplier;
+
+uniform float3 tintColor;
+uniform float tintAlpha;
+
+const half3 kLuminance = half3(0.2126, 0.7152, 0.0722);
+
+float radiusAt(float2 coord, float4 radii) {
+    if (coord.x >= 0.0) {
+        return coord.y <= 0.0 ? radii.y : radii.z;   // 右上 / 右下
+    }
+    return coord.y <= 0.0 ? radii.x : radii.w;       // 左上 / 左下
+}
+
+float sdRoundedRect(float2 coord, float2 halfSize, float radius) {
+    float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
+    float outside = length(max(cornerCoord, 0.0)) - radius;
+    float inside = min(max(cornerCoord.x, cornerCoord.y), 0.0);
+    return outside + inside;
+}
+
+float2 safeNormalize(float2 value, float2 fallback) {
+    float len = length(value);
+    return len > 0.001 ? value / len : fallback;
+}
+
+float2 roundedRectGradient(float2 coord, float2 halfSize, float radius) {
+    float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
+    if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
+        // 角区：梯度指向圆弧外法线方向
+        float2 outside = max(cornerCoord, 0.0);
+        float outsideLength = length(outside);
+        if (outsideLength > 0.001) {
+            return sign(coord) * (outside / outsideLength);
+        }
+        float useX = step(cornerCoord.y, cornerCoord.x);
+        return float2(
+            useX * sign(coord.x),
+            (1.0 - useX) * sign(coord.y)
+        );
+    }
+    // 直边区：取 x/y 中更靠边缘的轴
+    float useX = step(cornerCoord.y, cornerCoord.x);
+    return sign(coord) * float2(useX, 1.0 - useX);
+}
+
+// 圆透镜轮廓曲线：t=0 时为 0（远离边缘），t=1 时为 1（贴边）
+float lensCurve(float value) {
+    float clamped = clamp(value, 0.0, 1.0);
+    return 1.0 - sqrt(max(0.0, 1.0 - clamped * clamped));
+}
+
+half4 saturateColor(half4 color, float amount) {
+    half3 lin = toLinearSrgb(color.rgb);
+    float y = dot(lin, kLuminance);
+    half3 gray = half3(y);
+    half3 sat = fromLinearSrgb(mix(gray, lin, amount));
+    return half4(sat, color.a);
+}
+
+half4 applyContrastAndTint(half4 color, float3 tint, float alpha) {
+    float3 target = (whitePoint > 0.0) ? float3(1.0) : float3(0.0);
+    half3 rgb = half3(mix(color.rgb, target, abs(whitePoint)));
+    rgb = half3((rgb - 0.5) * (1.0 + contrast) + 0.5);
+    return half4(mix(rgb, half3(tint), alpha), 1.0);
+}
+
+half4 main(float2 coord) {
+    float2 halfSize = size * 0.5;
+    // 防御：size 尚未同步时直接透传内容，严禁返回全透明（面板消失事故根源）
+    if (halfSize.x <= 0.5 || halfSize.y <= 0.5) {
+        return content.eval(coord);
+    }
+
+    float2 centeredCoord = (coord + offset) - halfSize;
+    float radius = radiusAt(centeredCoord, cornerRadii);
+    float sd = sdRoundedRect(centeredCoord, halfSize, radius);
+
+    // 裁剪区域外：当前层已被 clip，仅作兜底
+    if (sd > 0.0) {
+        return half4(0.0);
+    }
+
+    float height = max(refractionHeight, 0.5);
+
+    // ── 内区：采样不位移，仅饱和/对比/染色 ──
+    if (-sd >= height) {
+        half4 baseColor = content.eval(coord);
+        baseColor = saturateColor(baseColor, chromaMultiplier);
+        return applyContrastAndTint(baseColor, tintColor, tintAlpha);
+    }
+
+    // ── 折射带：整周连续折射 + RGB 色散 ──
+    float rimDistance = clamp(-sd / height, 0.0, 1.0);   // 0 在贴边，1 在带内侧
+    float displacement = lensCurve(1.0 - rimDistance) * refractionAmount;
+    float2 shapeGrad = roundedRectGradient(centeredCoord, halfSize, radius);
+    float2 centreGrad = safeNormalize(centeredCoord, shapeGrad);
+    float2 grad = safeNormalize(shapeGrad + depthEffect * centreGrad, shapeGrad);
+    float2 refractedCoord = coord + displacement * grad;
+
+    half4 src = content.eval(refractedCoord);
+    float chromaAmount = dispersion * height * lensCurve(1.0 - rimDistance);
+    if (chromaAmount > 0.001) {
+        half4 redSample = content.eval(refractedCoord + grad * chromaAmount);
+        half4 blueSample = content.eval(refractedCoord - grad * chromaAmount);
+        src.r = redSample.r;
+        src.b = blueSample.b;
+    }
+    src = saturateColor(src, chromaMultiplier);
+
+    float3 target = (whitePoint > 0.0) ? float3(1.0) : float3(0.0);
+    half3 rgb = half3(mix(src.rgb, target, abs(whitePoint)));
+    rgb = half3((rgb - 0.5) * (1.0 + contrast) + 0.5);
+    rgb = mix(rgb, half3(tintColor), tintAlpha);
+
+    // ── iOS 风格光学轮廓 ──
+    // 暗色发丝线建立轮廓，左侧-上方宽高光，对侧更柔的内收暗影。
+    float rimWidth = max(2.25, height * 0.34);
+    float rim = 1.0 - smoothstep(0.0, rimWidth, -sd);
+    float hairlineWidth = max(1.20, height * 0.06);
+    float hairline = 1.0 - smoothstep(0.0, hairlineWidth, -sd);
+    float2 outwardNormal = roundedRectGradient(centeredCoord, halfSize, radius);
+    float2 lightDirection = safeNormalize(float2(-0.28, -0.96), float2(0.0, -1.0));
+    float lightFacing = pow(max(dot(outwardNormal, lightDirection), 0.0), 1.6);
+    // 光源略偏左：顶边高光从左到右自然衰减，避免整条白边像描边
+    float sideBias = 0.55 + 0.45 * clamp(-centeredCoord.x / max(halfSize.x, 1.0), -1.0, 1.0);
+    lightFacing *= sideBias;
+
+    half3 rimColor = isDark > 0.5 ? half3(0.86) : half3(1.0);
+    half3 contourColor = isDark > 0.5 ? half3(0.13) : half3(0.18);
+    float contourAmount = isDark > 0.5 ? 0.62 : 0.42;
+
+    // 左上宽高光（外侧更亮）+ 对侧内收暗影（底/右边缘压暗，圆形体积感来源）
+    rgb = mix(rgb, rimColor, rim * lightFacing * rimStrength);
+    rgb = mix(rgb, rimColor, rim * rim * pow(lightFacing, 2.0) * 0.45 * rimStrength);
+    rgb = mix(rgb, contourColor, rim * (1.0 - lightFacing) * rimStrength * 0.62);
+    // 发丝线最后绘制：保证最外圈是一条干净的暗色轮廓，而不是被高光覆盖的白边
+    rgb = mix(rgb, contourColor, hairline * contourAmount * max(rimStrength, 0.55));
+    // 轻微体积暗角：贴边少量压暗，强化「凸起玻璃厚度」感
+    float vignette = rim * rim * rim * 0.30;
+    rgb *= 1.0 - vignette * 0.25 * (1.0 - lightFacing * 0.55);
+
+    return half4(rgb, 1.0);
+}

@@ -482,7 +482,7 @@ private fun HourlyTemperatureChart(
     val horizontalEdgeGuard = rememberHorizontalScrollEdgeGuard()
 
     // 快速滑动时降级为占位渲染，避免一次性构建大量文本与雨丝
-    val fastScrolling = rememberFastScrollFlag(scrollState)
+    val fastScrolling = false
 
     val tagWidth = 62.dp
 
@@ -491,21 +491,8 @@ private fun HourlyTemperatureChart(
         val sidePadPx = with(density) { sidePad.toPx() }
         val viewportPx = with(density) { maxWidth.toPx() }
 
-        // ---------- 窗口化：只构建视口附近（±2 格缓冲）的元素 ----------
-        // 必须包在 derivedStateOf 里：直接在组合期读 scrollState.value 会让本函数
-        // （含 6 行参数行）在每个滚动像素上整体重组。窗口仅在跨越整格时变化，
-        // 数据类相等性保证只有窗口真的移动时才向下游传播失效。
-        val window by remember(itemWidthPx, viewportPx, sidePadPx, itemCount) {
-            derivedStateOf {
-                computeHourlyWindow(
-                    scrollOffsetPx = scrollState.value.toFloat(),
-                    viewportPx = viewportPx,
-                    itemWidthPx = itemWidthPx,
-                    sidePadPx = sidePadPx,
-                    itemCount = itemCount
-                )
-            }
-        }
+        // 直接全量渲染全部小时 cell，与逐日面板一致；避免窗口化/快速滑动占位导致的闪烁。
+        val window = remember(itemCount) { HourlyWindow(0, itemCount) }
         val windowStart = window.start
         val windowEnd = window.end
         val windowCount = (windowEnd - windowStart).coerceAtLeast(1)

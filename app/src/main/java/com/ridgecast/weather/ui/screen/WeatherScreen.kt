@@ -49,6 +49,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import com.ridgecast.weather.ui.glass.weatherPageBackground
 import com.ridgecast.weather.data.WeatherSettings
 import com.ridgecast.weather.data.ThemeMode
@@ -236,12 +238,22 @@ fun WeatherScreen(
         LocalWeatherTheme provides weatherTheme,
         LocalSecondaryPageTheme provides secondaryPageColors
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(currentScreen.screenBackgroundBrush(weatherTheme, secondaryPageColors))
+        // 次级页（城市管理/设置/预警详情）玻璃模糊源：屏幕底色刷（天气着色渐变）。
+        // 主页 CityDetail 分支内层 WeatherBackground 会用自己的 HazeState 覆盖 LocalGlassHazeState，
+        // 因此两层互不干扰。
+        val rootGlassHaze = remember { HazeState() }
+        val rootPowerSave = rememberPowerSaveMode()
+        CompositionLocalProvider(
+            LocalGlassHazeState provides (if (rootPowerSave) null else rootGlassHaze)
         ) {
-            AnimatedContent(
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .haze(rootGlassHaze)
+                        .background(currentScreen.screenBackgroundBrush(weatherTheme, secondaryPageColors))
+                )
+                AnimatedContent(
                 targetState = currentScreen,
                 modifier = Modifier.fillMaxSize(),
                 transitionSpec = { skyPulseScreenTransition() },
@@ -269,6 +281,9 @@ fun WeatherScreen(
 
             AppScreen.CityDetail -> {
                 var activeExplanation by remember { mutableStateOf<ActiveExplanation?>(null) }
+                // 弹窗与主页共用同一个模糊源：玻璃采样的是弹窗背后真实的天气内容，
+                // 而不是根级次级页底色（否则浅色主页上的深色弹窗会变成一块黑板）。
+                val cityGlassHaze = remember { HazeState() }
                 val explanationController = remember {
                     object : ExplanationController {
                         override fun showAqi(aqi: Int?) {
@@ -279,6 +294,9 @@ fun WeatherScreen(
                         }
                         override fun showWbgt(wbgt: Double?, uncertainty: Double?) {
                             activeExplanation = ActiveExplanation.Wbgt(wbgt, uncertainty)
+                        }
+                        override fun showAlert(alerts: List<com.ridgecast.weather.model.AlertContent>, initialIndex: Int, attributions: List<String>?) {
+                            activeExplanation = ActiveExplanation.Alert(alerts, initialIndex, attributions)
                         }
                         override fun dismiss() {
                             activeExplanation = null
@@ -300,7 +318,8 @@ fun WeatherScreen(
                             skycon = skycon,
                             daily = daily,
                             wind = wind,
-                            modifier = if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier
+                            modifier = if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier,
+                            hazeState = cityGlassHaze
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 when (val state = uiState) {
@@ -413,7 +432,16 @@ fun WeatherScreen(
                                                     scrollState = pageScrollState,
                                                     settings = settings,
                                                     onRefresh = { viewModel.refresh() },
-                                                    onAlertClick = { viewModel.navigateToAlertDetail(0) },
+                                                    onAlertClick = { idx ->
+                                                        val successState = uiState as? WeatherUiState.Success
+                                                        val alertMeta = successState?.weather?.result?.alert
+                                                        val contents = alertMeta?.content.orEmpty()
+                                                        activeExplanation = ActiveExplanation.Alert(
+                                                            alerts = contents,
+                                                            initialIndex = idx,
+                                                            attributions = alertMeta?.attributions
+                                                        )
+                                                    },
                                                     showBookmark = showBookmarkBtn,
                                                     isBookmarked = isBookmarked,
                                                     onBookmarkClick = {
@@ -475,10 +503,12 @@ fun WeatherScreen(
                 }
 
                 // 浮动毛玻璃详情面板 Overlay (同层渲染，底层完美硬件高斯模糊)
-                ExplanationModalOverlay(
-                    active = activeExplanation,
-                    onDismiss = { activeExplanation = null }
-                )
+                CompositionLocalProvider(LocalGlassHazeState provides cityGlassHaze) {
+                    ExplanationModalOverlay(
+                        active = activeExplanation,
+                        onDismiss = { activeExplanation = null }
+                    )
+                }
             }
         }
     }
@@ -540,6 +570,7 @@ fun WeatherScreen(
                     onBack = { viewModel.navigateBack() }
                 )
             }
+        }
         }
         }
         }

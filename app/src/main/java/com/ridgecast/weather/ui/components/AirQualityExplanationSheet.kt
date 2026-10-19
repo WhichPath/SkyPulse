@@ -32,6 +32,10 @@ import com.ridgecast.weather.ui.theme.TextDisabled
 import com.ridgecast.weather.ui.theme.TextPrimary
 import com.ridgecast.weather.ui.theme.TextSecondary
 import com.ridgecast.weather.ui.theme.TextTertiary
+import com.ridgecast.weather.model.AlertContent
+import com.ridgecast.weather.model.sortedByPublishTimeDescending
+import com.ridgecast.weather.ui.theme.alertLevelColor
+import com.ridgecast.weather.ui.components.LucideIcon
 import com.ridgecast.weather.util.AqhiCalculator
 
 // ============ AQI / AQHI 语义色阶 (高对比度磨砂通透配色) ============
@@ -128,17 +132,22 @@ private val AQHI_LEVELS = listOf(
         description = "短期健康风险严重。易受影响人群应避免所有户外活动；一般市民应避免一切户外体力消耗，留在室内并开启净化设施。"
     )
 )
-
 sealed interface ActiveExplanation {
     data class Aqi(val aqi: Int?) : ActiveExplanation
     data class Aqhi(val aqhi: AqhiCalculator.AqhiResult?) : ActiveExplanation
     data class Wbgt(val wbgt: Double?, val uncertainty: Double?) : ActiveExplanation
+    data class Alert(
+        val alerts: List<AlertContent>,
+        val initialIndex: Int = 0,
+        val attributions: List<String>? = null
+    ) : ActiveExplanation
 }
 
 interface ExplanationController {
     fun showAqi(aqi: Int?)
     fun showAqhi(aqhi: AqhiCalculator.AqhiResult?)
     fun showWbgt(wbgt: Double?, uncertainty: Double?)
+    fun showAlert(alerts: List<AlertContent>, initialIndex: Int = 0, attributions: List<String>? = null)
     fun dismiss()
 }
 
@@ -147,79 +156,33 @@ val LocalExplanationController = staticCompositionLocalOf<ExplanationController>
         override fun showAqi(aqi: Int?) {}
         override fun showAqhi(aqhi: AqhiCalculator.AqhiResult?) {}
         override fun showWbgt(wbgt: Double?, uncertainty: Double?) {}
+        override fun showAlert(alerts: List<AlertContent>, initialIndex: Int, attributions: List<String>?) {}
         override fun dismiss() {}
     }
 }
 
 /**
  * 统一样式的浮动玻璃质感详情弹窗 Overlay
- * - 位于同一 Compose 渲染树，背景由父容器应用真正的硬件高斯模糊 (Modifier.blur)
- * - 左右对称 (26dp)、上下在安全显示区域内对称居中 (36dp)，彻底杜绝贴底问题
- * - 采用 70%~80% 半透明深色毛玻璃材质，柔和微高光边框，通透透出底层模糊效果
- * - 点击遮罩留白处直接退出，支持原生 Back 返回手势
+ * 基于统一复用组件 [FloatingStateModal]，在同一个渲染树上承载 AQI / AQHI / WBGT / 预警详情。
  */
 @Composable
 fun ExplanationModalOverlay(
     active: ActiveExplanation?,
     onDismiss: () -> Unit
 ) {
-    if (active != null) {
-        BackHandler { onDismiss() }
-    }
-
-    AnimatedVisibility(
-        visible = active != null,
-        enter = fadeIn(animationSpec = tween(durationMillis = 260)),
-        exit = fadeOut(animationSpec = tween(durationMillis = 200))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.22f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss
-                )
-                .padding(
-                    horizontal = SkyPulseDesignSystem.Spacing.modalHorizontalMargin,
-                    vertical = SkyPulseDesignSystem.Spacing.modalVerticalMargin
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            AnimatedVisibility(
-                visible = active != null,
-                enter = fadeIn(animationSpec = tween(durationMillis = 260)) +
-                    scaleIn(
-                        initialScale = 0.95f,
-                        animationSpec = tween(durationMillis = 260)
-                    ),
-                exit = fadeOut(animationSpec = tween(durationMillis = 200)) +
-                    scaleOut(
-                        targetScale = 0.97f,
-                        animationSpec = tween(durationMillis = 200)
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .floatingGlassSurface(SkyPulseDesignSystem.Radius.extraLarge)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {} // 阻止内部点击触发外部 dismiss
-                        )
-                        .padding(horizontal = 20.dp, vertical = 22.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    when (active) {
-                        is ActiveExplanation.Aqi -> AqiExplanationContent(active.aqi)
-                        is ActiveExplanation.Aqhi -> AqhiExplanationContent(active.aqhi)
-                        is ActiveExplanation.Wbgt -> WbgtExplanationContent(active.wbgt, active.uncertainty)
-                        null -> {}
-                    }
-                }
-            }
+    FloatingStateModal(
+        data = active,
+        onDismiss = onDismiss
+    ) { current ->
+        when (current) {
+            is ActiveExplanation.Aqi -> AqiExplanationContent(current.aqi)
+            is ActiveExplanation.Aqhi -> AqhiExplanationContent(current.aqhi)
+            is ActiveExplanation.Wbgt -> WbgtExplanationContent(current.wbgt, current.uncertainty)
+            is ActiveExplanation.Alert -> AlertExplanationContent(
+                alerts = current.alerts,
+                initialIndex = current.initialIndex,
+                attributions = current.attributions
+            )
         }
     }
 }
@@ -397,5 +360,128 @@ private fun isAqhiCurrentLevel(aqhi: AqhiCalculator.AqhiResult?, band: String): 
         "8 – 10 级" -> aqhi.index in 8..10
         "10+ 级" -> aqhi.index >= 11
         else -> false
+    }
+}
+
+/**
+ * 气象预警详情内容组件（嵌入通用浮动弹窗展示）
+ */
+@Composable
+fun AlertExplanationContent(
+    alerts: List<AlertContent>,
+    initialIndex: Int = 0,
+    attributions: List<String>? = null
+) {
+    val sortedAlerts = remember(alerts) {
+        alerts.sortedByPublishTimeDescending()
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        LucideIcon(
+            name = "triangle-alert",
+            contentDescription = null,
+            tint = TextPrimary,
+            size = 22.dp
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "气象预警详情",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    if (sortedAlerts.isEmpty()) {
+        Text(
+            text = "暂无生效中的预警信息",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary
+        )
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            sortedAlerts.forEach { alert ->
+                AlertItemCard(alert = alert)
+            }
+        }
+    }
+
+    if (!attributions.isNullOrEmpty()) {
+        Spacer(modifier = Modifier.height(16.dp))
+        AttributionNote(attributions = attributions)
+    }
+}
+
+@Composable
+private fun AlertItemCard(alert: AlertContent) {
+    val title = alert.title
+        ?.replace(Regex("\\[.*?\\]"), "")
+        ?.replace(Regex("^.*(?:发布|变更|解除|继续|更新)"), "")
+        ?.replace(Regex("预警.*$"), "预警")
+        ?.trim()
+        ?.ifBlank { null } ?: alert.title ?: "气象预警"
+
+    val alertColor = alertLevelColor(
+        alert.level,
+        alert.title,
+        fallback = TextPrimary,
+        whiteAlert = TextPrimary
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(SkyPulseDesignSystem.Shapes.medium)
+            .background(Color.White.copy(alpha = 0.05f))
+            .border(1.dp, alertColor.copy(alpha = 0.35f), SkyPulseDesignSystem.Shapes.medium)
+            .padding(14.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(SkyPulseDesignSystem.Shapes.extraSmall)
+                    .background(alertColor.copy(alpha = 0.22f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = alert.level ?: "预警",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = alertColor
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = alertColor,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        if (alert.publishTime != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "发布时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(alert.publishTime * 1000L))}",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextTertiary
+            )
+        }
+
+        val description = alert.description
+        if (!description.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                color = TextSecondary
+            )
+        }
     }
 }

@@ -56,12 +56,12 @@ class WeatherRemoteDataSourceHourlyRangeTest {
 
         // includeYesterday 只应影响「是否裁掉当前小时之前的数据」，不应影响请求长度
         runCatching { dataSource.getWeather(116.4074, 39.9042, includeYesterday = true) }
-        coVerify(exactly = 1) { api.getWeatherHourlyV1(39.9042, 116.4074, 240, true, "zh") }
+        coVerify(exactly = 1) { api.getWeatherHourlyV1(39.9042, 116.4074, 72, true, "zh") }
 
         runCatching { dataSource.getWeather(116.4074, 39.9042, includeYesterday = false) }
-        // 两次调用都必须携带 240h，不允许因 includeYesterday 变化而降级
-        coVerify(exactly = 2) { api.getWeatherHourlyV1(39.9042, 116.4074, 240, true, "zh") }
-        coVerify(exactly = 0) { api.getWeatherHourlyV1(39.9042, 116.4074, 72, true, "zh") }
+        // 两次调用都必须携带 72h，不允许因 includeYesterday 变化而降级
+        coVerify(exactly = 2) { api.getWeatherHourlyV1(39.9042, 116.4074, 72, true, "zh") }
+        coVerify(exactly = 0) { api.getWeatherHourlyV1(39.9042, 116.4074, 240, true, "zh") }
     }
 
     @Test
@@ -76,6 +76,6 @@ class WeatherRemoteDataSourceHourlyRangeTest {
     @Test
     fun `hourly range stays within the provider documented maximum`() {
         // 官方 /weather/v1/hourly 的 hours 取值范围为 1-240
-        assertTrue(240 in 1..240)
+        assertTrue(72 in 1..240)
     }
 }

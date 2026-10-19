@@ -53,9 +53,9 @@ class WeatherRemoteDataSource @Inject constructor(
             // v4.1.3 修正：逐小时请求长度**不能**由 includeYesterday 决定。
             // includeYesterday 只负责「是否裁掉当前小时之前的数据」，而唯一生产调用点
             // (WeatherSyncManager) 恒传 true，若据此推导请求长度，240h 会永久失效。
-            // 主界面与 Widget 共用同一份 Room 缓存，故统一按官方上限拉满 240h（10 天），
-            // 由各消费端按需裁剪，避免缓存被写成不同长度造成分裂。
-            val hourlySteps = 240
+            // 回归 72h（3 天）：渲染端直接全量绘制，避免窗口化/快速滑动占位导致的闪烁。
+            // 主界面与 Widget 共用同一份 Room 缓存，统一按 72h 请求。
+            val hourlySteps = 72
             weatherI("primary_weather_start: lon=$longitude, lat=$latitude, alert=true, hourlySteps=$hourlySteps")
             val response = api.getWeather(
                 longitude = longitude,
