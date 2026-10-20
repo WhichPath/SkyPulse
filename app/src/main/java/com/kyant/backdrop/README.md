@@ -12,5 +12,11 @@ otherwise the same backdrop/lens/blur/optics pipeline.
 Included: LayerBackdrop, drawBackdrop, lens, blur, vibrancy, highlight, shadow,
 inner shadow, and their supporting internals.
 
+Local modifications (RidgeCast v1.0.7):
+- `HighlightStyle.Default` gained `intensity` and an optional `secondary` light,
+  and the default highlight AGSL shader was extended to composite **two
+  independent light axes** (sun + moon). The runtime shader cache key was
+  bumped to `DefaultDual` accordingly.
+
 Copyright: Kyant and AndroidLiquidGlass contributors. Licensed under Apache-2.0;
 see `LICENSE`.

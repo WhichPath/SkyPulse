@@ -146,7 +146,7 @@ class WeatherViewModel @Inject constructor(
         if (cityId == null) {
             flowOf(
                 WeatherUiState.Success(
-                    weather = com.ridgecast.weather.data.mock.MockWeatherData.createMarsWeather(),
+                    weather = com.ridgecast.weather.data.mock.MockWeatherData.createSampleWeather(),
                     locationName = com.ridgecast.weather.data.mock.MockWeatherData.DEFAULT_CITY_NAME
                 )
             )
@@ -166,7 +166,7 @@ class WeatherViewModel @Inject constructor(
                         WeatherUiState.Success(weather, locationName)
                     } else {
                         WeatherUiState.Success(
-                            weather = com.ridgecast.weather.data.mock.MockWeatherData.createMarsWeather(),
+                            weather = com.ridgecast.weather.data.mock.MockWeatherData.createSampleWeather(),
                             locationName = "北京市"
                         )
                     }
@@ -176,7 +176,7 @@ class WeatherViewModel @Inject constructor(
                     val city = _savedCities.value.find { it.id == cityId }
                     val locationName = city?.name?.takeIf { it != "当前定位" && it != "定位中..." } ?: "北京市"
                     WeatherUiState.Success(
-                        weather = com.ridgecast.weather.data.mock.MockWeatherData.createMarsWeather(),
+                        weather = com.ridgecast.weather.data.mock.MockWeatherData.createSampleWeather(),
                         locationName = locationName
                     )
                 }
@@ -596,7 +596,7 @@ class WeatherViewModel @Inject constructor(
                 refreshLog("fetch_weather_skip_fresh: ${refreshCity.refreshSummary()}")
                 return@launch
             }
-            performRefreshWithAnimation(refreshCity, source = "fetchWeather")
+            performRefreshWithAnimation(refreshCity, source = "fetchWeather", highAccuracy = false)
         }
     }
 
@@ -623,7 +623,7 @@ class WeatherViewModel @Inject constructor(
                     setRefreshPhase(RefreshPhase.Locating, "manualRefresh", refreshCity)
                     refreshLog("manual_refresh_current_location_start: ${refreshCity.refreshSummary()}")
                     val result = refreshWeatherUseCase.refreshCurrentLocationManual(
-                        timeoutMs = 7000L,
+                        timeoutMs = 5000L,
                         onFetchingWeather = {
                             setRefreshPhase(RefreshPhase.Fetching, "manualRefresh", refreshCity)
                         }
@@ -723,7 +723,7 @@ class WeatherViewModel @Inject constructor(
                 scheduleLocationCalibration("onResumeSkipFresh")
                 return@launch
             }
-            performRefreshWithAnimation(refreshCity, source = "onResume")
+            performRefreshWithAnimation(refreshCity, source = "onResume", highAccuracy = false)
             scheduleLocationCalibration("onResume")
         }
     }
@@ -740,7 +740,7 @@ class WeatherViewModel @Inject constructor(
                 refreshLog("silent_refresh_skip_fresh: ${refreshCity.refreshSummary()}")
                 return@launch
             }
-            performRefreshWithAnimation(refreshCity, source = "silentRefresh")
+            performRefreshWithAnimation(refreshCity, source = "silentRefresh", highAccuracy = false)
         }
     }
 
@@ -748,7 +748,8 @@ class WeatherViewModel @Inject constructor(
         city: City?,
         source: String,
         minElapsedMs: Long = 500L,
-        successDelayMs: Long = 300L
+        successDelayMs: Long = 300L,
+        highAccuracy: Boolean = true
     ) {
         if (!tryBeginUiRefresh(source, city)) return
         if (city == null || city.isCurrentLocation) {
@@ -758,8 +759,8 @@ class WeatherViewModel @Inject constructor(
         }
         try {
             val startTime = android.os.SystemClock.elapsedRealtime()
-            refreshLog("perform_refresh_start: source=$source, ${city.refreshSummary()}")
-            val refreshed = runRefreshWithTimeout(city, silent = true)
+            refreshLog("perform_refresh_start: source=$source, highAccuracy=$highAccuracy, ${city.refreshSummary()}")
+            val refreshed = runRefreshWithTimeout(city, silent = true, highAccuracy = highAccuracy)
             val elapsed = elapsedSince(startTime)
             refreshLog("perform_refresh_done: source=$source, refreshed=$refreshed, elapsed=${elapsed}ms, ${city.refreshSummary()}")
             if (elapsed < minElapsedMs) delay(minElapsedMs - elapsed)
@@ -775,13 +776,14 @@ class WeatherViewModel @Inject constructor(
 
     private suspend fun runRefreshWithTimeout(
         city: City?,
-        silent: Boolean
+        silent: Boolean,
+        highAccuracy: Boolean = true
     ): Boolean {
         val startMs = android.os.SystemClock.elapsedRealtime()
-        refreshLog("run_refresh_with_timeout_start: silent=$silent, timeout=${REFRESH_MAX_ACTIVE_MS}ms, ${city.refreshSummary()}")
+        refreshLog("run_refresh_with_timeout_start: silent=$silent, highAccuracy=$highAccuracy, timeout=${REFRESH_MAX_ACTIVE_MS}ms, ${city.refreshSummary()}")
         val result = try {
             withTimeoutOrNull(REFRESH_MAX_ACTIVE_MS) {
-                refreshSelectedWeather(city, silent)
+                refreshSelectedWeather(city, silent, highAccuracy)
             }
         } catch (e: CancellationException) {
             throw e
@@ -802,17 +804,18 @@ class WeatherViewModel @Inject constructor(
 
     private suspend fun refreshSelectedWeather(
         city: City?,
-        silent: Boolean = false
+        silent: Boolean = false,
+        highAccuracy: Boolean = true
     ): Boolean {
         val startMs = android.os.SystemClock.elapsedRealtime()
-        refreshLog("refresh_selected_start: silent=$silent, ${city.refreshSummary()}")
+        refreshLog("refresh_selected_start: silent=$silent, highAccuracy=$highAccuracy, ${city.refreshSummary()}")
         return if (city != null && !city.isCurrentLocation) {
             val result = refreshWeatherUseCase.refreshCity(city.id, city.longitude, city.latitude)
             handleSyncResult(result, city, silent)
             refreshLog("refresh_selected_manual_city_done: success=${result is SyncResult.Success}, elapsed=${elapsedSince(startMs)}ms, ${city.refreshSummary()}")
             result is SyncResult.Success
         } else {
-            val success = refreshCurrentLocation(silent, highAccuracy = true)
+            val success = refreshCurrentLocation(silent, highAccuracy = highAccuracy, force = highAccuracy)
             refreshLog("refresh_selected_current_location_done: success=$success, elapsed=${elapsedSince(startMs)}ms, ${city.refreshSummary()}")
             success
         }
@@ -823,13 +826,15 @@ class WeatherViewModel @Inject constructor(
      */
     private suspend fun refreshCurrentLocation(
         silent: Boolean = false,
-        highAccuracy: Boolean = true
+        highAccuracy: Boolean = true,
+        force: Boolean = highAccuracy
     ): Boolean {
         val startMs = android.os.SystemClock.elapsedRealtime()
-        refreshLog("refresh_current_location_start: silent=$silent, highAccuracy=$highAccuracy")
+        refreshLog("refresh_current_location_start: silent=$silent, highAccuracy=$highAccuracy, force=$force")
         transientError.value = null
         val result = refreshWeatherUseCase.refreshWithLocation(
             highAccuracy = highAccuracy,
+            force = force,
             onFetchingWeather = {
                 setRefreshPhase(RefreshPhase.Fetching, "refreshCurrentLocation")
             }

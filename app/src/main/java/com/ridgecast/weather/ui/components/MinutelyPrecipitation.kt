@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import com.ridgecast.weather.model.MinutelyForecast
 import com.ridgecast.weather.ui.theme.PrecipBarBottom
@@ -73,6 +74,7 @@ fun MinutelyPrecipitationCard(
 
             MinutelyBarChart(
                 data = sampled,
+                minutely = minutely,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -84,6 +86,7 @@ fun MinutelyPrecipitationCard(
 @Composable
 private fun MinutelyBarChart(
     data: List<Double>,
+    minutely: MinutelyForecast? = null,
     modifier: Modifier = Modifier
 ) {
     val chartHeightDp = CHART_HEIGHT_DP.dp
@@ -174,11 +177,14 @@ private fun MinutelyBarChart(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Time labels aligned with chart edges
-                val now = LocalTime.now()
-                val t0 = now.format(minuteTimeFormat)
-                val t1 = now.plusHours(1).format(minuteTimeFormat)
-                val t2 = now.plusHours(2).format(minuteTimeFormat)
+                // 时间刻度：优先使用 API 返回的 fxTime（5 分钟区间起始时刻），
+                // 避免用本地 now 造成最多 5 分钟的错位；无数据时回退到本地当前时间。
+                val firstTime = minutely?.times?.firstOrNull()?.let { fx ->
+                    runCatching { OffsetDateTime.parse(fx).toLocalTime() }.getOrNull()
+                } ?: LocalTime.now()
+                val t0 = firstTime.format(minuteTimeFormat)
+                val t1 = firstTime.plusHours(1).format(minuteTimeFormat)
+                val t2 = firstTime.plusHours(2).format(minuteTimeFormat)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),

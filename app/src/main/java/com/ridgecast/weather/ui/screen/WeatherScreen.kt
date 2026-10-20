@@ -181,6 +181,11 @@ fun WeatherScreen(
         is WeatherUiState.Success -> s.weather.result?.daily
         else -> null
     }
+    // 天文快照（接口优先的太阳高度角/方位角与月相照度）
+    val astronomy = when (val s = uiState) {
+        is WeatherUiState.Success -> s.weather.result?.astronomy
+        else -> null
+    }
     // 实时风数据（驱动粒子动画：雨丝倾斜、云层漂移方向）
     val wind = when (val s = uiState) {
         is WeatherUiState.Success -> s.weather.result?.realtime?.wind?.let { w ->
@@ -231,8 +236,21 @@ fun WeatherScreen(
         return
     }
 
-    // 全局玻璃光源：当前城市当天的太阳/月亮轨迹 → 高光轴向与强度
-    val glassLight = rememberGlassLight(daily)
+    // 全局玻璃光源：太阳 + 月亮两个真实光源（接口优先，本地 NOAA/Meeus 兜底）
+    // 整屏共用一个时钟源，城市分页里的每个城市再按各自经纬度算自己的光照。
+    val nowMillis = rememberNowMillis()
+    val currentCityCoordinates by remember(effectiveCities, currentCityIndex) {
+        derivedStateOf {
+            effectiveCities.getOrNull(currentCityIndex)?.let { it.latitude to it.longitude }
+        }
+    }
+    val glassLight = rememberGlassLight(
+        daily = daily,
+        astronomy = astronomy,
+        latitude = currentCityCoordinates?.first,
+        longitude = currentCityCoordinates?.second,
+        nowMillis = nowMillis
+    )
 
     // 次级页面（城市管理/预警详情/设置）深浅色配色，主页与小组件不受影响
     val secondaryPageColors = if (resolvedDark) SecondaryPageDarkColors else SecondaryPageLightColors
@@ -431,37 +449,50 @@ fun WeatherScreen(
                                             }
                                             val pageScrollState = scrollStates.getOrPut(city?.id ?: "current_location") { ScrollState(0) }
                                             if (contentState != null) {
-                                                WeatherContentBody(
-                                                    state = contentState,
-                                                    scrollState = pageScrollState,
-                                                    settings = settings,
-                                                    onRefresh = { viewModel.refresh() },
-                                                    onAlertClick = { idx ->
-                                                        val successState = uiState as? WeatherUiState.Success
-                                                        val alertMeta = successState?.weather?.result?.alert
-                                                        val contents = alertMeta?.content.orEmpty()
-                                                        activeExplanation = ActiveExplanation.Alert(
-                                                            alerts = contents,
-                                                            initialIndex = idx,
-                                                            attributions = alertMeta?.attributions
-                                                        )
-                                                    },
-                                                    showBookmark = showBookmarkBtn,
-                                                    isBookmarked = isBookmarked,
-                                                    onBookmarkClick = {
-                                                        if (city?.isCurrentLocation == true) {
-                                                            viewModel.bookmarkCurrentLocation()
-                                                        } else if (city != null) {
-                                                            // 取消收藏：先回到定位城市，再删除
-                                                            val currentLocCity = savedCities.firstOrNull { it.isCurrentLocation }
-                                                            if (currentLocCity != null) {
-                                                                viewModel.navigateToCityDetail(currentLocCity.id)
-                                                            }
-                                                            viewModel.removeCity(city.id)
-                                                        }
-                                                    },
-                                                    onRadarClick = { viewModel.navigateToRadarMap() }
+                                                // 每个城市按**自己的经纬度**计算光照：
+                                                // 日出日落/太阳高度角随地点不同，高光方向与强度也随之变化。
+                                                val cityGlassLight = rememberGlassLight(
+                                                    daily = contentState.weather.result?.daily,
+                                                    astronomy = contentState.weather.result?.astronomy,
+                                                    latitude = city?.latitude,
+                                                    longitude = city?.longitude,
+                                                    nowMillis = nowMillis
                                                 )
+                                                CompositionLocalProvider(
+                                                    LocalGlassLight provides cityGlassLight
+                                                ) {
+                                                    WeatherContentBody(
+                                                        state = contentState,
+                                                        scrollState = pageScrollState,
+                                                        settings = settings,
+                                                        onRefresh = { viewModel.refresh() },
+                                                        onAlertClick = { idx ->
+                                                            val successState = uiState as? WeatherUiState.Success
+                                                            val alertMeta = successState?.weather?.result?.alert
+                                                            val contents = alertMeta?.content.orEmpty()
+                                                            activeExplanation = ActiveExplanation.Alert(
+                                                                alerts = contents,
+                                                                initialIndex = idx,
+                                                                attributions = alertMeta?.attributions
+                                                            )
+                                                        },
+                                                        showBookmark = showBookmarkBtn,
+                                                        isBookmarked = isBookmarked,
+                                                        onBookmarkClick = {
+                                                            if (city?.isCurrentLocation == true) {
+                                                                viewModel.bookmarkCurrentLocation()
+                                                            } else if (city != null) {
+                                                                // 取消收藏：先回到定位城市，再删除
+                                                                val currentLocCity = savedCities.firstOrNull { it.isCurrentLocation }
+                                                                if (currentLocCity != null) {
+                                                                    viewModel.navigateToCityDetail(currentLocCity.id)
+                                                                }
+                                                                viewModel.removeCity(city.id)
+                                                            }
+                                                        },
+                                                        onRadarClick = { viewModel.navigateToRadarMap() }
+                                                    )
+                                                }
                                             } else {
                                                 LoadingShimmer(modifier = Modifier.fillMaxSize())
                                             }

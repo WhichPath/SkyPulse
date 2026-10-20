@@ -6,7 +6,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import com.ridgecast.weather.ui.glass.GlassStyle
+import com.ridgecast.weather.ui.glass.GlassStyles
 import com.ridgecast.weather.ui.theme.LocalWeatherTheme
 import com.ridgecast.weather.ui.theme.SkyPulseDesignSystem
 
@@ -20,6 +21,7 @@ import com.ridgecast.weather.ui.theme.SkyPulseDesignSystem
 fun GlassCard(
     modifier: Modifier = Modifier,
     radius: androidx.compose.ui.unit.Dp = SkyPulseDesignSystem.Radius.card,
+    style: GlassStyle = GlassStyles.Surface,
     content: @Composable BoxScope.() -> Unit
 ) {
     val theme = LocalWeatherTheme.current
@@ -34,10 +36,7 @@ fun GlassCard(
                 radius = radius,
                 isDark = isDark,
                 backgroundColor = tint,
-                tintAlpha = if (isDark) 0.16f else 0.08f,
-                blurRadius = 8.dp,
-                refractionHeight = 18.dp,
-                refractionAmount = 22.dp
+                style = style
             ),
         content = content
     )

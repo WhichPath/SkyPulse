@@ -33,6 +33,7 @@ import com.ridgecast.weather.data.WeatherSettings
 import com.ridgecast.weather.data.remote.qweather.QWeatherConnectionResult
 import com.ridgecast.weather.data.remote.qweather.QWeatherCredentials
 import com.ridgecast.weather.ui.components.liquidGlass
+import com.ridgecast.weather.ui.glass.GlassStyles
 import com.ridgecast.weather.ui.components.QWeatherApiSettingsSection
 import com.ridgecast.weather.ui.components.secondaryGlassSurface
 import com.ridgecast.weather.ui.theme.*
@@ -257,10 +258,7 @@ private fun IosCard(
                 radius = SkyPulseDesignSystem.Radius.settingsCard,
                 isDark = page.isDark,
                 backgroundColor = page.cardBackground,
-                tintAlpha = if (page.isDark) 0.30f else 0.24f,
-                blurRadius = 8.dp,
-                refractionHeight = 16.dp,
-                refractionAmount = 20.dp
+                style = GlassStyles.Secondary
             ),
         content = content
     )

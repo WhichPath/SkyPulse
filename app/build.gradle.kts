@@ -37,8 +37,8 @@ android {
         applicationId = "com.ridgecast.weather"
         minSdk = 34
         targetSdk = 35
-        versionCode = 105
-        versionName = "1.0.5"
+        versionCode = 107
+        versionName = "1.0.7"
 
         vectorDrawables {
             useSupportLibrary = true

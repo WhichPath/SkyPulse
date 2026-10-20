@@ -19,9 +19,11 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.highlight.HighlightStyle
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
+import com.ridgecast.weather.ui.glass.GlassStyle
+import com.ridgecast.weather.ui.glass.LocalGlassStyle
 
 /**
- * SkyPulse 统一液态玻璃表面（v1.0.5）。
+ * SkyPulse 统一液态玻璃表面（v1.0.7）。
  *
  * 视觉核心来自 Kyant0/AndroidLiquidGlass（Backdrop，Apache-2.0）：
  * backdrop 图层 → vibrancy/模糊 → SDF 折射 + 色散 → 高光/内外阴影 → 罩色。
@@ -34,20 +36,26 @@ import com.kyant.backdrop.shadow.Shadow
  * 3. 统一使用 `RoundedCornerShape`，与库的 rounded-rect SDF 一致，
  *    避免超椭圆裁剪与圆弧 shader 不匹配产生的黑角/缺角；
  * 4. 无背景源或省电模式时降级为半透明表面，不闪退、不消失。
+ *
+ * ## 材质参数全部来自 [GlassStyle]
+ * 模糊半径、雾化浓度、折射厚度、高光宽度/衰减都不再由调用点硬编码，
+ * 改 [LocalGlassStyle] 提供的样式即可全站生效。
+ *
+ * ## 边缘高光
+ * 最多两个光源（太阳 + 月亮）同时参与，各自拥有独立的角度、颜色与强度，
+ * 由 [LocalGlassLight] 提供；**没有任何光源时直接不绘制高光**（黑夜里
+ * 没有光就不该有反光）。
  */
 @Composable
 fun Modifier.liquidGlass(
     radius: Dp,
     isDark: Boolean,
     backgroundColor: Color = if (isDark) Color(0xFF101214) else Color.White,
-    tintAlpha: Float = if (isDark) 0.16f else 0.10f,
-    blurRadius: Dp = 8.dp,
-    refractionHeight: Dp = 18.dp,
-    refractionAmount: Dp = 22.dp,
+    style: GlassStyle = LocalGlassStyle.current,
     backdrop: Backdrop? = LocalGlassBackdrop.current
 ): Modifier {
     val shape = RoundedCornerShape(radius)
-    val tint = backgroundColor.copy(alpha = tintAlpha)
+    val tint = backgroundColor.copy(alpha = style.tintAlpha(isDark))
     val powerSave = rememberPowerSaveMode()
     val light = LocalGlassLight.current
 
@@ -67,25 +75,41 @@ fun Modifier.liquidGlass(
         shape = { shape },
         effects = {
             vibrancy()
-            blur(blurRadius.toPx())
+            blur(style.blurRadius.toPx())
             lens(
-                refractionHeight = refractionHeight.toPx(),
-                refractionAmount = refractionAmount.toPx(),
+                refractionHeight = style.refractionHeight.toPx(),
+                refractionAmount = style.refractionAmount.toPx(),
                 depthEffect = true,
                 chromaticAberration = false
             )
         },
         highlight = {
-            Highlight(
-                width = 1.dp,
-                blurRadius = 0.5.dp,
-                alpha = (if (isDark) 0.58f else 0.82f) * light.intensity,
-                style = HighlightStyle.Default(
-                    color = if (light.isDaylight) Color.White else Color(0xFFD6E4FF),
-                    angle = light.angleDegrees,
-                    falloff = 1.2f
+            val primary = light.sun ?: light.moon
+            if (primary == null) {
+                // 太阳、月亮都不在天空里 → 没有光源就没有边缘高光
+                null
+            } else {
+                val secondary = if (light.sun != null && light.moon != null) light.moon else null
+                Highlight(
+                    width = style.highlightWidth,
+                    blurRadius = style.highlightBlurRadius,
+                    alpha = style.highlightAlphaScale * (if (isDark) 0.58f else 0.82f),
+                    style = HighlightStyle.Default(
+                        color = primary.color,
+                        angle = primary.angleDegrees,
+                        falloff = style.highlightFalloff,
+                        intensity = primary.intensity,
+                        secondary = secondary?.let {
+                            HighlightStyle.Default.Secondary(
+                                color = it.color,
+                                angle = it.angleDegrees,
+                                falloff = style.highlightFalloff,
+                                intensity = it.intensity
+                            )
+                        }
+                    )
                 )
-            )
+            }
         },
         shadow = {
             Shadow(

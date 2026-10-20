@@ -46,8 +46,23 @@ interface HighlightStyle {
         override val color: Color = Color.White.copy(alpha = 0.5f),
         override val blendMode: BlendMode = BlendMode.Plus,
         val angle: Float = 45f,
-        @param:FloatRange(from = 0.0) val falloff: Float = 1f
+        @param:FloatRange(from = 0.0) val falloff: Float = 1f,
+        /** 主光源强度（0..1），与 [Highlight.alpha] 相乘。 */
+        @param:FloatRange(from = 0.0) val intensity: Float = 1f,
+        /** 第二光源（用于太阳 + 月亮双光源），null 时只有主光源。 */
+        val secondary: Secondary? = null
     ) : HighlightStyle {
+
+        /**
+         * 第二光源：与主光源同结构，拥有独立的角度、颜色与强度。
+         */
+        @Immutable
+        data class Secondary(
+            val color: Color,
+            val angle: Float,
+            @param:FloatRange(from = 0.0) val falloff: Float = 1f,
+            @param:FloatRange(from = 0.0) val intensity: Float = 1f
+        )
 
         override fun DrawScope.createShader(
             shape: Shape,
@@ -55,7 +70,7 @@ interface HighlightStyle {
         ): RuntimeShader? {
             return if (isRuntimeShaderSupported()) {
                 runtimeShaderCache.obtainRuntimeShader(
-                    "Default",
+                    "DefaultDual",
                     DefaultHighlightShaderString
                 ).apply {
                     setFloatUniform("size", size.width, size.height)
@@ -63,6 +78,19 @@ interface HighlightStyle {
                     setColorUniform("color", color.copy(alpha = 1f))
                     setFloatUniform("angle", angle * (PI / 180f).toFloat())
                     setFloatUniform("falloff", falloff)
+                    setFloatUniform("intensity", intensity)
+                    val second = secondary
+                    if (second == null) {
+                        setColorUniform("color2", Color.Transparent)
+                        setFloatUniform("angle2", 0f)
+                        setFloatUniform("falloff2", 1f)
+                        setFloatUniform("intensity2", 0f)
+                    } else {
+                        setColorUniform("color2", second.color.copy(alpha = 1f))
+                        setFloatUniform("angle2", second.angle * (PI / 180f).toFloat())
+                        setFloatUniform("falloff2", second.falloff)
+                        setFloatUniform("intensity2", second.intensity)
+                    }
                 }
             } else {
                 null

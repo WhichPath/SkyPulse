@@ -66,8 +66,8 @@ class LocationManager @Inject constructor(
         private const val KEY_PENDING_ACCURACY = "pending_accuracy"
         private const val KEY_LAST_GOOD_NAME = "last_good_name"
 
-        private const val REGULAR_LOCATION_TOTAL_TIMEOUT_MS = 12_000L
-        private const val HIGH_ACCURACY_LOCATION_TOTAL_TIMEOUT_MS = 10_000L
+        private const val REGULAR_LOCATION_TOTAL_TIMEOUT_MS = 6_000L
+        private const val HIGH_ACCURACY_LOCATION_TOTAL_TIMEOUT_MS = 5_000L
         private const val ACCEPTABLE_ACCURACY_METERS = 120f
     }
 

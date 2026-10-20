@@ -32,7 +32,7 @@ class SystemLocationProvider @Inject constructor(
 
     companion object {
         private const val TAG = "SystemLocProvider"
-        private const val GOOD_ACCURACY_METERS = 60f
+        private const val GOOD_ACCURACY_METERS = 120f
         private const val ACCEPTABLE_ACCURACY_METERS = 120f
         private const val RECENT_ACTIVE_FIX_MS = 60 * 1000L
         private const val RECENT_LAST_KNOWN_MS = 90 * 1000L
@@ -118,7 +118,7 @@ class SystemLocationProvider @Inject constructor(
                     val requestInterval = if (highAccuracy) 1000L else timeoutMillis
                     FileLogger.locD(TAG, "fused_request: priority=$priority, interval=${requestInterval}ms, maxUpdates=${if (highAccuracy) 4 else 1}, hasFine=$hasFine")
                     val request = LocationRequest.Builder(priority, requestInterval)
-                        .setMaxUpdates(if (highAccuracy) 4 else 1)
+                        .setMaxUpdates(if (highAccuracy) 2 else 1)
                         .setMinUpdateIntervalMillis(requestInterval)
                         .build()
 

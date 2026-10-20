@@ -4,8 +4,11 @@ import android.os.SystemClock
 import com.ridgecast.weather.data.remote.WeatherApiService
 import com.ridgecast.weather.model.WeatherResponse
 import com.ridgecast.weather.util.FileLogger
+import com.ridgecast.weather.util.WeatherDataValidator
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import java.util.Calendar
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,6 +36,41 @@ class QWeatherApiService @Inject constructor(
 
     companion object {
         private const val TAG = "QWeatherApiService"
+
+        /** 本地日期 yyyyMMdd（天端点按城市当地日期查询）。 */
+        private fun formatLocalDate(): String {
+            val now = Calendar.getInstance()
+            return String.format(
+                Locale.US, "%04d%02d%02d",
+                now.get(Calendar.YEAR),
+                now.get(Calendar.MONTH) + 1,
+                now.get(Calendar.DAY_OF_MONTH)
+            )
+        }
+
+        /** 本地时刻 HHmm。 */
+        private fun formatLocalTime(): String {
+            val now = Calendar.getInstance()
+            return String.format(
+                Locale.US, "%02d%02d",
+                now.get(Calendar.HOUR_OF_DAY),
+                now.get(Calendar.MINUTE)
+            )
+        }
+
+        /**
+         * 本地时区偏移（±HHmm）。
+         *
+         * 天文端点必须带时区；此处用设备时区近似城市时区（绝大多数用户一致），
+         * 若不一致也只是让接口光源略微偏差，本地 NOAA/Meeus 算法仍是最终兜底。
+         */
+        private fun formatLocalTimezoneOffset(): String {
+            val now = Calendar.getInstance()
+            val offsetMinutes = now.get(Calendar.ZONE_OFFSET) + now.get(Calendar.DST_OFFSET)
+            val sign = if (offsetMinutes < 0) "-" else "+"
+            val abs = kotlin.math.abs(offsetMinutes)
+            return String.format(Locale.US, "%s%02d%02d", sign, abs / 60, abs % 60)
+        }
     }
 
     /**
@@ -140,12 +178,35 @@ class QWeatherApiService @Inject constructor(
             safeApiCall(endpoint = "air", issueSink = reportIssue) { api.getAirNow(latitude, longitude) }
         }
 
+        // 天文（玻璃高光的物理光源）：非核心增强，且**本地可兜底**，
+        // 因此不记 DataIssue（不打扰用户），失败时 UI 用本地算法重算。
+        val localDate = formatLocalDate()
+        val localTime = formatLocalTime()
+        val localTz = formatLocalTimezoneOffset()
+        val astronomySolarDeferred = async {
+            safeApiCall(endpoint = "astronomy", issueSink = null) {
+                api.getSolarElevationAngle(
+                    location = location,
+                    date = localDate,
+                    time = localTime,
+                    tz = localTz
+                )
+            }
+        }
+        val astronomyMoonDeferred = async {
+            safeApiCall(endpoint = "astronomy", issueSink = null) {
+                api.getAstronomyMoon(location = location, date = localDate)
+            }
+        }
+
         val now = nowDeferred.await()
         val daily = dailyDeferred.await()
         val hourly = hourlyDeferred.await()
         val minutely = minutelyDeferred.await()
         val warning = warningDeferred.await()
         val air = airDeferred.await()
+        val astronomySolar = astronomySolarDeferred.await()
+        val astronomyMoon = astronomyMoonDeferred.await()
 
         // 诊断日志：记录各端点响应码
         FileLogger.i(TAG, "api_response_codes: now=${now?.condition?.code}, daily=${daily?.days?.size ?: -1}, hourly=${hourly?.hours?.size ?: -1}, minutely=${minutely?.code}, warning=${warning?.alerts?.size ?: -1}, air=${air?.indexes?.size ?: -1}")
@@ -164,6 +225,8 @@ class QWeatherApiService @Inject constructor(
             minutely = minutely,
             warning = warning,
             air = air,
+            astronomySolar = astronomySolar,
+            astronomyMoon = astronomyMoon,
             longitude = longitude,
             latitude = latitude,
             dataIssues = issues.toList()
@@ -171,6 +234,9 @@ class QWeatherApiService @Inject constructor(
 
         val elapsed = SystemClock.elapsedRealtime() - startMs
         FileLogger.i(TAG, "weather fetched: elapsed=${elapsed}ms, skycon=${response.result?.realtime?.skycon}, temp=${response.result?.realtime?.temperature}, alerts=${response.result?.alert?.content?.size ?: 0}, issues=${response.dataIssues?.size ?: 0}")
+
+        // 数据完整性自检（默认关闭，打开后写文件日志）
+        WeatherDataValidator.logIfEnabled("api", response)
 
         response
     }

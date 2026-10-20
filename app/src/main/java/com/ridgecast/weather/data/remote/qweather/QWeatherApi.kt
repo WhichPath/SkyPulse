@@ -87,4 +87,40 @@ interface QWeatherApi {
         @Query("localTime") localTime: Boolean = true,
         @Query("lang") lang: String = "zh"
     ): QWeatherV1DailyResponse
+
+    // ============ v7 天文（玻璃高光的物理光源） ============
+    // 官方停服公告（2026-07-31）仅涉及 /v7/grid-weather/* 与 /v7/weather/*；
+    // 天文类端点不在停服名单内。这两个端点属于**非核心增强**：
+    // 失败或返回异常值时，UI 会回落到本地 NOAA / Meeus 算法计算，功能不受影响。
+
+    /**
+     * 太阳高度角与方位角（任意时间点）。
+     *
+     * @param location 经度,纬度（和风格式：lon,lat）
+     * @param date yyyyMMdd
+     * @param time HHmm（24 小时制）
+     * @param tz 时区偏移，如 0800 / -0530
+     * @param alt 海拔高度（米）
+     */
+    @GET("v7/astronomy/solar-elevation-angle")
+    suspend fun getSolarElevationAngle(
+        @Query("location") location: String,
+        @Query("date") date: String,
+        @Query("time") time: String,
+        @Query("tz") tz: String,
+        @Query("alt") alt: Int = 0
+    ): QWeatherSolarElevationResponse
+
+    /**
+     * 月升月落与逐小时月相（含被照亮百分比 illumination）。
+     *
+     * @param location 经度,纬度（和风格式：lon,lat）
+     * @param date yyyyMMdd
+     */
+    @GET("v7/astronomy/moon")
+    suspend fun getAstronomyMoon(
+        @Query("location") location: String,
+        @Query("date") date: String,
+        @Query("lang") lang: String = "zh"
+    ): QWeatherAstronomyMoonResponse
 }

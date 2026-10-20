@@ -271,6 +271,47 @@ data class QWeatherV1DayPart(
     val humidity: Double? = null
 )
 
+// ============ v7 天文（太阳高度角 / 月相照度） ============
+
+/**
+ * 太阳高度角响应（`/v7/astronomy/solar-elevation-angle`）。
+ *
+ * 注意：和风把数值以**字符串**返回（如 "42.88"），且错误时会返回非数值内容，
+ * 因此必须用 [String.toDoubleOrNull] 严格解析，解析失败即视为该来源不可用。
+ */
+@JsonClass(generateAdapter = true)
+data class QWeatherSolarElevationResponse(
+    val code: String? = null,
+    val solarElevationAngle: String? = null,
+    val solarAzimuthAngle: String? = null,
+    val solarHour: String? = null,
+    val hourAngle: String? = null
+)
+
+/**
+ * 月升月落与月相响应（`/v7/astronomy/moon`）。
+ */
+@JsonClass(generateAdapter = true)
+data class QWeatherAstronomyMoonResponse(
+    val code: String? = null,
+    val moonrise: String? = null,
+    val moonset: String? = null,
+    val moonPhase: List<QWeatherMoonPhase>? = null
+)
+
+/** 逐小时月相条目。 */
+@JsonClass(generateAdapter = true)
+data class QWeatherMoonPhase(
+    val fxTime: String? = null,
+    /** 相位比例 0..1 */
+    val value: String? = null,
+    /** 月相名称（中文/英文随 lang 而定） */
+    val name: String? = null,
+    /** 被照亮百分比，如 "88" */
+    val illumination: String? = null,
+    val icon: String? = null
+)
+
 // ============ v1 通用子模型 ============
 
 @JsonClass(generateAdapter = true)

@@ -33,11 +33,12 @@ class RefreshWeatherUseCase @Inject constructor(
      */
     suspend fun refreshWithLocation(
         highAccuracy: Boolean = true,
+        force: Boolean = true,
         onFetchingWeather: (() -> Unit)? = null
     ): SyncResult {
         return syncManager.refreshWeatherWithLocation(
             highAccuracy = highAccuracy,
-            force = true,
+            force = force,
             onFetchingWeather = onFetchingWeather
         )
     }

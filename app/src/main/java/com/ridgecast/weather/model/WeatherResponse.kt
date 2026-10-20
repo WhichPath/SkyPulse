@@ -35,7 +35,37 @@ data class WeatherResult(
     val hourly: HourlyForecast? = null,
     val daily: DailyForecast? = null,
     @Json(name = "forecast_keypoint") val forecastKeypoint: String? = null,
-    val alert: Alert? = null
+    val alert: Alert? = null,
+    /** 天文快照（太阳高度角/方位角、月相照度），驱动玻璃高光的物理光照。 */
+    val astronomy: AstronomySnapshot? = null
+)
+
+/**
+ * 天文快照。
+ *
+ * 数据来源优先级（v1.0.7）：
+ * 1. **接口优先**：和风 `/v7/astronomy/solar-elevation-angle`（太阳高度角/方位角）
+ *    与 `/v7/astronomy/moon`（月相被照亮比例）；
+ * 2. **本地兜底**：接口不可用/返回异常值时，用本地 NOAA 太阳位置算法
+ *    与 Meeus 月历算法重算（零网络，精度足够驱动 UI）。
+ *
+ * 字段为 null 即表示"该来源不可用"，由 [com.ridgecast.weather.ui.components.rememberGlassLight]
+ * 回落到本地计算。
+ */
+@JsonClass(generateAdapter = true)
+data class AstronomySnapshot(
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    /** 太阳高度角（度）：地平线为 0，天顶为正。 */
+    val solarElevationDegrees: Double? = null,
+    /** 太阳方位角（度）：0 = 正北，90 = 正东。 */
+    val solarAzimuthDegrees: Double? = null,
+    /** 月亮被照亮比例 0..1。 */
+    val moonIllumination: Double? = null,
+    /** 月相名称（原始透传，用于诊断）。 */
+    val moonPhaseName: String? = null,
+    /** 采样时刻（UTC 毫秒）。 */
+    val observedAtMillis: Long = 0L
 )
 
 @JsonClass(generateAdapter = true)
@@ -188,7 +218,13 @@ data class MinutelyForecast(
     val precipitation_2h: List<Double>? = null,
     val precipitation: List<Double>? = null,
     val probability: List<Double>? = null,
-    val description: String? = null
+    val description: String? = null,
+    /**
+     * 每个 5 分钟数据点对应的预报起始时间（ISO-8601，含时区）。
+     * 来源：和风 /v7/minutely/5m 的 minutely[].fxTime。
+     * 用于 UI 时间刻度，避免用本地 now 导致最多 5 分钟偏差。
+     */
+    val times: List<String>? = null
 )
 
 // ============ Hourly ============

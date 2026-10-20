@@ -2,9 +2,8 @@ package com.ridgecast.weather.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.ridgecast.weather.ui.glass.GlassStyles
 import com.ridgecast.weather.ui.theme.LocalSecondaryPageTheme
 
 /**
@@ -12,6 +11,8 @@ import com.ridgecast.weather.ui.theme.LocalSecondaryPageTheme
  *
  * 统一使用 Backdrop 的实时背景图层；搜索栏、设置分组、预警卡片
  * 不再各自实现材质。
+ *
+ * 材质参数全部来自 [GlassStyles]，本文件只负责"选哪套样式"。
  */
 @Composable
 fun Modifier.secondaryGlassSurface(radius: Dp): Modifier {
@@ -20,10 +21,7 @@ fun Modifier.secondaryGlassSurface(radius: Dp): Modifier {
         radius = radius,
         isDark = page.isDark,
         backgroundColor = page.cardBackground,
-        tintAlpha = if (page.isDark) 0.28f else 0.22f,
-        blurRadius = 8.dp,
-        refractionHeight = 16.dp,
-        refractionAmount = 20.dp
+        style = GlassStyles.Secondary
     )
 }
 
@@ -39,9 +37,6 @@ fun Modifier.floatingGlassSurface(radius: Dp): Modifier {
         radius = radius,
         isDark = page.isDark,
         backgroundColor = page.cardBackground,
-        tintAlpha = if (page.isDark) 0.26f else 0.20f,
-        blurRadius = 10.dp,
-        refractionHeight = 24.dp,
-        refractionAmount = 28.dp
+        style = GlassStyles.Floating
     )
 }

@@ -5,6 +5,7 @@ import com.ridgecast.weather.model.AlertContent
 import com.ridgecast.weather.model.AirQuality
 import com.ridgecast.weather.model.AirQualityDescription
 import com.ridgecast.weather.model.AirQualityIndex
+import com.ridgecast.weather.model.AstronomySnapshot
 import com.ridgecast.weather.model.AstroTime
 import com.ridgecast.weather.model.DailyAstro
 import com.ridgecast.weather.model.DailyForecast
@@ -33,6 +34,7 @@ import com.ridgecast.weather.model.Wind
 import com.ridgecast.weather.model.sortedByPublishTimeDescending
 import com.ridgecast.weather.util.AqiCalculator
 import com.ridgecast.weather.util.WeatherUtils
+import java.util.Calendar
 import java.util.TimeZone
 
 /**
@@ -63,6 +65,8 @@ object QWeatherMapper {
         minutely: QWeatherMinutelyResponse?,
         warning: QWeatherWarningResponse?,
         air: QWeatherAirResponse?,
+        astronomySolar: QWeatherSolarElevationResponse? = null,
+        astronomyMoon: QWeatherAstronomyMoonResponse? = null,
         longitude: Double,
         latitude: Double,
         dataIssues: List<com.ridgecast.weather.model.DataIssue> = emptyList()
@@ -74,6 +78,12 @@ object QWeatherMapper {
         val dailyForecast = mapDailyV1(daily)
         val hourlyForecast = mapHourlyV1(hourly, dailyForecast?.astro)
         val alert = mapWarning(warning)
+        val astronomy = mapAstronomy(
+            solar = astronomySolar,
+            moon = astronomyMoon,
+            longitude = longitude,
+            latitude = latitude
+        )
 
         return WeatherResponse(
             status = "ok",
@@ -90,9 +100,60 @@ object QWeatherMapper {
                 hourly = hourlyForecast,
                 daily = dailyForecast,
                 forecastKeypoint = minutelyForecast?.description,
-                alert = alert
+                alert = alert,
+                astronomy = astronomy
             ),
             dataIssues = dataIssues.takeIf { it.isNotEmpty() }
+        )
+    }
+
+    // ============ 天文（玻璃高光光源） ============
+
+    /**
+     * 归一化天文快照。
+     *
+     * 和风天文端点把数值以**字符串**返回，错误时也可能返回非数值内容，
+     * 因此这里一律用 [String.toDoubleOrNull] 严格解析；任何一项解析失败
+     * 都只置空该字段（不抛错），由 UI 回落到本地 NOAA / Meeus 算法。
+     */
+    private fun mapAstronomy(
+        solar: QWeatherSolarElevationResponse?,
+        moon: QWeatherAstronomyMoonResponse?,
+        longitude: Double,
+        latitude: Double
+    ): AstronomySnapshot? {
+        val solarOk = solar?.code == "200"
+        val moonOk = moon?.code == "200"
+        if (!solarOk && !moonOk) return null
+
+        val solarElevation = if (solarOk) solar?.solarElevationAngle?.toDoubleOrNull() else null
+        val solarAzimuth = if (solarOk) solar?.solarAzimuthAngle?.toDoubleOrNull() else null
+
+        // 月相：取当前小时对应的那一条
+        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val phaseEntry = moon?.moonPhase?.minByOrNull { entry ->
+            val hour = entry.fxTime
+                ?.substringAfter("T")
+                ?.substringBefore(":")
+                ?.toIntOrNull()
+                ?: Int.MAX_VALUE
+            kotlin.math.abs(hour - currentHour)
+        }
+        val illuminationPercent = if (moonOk) phaseEntry?.illumination?.toDoubleOrNull() else null
+        val moonIllumination = illuminationPercent?.let { (it / 100.0).coerceIn(0.0, 1.0) }
+
+        if (solarElevation == null && solarAzimuth == null && moonIllumination == null) {
+            return null
+        }
+
+        return AstronomySnapshot(
+            latitude = latitude,
+            longitude = longitude,
+            solarElevationDegrees = solarElevation,
+            solarAzimuthDegrees = solarAzimuth,
+            moonIllumination = moonIllumination,
+            moonPhaseName = phaseEntry?.name,
+            observedAtMillis = System.currentTimeMillis()
         )
     }
 
@@ -247,13 +308,17 @@ object QWeatherMapper {
         val precipList = items.mapNotNull { it.precip?.toDoubleOrNull() }
         if (precipList.isEmpty()) return null
 
+        // 保留每个 5 分钟数据点的 fxTime，供 UI 做准确的时间刻度
+        val timeList = items.mapNotNull { it.fxTime }
+
         return MinutelyForecast(
             status = "ok",
             datasource = "qweather",
             precipitation_2h = precipList,
             precipitation = precipList,
             probability = null,
-            description = minutely.summary
+            description = minutely.summary,
+            times = timeList.takeIf { it.size == precipList.size }
         )
     }
 

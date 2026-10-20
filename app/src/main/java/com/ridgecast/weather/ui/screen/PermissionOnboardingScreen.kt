@@ -37,6 +37,7 @@ import com.ridgecast.weather.ui.components.LocalGlassLight
 import com.ridgecast.weather.ui.components.rememberGlassLight
 import com.ridgecast.weather.ui.components.LucideIcon
 import com.ridgecast.weather.ui.components.liquidGlass
+import com.ridgecast.weather.ui.glass.GlassStyles
 import com.ridgecast.weather.ui.theme.SkyPulseDesignSystem
 import com.ridgecast.weather.ui.theme.SunnyGradient
 import com.ridgecast.weather.ui.theme.TextPrimary
@@ -157,10 +158,7 @@ fun PermissionOnboardingScreen(
                             radius = SkyPulseDesignSystem.Radius.large,
                             isDark = false,
                             backgroundColor = Color.White,
-                            tintAlpha = 0.38f,
-                            blurRadius = 6.dp,
-                            refractionHeight = 10.dp,
-                            refractionAmount = 14.dp
+                            style = GlassStyles.OnboardingAction
                         )
                         .clickable {
                             // 先检查是否需要请求通知权限：Android 13+ 才是运行时权限
@@ -209,10 +207,7 @@ private fun OnboardingGlassRow(
                 radius = SkyPulseDesignSystem.Radius.large,
                 isDark = false,
                 backgroundColor = Color.White,
-                tintAlpha = 0.20f,
-                blurRadius = 6.dp,
-                refractionHeight = 12.dp,
-                refractionAmount = 16.dp
+                style = GlassStyles.Onboarding
             )
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically

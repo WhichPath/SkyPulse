@@ -157,8 +157,13 @@ internal const val DefaultHighlightShaderString = """
 uniform float2 size;
 uniform float4 cornerRadii;
 layout(color) uniform half4 color;
+layout(color) uniform half4 color2;
 uniform float angle;
+uniform float angle2;
 uniform float falloff;
+uniform float falloff2;
+uniform float intensity;
+uniform float intensity2;
 
 $RoundedRectSDF
 
@@ -171,8 +176,11 @@ half4 main(float2 coord) {
     float2 grad = gradSdRoundedRect(centeredCoord, halfSize, gradRadius);
     float2 normal = float2(cos(angle), sin(angle));
     float d = dot(grad, normal);
-    float intensity = pow(abs(d), falloff);
-    return color * intensity;
+    half4 primary = color * (pow(abs(d), falloff) * intensity);
+    float2 normal2 = float2(cos(angle2), sin(angle2));
+    float d2 = dot(grad, normal2);
+    half4 secondary = color2 * (pow(abs(d2), falloff2) * intensity2);
+    return primary + secondary;
 }"""
 
 internal const val AmbientHighlightShaderString = """
