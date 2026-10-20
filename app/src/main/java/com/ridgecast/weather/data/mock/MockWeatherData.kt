@@ -1,13 +1,9 @@
 package com.ridgecast.weather.data.mock
 
 import com.ridgecast.weather.model.AirQuality
-import com.ridgecast.weather.model.AirQualityDescription
-import com.ridgecast.weather.model.AirQualityIndex
 import com.ridgecast.weather.model.Alert
 import com.ridgecast.weather.model.AstronomySnapshot
 import com.ridgecast.weather.model.AstroTime
-import com.ridgecast.weather.model.DailyAqiIndexValue
-import com.ridgecast.weather.model.DailyAqiValue
 import com.ridgecast.weather.model.DailyAstro
 import com.ridgecast.weather.model.DailyForecast
 import com.ridgecast.weather.model.DailyLifeIndex
@@ -17,7 +13,6 @@ import com.ridgecast.weather.model.DailyTemperature
 import com.ridgecast.weather.model.DailyValue
 import com.ridgecast.weather.model.DailyWind
 import com.ridgecast.weather.model.HourlyAirQuality
-import com.ridgecast.weather.model.HourlyAqiValue
 import com.ridgecast.weather.model.HourlyForecast
 import com.ridgecast.weather.model.HourlyLifeIndex
 import com.ridgecast.weather.model.HourlySkycon
@@ -63,6 +58,20 @@ import kotlin.math.sin
  * 并由 [com.ridgecast.weather.util.WeatherDataValidator] 校验；
  * 单元测试 `MockWeatherDataTest` 会断言本数据"零缺失"，
  * 真实接口字段升级时校验器同步升级，缺口会立刻暴露。
+ *
+ * ### 硬约束：示例数据只给「原始观测量」，派生量一律由 App 自算
+ * 1. **空气质量只给分项浓度**（PM2.5/PM10/O3/SO2/NO2/CO + 单位），
+ *    不预置 `aqi` / `*Iaqi` / `description`：
+ *    AQI 由 [com.ridgecast.weather.util.AqiCalculator]、AQHI 由
+ *    [com.ridgecast.weather.util.AqhiCalculator] 自算，
+ *    与真实接口路径（`QWeatherMapper` 同样调 AqiCalculator）口径完全一致；
+ * 2. **逐时/逐日不含空气质量**：和风虽有 /airquality/v1/hourly、/airquality/v1/daily
+ *    端点，但本项目只接入实况 /airquality/v1/current，模型里没有逐时/逐日空气质量字段，
+ *    示例数据不得凭空造数；
+ * 3. **分钟级降水必须有真实值**：下雨时给出 5 分钟累计降水，
+ *    不下雨时全 0（对应和风的「未来两小时无降水」）；
+ *    `forecast_keypoint` 取自分钟级 summary，**不再塞气候说明文案**
+ *    （那会让示例数据多出一块真实数据永远不会有的面板）。
  */
 object MockWeatherData {
 
@@ -121,8 +130,14 @@ object MockWeatherData {
         val hourlyPressure = mutableListOf<HourlyValue>()
         val hourlyVisibility = mutableListOf<HourlyValue>()
         val hourlyPrecip = mutableListOf<HourlyValue>()
-        val hourlyAqi = mutableListOf<HourlyAqiValue>()
+        // 逐时空气质量（/airquality/v1/hourly 同构）：只给**原始分项浓度**，
+        // 逐时 AQI 由 App 用 AqiCalculator 自算（官方逐时端点只给 qaqi/gb-defra）。
         val hourlyPm25 = mutableListOf<HourlyValue>()
+        val hourlyPm10 = mutableListOf<HourlyValue>()
+        val hourlyO3 = mutableListOf<HourlyValue>()
+        val hourlySo2 = mutableListOf<HourlyValue>()
+        val hourlyNo2 = mutableListOf<HourlyValue>()
+        val hourlyCo = mutableListOf<HourlyValue>()
         val hourlyUv = mutableListOf<HourlyUvItem>()
 
         for (i in 0 until HOURLY_ROWS) {
@@ -168,13 +183,19 @@ object MockWeatherData {
                     probability = if (rain > 0) 0.62 else 0.12
                 )
             )
-            hourlyAqi.add(
-                HourlyAqiValue(
-                    datetime = timeStr,
-                    value = AirQualityIndex(chn = round1(20.0 + cloudrate / 8.0), usa = round1(24.0 + cloudrate / 7.0))
-                )
-            )
-            hourlyPm25.add(HourlyValue(datetime = timeStr, value = round1(4.6 + cloudrate / 14.0)))
+            // 逐时分项污染物浓度（赤道海域气溶胶口径，与实况同一套量级）
+            val pm25 = round1(4.8 + cloudrate * 3.2)
+            val pm10 = round1(12.0 + cloudrate * 7.5)
+            val o3 = round1(46.0 + cloudrate * 18.0)
+            val so2 = round1(1.2 + cloudrate * 0.8)
+            val no2 = round1(2.4 + cloudrate * 2.0)
+            val co = round1(320.0 + cloudrate * 90.0)
+            hourlyPm25.add(HourlyValue(datetime = timeStr, value = pm25))
+            hourlyPm10.add(HourlyValue(datetime = timeStr, value = pm10))
+            hourlyO3.add(HourlyValue(datetime = timeStr, value = o3))
+            hourlySo2.add(HourlyValue(datetime = timeStr, value = so2))
+            hourlyNo2.add(HourlyValue(datetime = timeStr, value = no2))
+            hourlyCo.add(HourlyValue(datetime = timeStr, value = co))
             hourlyUv.add(
                 HourlyUvItem(
                     datetime = timeStr,
@@ -192,8 +213,6 @@ object MockWeatherData {
         val dailySkycons = mutableListOf<DailySkycon>()
         val dailyWinds = mutableListOf<DailyWind>()
         val dailyPrecip = mutableListOf<DailyPrecipitation>()
-        val dailyAqis = mutableListOf<DailyAqiIndexValue>()
-        val dailyPm25 = mutableListOf<DailyAqiValue>()
         val dailyLife = mutableListOf<LifeIndexDay>()
 
         val dayCalendar = utcCalendar.clone() as Calendar
@@ -225,8 +244,6 @@ object MockWeatherData {
                 skycon == "CLOUDY" -> 0.24
                 else -> 0.12
             }
-            val aqiChn = 18.0 + (i % 5) * 3.4 + (if (rainy) 2.0 else 0.0)
-            val aqiUsa = 22.0 + (i % 5) * 3.8 + (if (rainy) 2.0 else 0.0)
             val uv = 11 - (if (cloudrateOf(skycon) > 70) 2 else 0)
 
             // 逐日天文：当天真实的太阳/月亮时刻（赤道）
@@ -291,42 +308,11 @@ object MockWeatherData {
                     probability = rainProb
                 )
             )
-            dailyAqis.add(
-                DailyAqiIndexValue(
-                    date = dateStr,
-                    max = AirQualityIndex(chn = round1(aqiChn + 4.0), usa = round1(aqiUsa + 5.0)),
-                    min = AirQualityIndex(chn = round1(aqiChn - 5.0), usa = round1(aqiUsa - 6.0)),
-                    avg = AirQualityIndex(chn = round1(aqiChn), usa = round1(aqiUsa))
-                )
-            )
-            dailyPm25.add(
-                DailyAqiValue(
-                    date = dateStr,
-                    max = round1(4.2 + cloudrateOf(skycon) / 12.0),
-                    min = round1(2.6 + cloudrateOf(skycon) / 22.0),
-                    avg = round1(3.4 + cloudrateOf(skycon) / 16.0)
-                )
-            )
             dailyLife.add(
                 LifeIndexDay(date = dateStr, index = uv.toString(), desc = uvDesc(uv))
             )
 
             dayCalendar.add(Calendar.DAY_OF_YEAR, 1)
-        }
-
-        // ---- 分钟级降水（未来 2 小时，逐 5 分钟） ----
-        val minutelyTimes = mutableListOf<String>()
-        val minutelyPrecip = mutableListOf<Double>()
-        val minutelyProb = mutableListOf<Double>()
-        val minutelyCalendar = localCalendar.clone() as Calendar
-        minutelyCalendar.set(Calendar.SECOND, 0)
-        minutelyCalendar.set(Calendar.MILLISECOND, 0)
-        val minutelyIso = SimpleDateFormat("yyyy-MM-dd HH:mm:ssXXX", Locale.CHINA)
-        repeat(24) { i ->
-            minutelyTimes.add(minutelyIso.format(minutelyCalendar.time))
-            minutelyPrecip.add(0.0)
-            minutelyProb.add(0.1)
-            minutelyCalendar.add(Calendar.MINUTE, 5)
         }
 
         // ---- 汇总实况 ----
@@ -336,7 +322,58 @@ object MockWeatherData {
         val currentSkycon = hourlySkycons.first().value ?: "PARTLY_CLOUDY_DAY"
         val currentWind = hourlyWinds.first()
         val currentRain = hourlyPrecip.first().value ?: 0.0
-        val currentAqi = hourlyAqi.first().value
+
+        // ---- 分钟级降水（未来 2 小时，逐 5 分钟累计，mm） ----
+        // 与和风 /v7/minutely/5m 同构：24 个 5 分钟累计 + 一句 summary。
+        //
+        // **必须与逐时降水量自洽**：同一小时内的 12 个 5 分钟累计之和
+        // = 该小时的降水量（mm）。否则图上强度会和逐小时预报对不上
+        // （此前峰值按「每 5 分钟 1.6mm」硬编，逐时只有 2.9mm/h，差了近 6 倍）。
+        // 形状取对流单体过境：小时内中间强、两端弱，并按小时总量归一化。
+        val minutelyTimes = mutableListOf<String>()
+        val minutelyPrecip = mutableListOf<Double>()
+        val minutelyProb = mutableListOf<Double>()
+        val minutelyCalendar = localCalendar.clone() as Calendar
+        minutelyCalendar.set(Calendar.SECOND, 0)
+        minutelyCalendar.set(Calendar.MILLISECOND, 0)
+        val minutelyIso = SimpleDateFormat("yyyy-MM-dd HH:mm:ssXXX", Locale.CHINA)
+        // 小时内 12 个 5 分钟槽位的强度形状
+        val slotShape = List(12) { slot -> sin(PI * (slot + 0.5) / 12.0) }
+        val slotShapeSum = slotShape.sum()
+        repeat(24) { i ->
+            minutelyTimes.add(minutelyIso.format(minutelyCalendar.time))
+            val hourOffset = i / 12
+            val slot = i % 12
+            val h = (baseHour + hourOffset) % 24
+            val hourRainMm = hourlyRain(h)
+            val mm = if (hourRainMm > 0.0) {
+                round2(hourRainMm * slotShape[slot] / slotShapeSum)
+            } else {
+                0.0
+            }
+            minutelyPrecip.add(mm)
+            minutelyProb.add(if (mm > 0.0) 0.62 else 0.08)
+            minutelyCalendar.add(Calendar.MINUTE, 5)
+        }
+        // summary 由**数据本身**推导，保证与柱子、逐时预报三者自洽。
+        // 口径贴真实接口：和风 /v7/minutely/5m 的 summary 是**自然语言描述**
+        // （官方示例「95分钟后雨就停了」），不是「有降水/无降水」这种标签。
+        val minutelyHasRain = minutelyPrecip.any { it > 0.0 }
+        val minutelySummary = if (!minutelyHasRain) {
+            "未来两小时无降水"
+        } else {
+            val firstIdx = minutelyPrecip.indexOfFirst { it > 0.0 }
+            val lastIdx = minutelyPrecip.indexOfLast { it > 0.0 }
+            val startMinutes = firstIdx * 5
+            val endMinutes = (lastIdx + 1) * 5
+            val kind = if (currentSkycon.contains("SNOW")) "雪" else "雨"
+            val startText = if (startMinutes <= 0) {
+                "现在开始有$kind"
+            } else {
+                "${startMinutes}分钟后开始有$kind"
+            }
+            "$startText，${endMinutes}分钟后${kind}就停了"
+        }
 
         val response = WeatherResponse(
             status = "ok",
@@ -367,30 +404,22 @@ object MockWeatherData {
                         nearest = PrecipitationNearest(status = "ok", distance = 0.0, intensity = currentRain)
                     ),
                     air_quality = AirQuality(
+                        // 只给**分项浓度**（赤道海域气溶胶口径），不预置 AQI / IAQI / 等级文案：
+                        // 这些派生量一律由 App 用 AqiCalculator / AqhiCalculator 自算，
+                        // 与真实接口路径（QWeatherMapper 同样调 AqiCalculator）口径一致，
+                        // 不会出现「浓度和 AQI 对不上」。
                         pm25 = hourlyPm25.first().value,
-                        pm10 = 12.4,
-                        o3 = 58.0,
-                        so2 = 1.6,
-                        no2 = 3.2,
-                        co = 386.0,
-                        aqi = currentAqi,
-                        description = AirQualityDescription(chn = "优", usa = "Good"),
-                        primaryPollutant = "O3",
-                        healthEffect = "空气质量令人满意，基本无空气污染。",
-                        healthAdviceGeneral = "各类人群均可正常开展户外活动。",
-                        healthAdviceSensitive = "极少数敏感人群应减少户外剧烈运动。",
+                        pm10 = round1(12.0 + currentCloud * 7.5),
+                        o3 = round1(46.0 + currentCloud * 18.0),
+                        so2 = round1(1.2 + currentCloud * 0.8),
+                        no2 = round1(2.4 + currentCloud * 2.0),
+                        co = round1(320.0 + currentCloud * 90.0),
                         pm25Unit = "μg/m³",
                         pm10Unit = "μg/m³",
                         o3Unit = "μg/m³",
                         so2Unit = "μg/m³",
                         no2Unit = "μg/m³",
-                        coUnit = "μg/m³",
-                        pm25Iaqi = 22,
-                        pm10Iaqi = 30,
-                        o3Iaqi = 28,
-                        so2Iaqi = 4,
-                        no2Iaqi = 6,
-                        coIaqi = 5
+                        coUnit = "μg/m³"
                     ),
                     life_index = LifeIndex(
                         ultraviolet = LifeIndexItem(index = "11", desc = "极强"),
@@ -403,7 +432,7 @@ object MockWeatherData {
                     precipitation_2h = minutelyPrecip,
                     precipitation = minutelyPrecip,
                     probability = minutelyProb,
-                    description = "未来两小时几内亚湾上空以高层云为主，暂无明显降水回波。",
+                    description = minutelySummary,
                     times = minutelyTimes
                 ),
                 hourly = HourlyForecast(
@@ -420,9 +449,22 @@ object MockWeatherData {
                     pressure = hourlyPressure,
                     visibility = hourlyVisibility,
                     dswrf = null,
+                    // 逐时空气质量：与 /airquality/v1/hourly 同构，
+                    // 只给分项浓度（原始观测量），逐时 AQI 由 App 自算
                     air_quality = HourlyAirQuality(
-                        aqi = hourlyAqi,
-                        pm25 = hourlyPm25
+                        pm25 = hourlyPm25,
+                        pm10 = hourlyPm10,
+                        o3 = hourlyO3,
+                        so2 = hourlySo2,
+                        no2 = hourlyNo2,
+                        co = hourlyCo,
+                        aqi = null,
+                        pm25Unit = "μg/m³",
+                        pm10Unit = "μg/m³",
+                        o3Unit = "μg/m³",
+                        so2Unit = "μg/m³",
+                        no2Unit = "μg/m³",
+                        coUnit = "μg/m³"
                     ),
                     life_index = HourlyLifeIndex(ultraviolet = hourlyUv)
                 ),
@@ -433,13 +475,11 @@ object MockWeatherData {
                     temperature = dailyTemps,
                     wind = dailyWinds,
                     skycon = dailySkycons,
-                    air_quality = com.ridgecast.weather.model.DailyAirQuality(
-                        aqi = dailyAqis,
-                        pm25 = dailyPm25
-                    ),
                     life_index = DailyLifeIndex(ultraviolet = dailyLife)
                 ),
-                forecastKeypoint = "几内亚湾赤道海域全年高温高湿，午后对流旺盛，紫外线极强，外出注意防晒与阵雨。",
+                // 与真实接口同口径：forecast_keypoint 取自分钟级降水的 summary，
+                // 不再塞入与真实数据无关的「气候说明面板」文案。
+                forecastKeypoint = minutelySummary,
                 alert = Alert(status = "ok", content = emptyList()),
                 astronomy = AstronomySnapshot(
                     latitude = MAP_CENTER_LAT,

@@ -244,8 +244,35 @@ data class HourlyForecast(
     val pressure: List<HourlyValue>? = null,
     val visibility: List<HourlyValue>? = null,
     val dswrf: List<HourlyValue>? = null,
+    // 逐时空气质量：来源 /airquality/v1/hourly（未来 24 小时）。
+    // 与实况 AirQuality 同构 —— **只存原始观测量（分项浓度 + 单位）**，
+    // 逐时 AQI 由 App 用 AqiCalculator 自算（官方逐时端点只给 qaqi/gb-defra，没有 us-epa）。
     val air_quality: HourlyAirQuality? = null,
     val life_index: HourlyLifeIndex? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class HourlyAirQuality(
+    val pm25: List<HourlyValue>? = null,
+    val pm10: List<HourlyValue>? = null,
+    val o3: List<HourlyValue>? = null,
+    val so2: List<HourlyValue>? = null,
+    val no2: List<HourlyValue>? = null,
+    val co: List<HourlyValue>? = null,
+    /** 逐时 AQI（可选）：数据源直接给的就用；没有则由分项浓度自算。 */
+    val aqi: List<HourlyAqiValue>? = null,
+    val pm25Unit: String? = null,
+    val pm10Unit: String? = null,
+    val o3Unit: String? = null,
+    val so2Unit: String? = null,
+    val no2Unit: String? = null,
+    val coUnit: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class HourlyAqiValue(
+    val datetime: String? = null,
+    val value: AirQualityIndex? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -282,18 +309,6 @@ data class HourlySkycon(
     val value: String? = null
 )
 
-@JsonClass(generateAdapter = true)
-data class HourlyAirQuality(
-    val aqi: List<HourlyAqiValue>? = null,
-    val pm25: List<HourlyValue>? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class HourlyAqiValue(
-    val datetime: String? = null,
-    val value: AirQualityIndex? = null
-)
-
 // ============ Daily ============
 
 @JsonClass(generateAdapter = true)
@@ -315,7 +330,7 @@ data class DailyForecast(
     val skycon: List<DailySkycon>? = null,
     val skycon_08h_20h: List<DailySkycon>? = null,
     val skycon_20h_32h: List<DailySkycon>? = null,
-    val air_quality: DailyAirQuality? = null,
+    // 逐日同样不含空气质量（与逐时同理：端点存在但未接入）
     val life_index: DailyLifeIndex? = null
 )
 
@@ -391,28 +406,6 @@ data class DailyValue(
 data class DailySkycon(
     val date: String? = null,
     val value: String? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class DailyAirQuality(
-    val aqi: List<DailyAqiIndexValue>? = null,
-    val pm25: List<DailyAqiValue>? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class DailyAqiIndexValue(
-    val date: String? = null,
-    val max: AirQualityIndex? = null,
-    val min: AirQualityIndex? = null,
-    val avg: AirQualityIndex? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class DailyAqiValue(
-    val date: String? = null,
-    val max: Double? = null,
-    val min: Double? = null,
-    val avg: Double? = null
 )
 
 @JsonClass(generateAdapter = true)

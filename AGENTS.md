@@ -90,6 +90,24 @@
   Floating / Onboarding / OnboardingAction`），`Modifier.liquidGlass` 通过
   `LocalGlassStyle` 取值，**调用点不得再硬编码 blur/tint/refraction**；
   要调参只改 `GlassStyle` 一处，全站生效。
+- **边缘存在感（v1.0.9 收敛为「薄片」观感）**：玻璃的「边缘」是 **4 层叠加**——
+  ①折射带（`refractionHeight`/`refractionAmount`）②高光描边（`Highlight`）
+  ③内投影（厚玻璃感的大头）④外投影。v1.0.9 起：
+  - 折射带宽砍半（14→7dp）、高光变细变柔且只留在迎光角
+    （`highlightAlphaScale` 1→0.62、`highlightWidth` 1→0.5dp、
+    `highlightFalloff` 1.2→1.9、`highlightBlurRadius` 0.5→1.2dp）；
+  - **内/外投影此前硬编码在 `LiquidGlass.kt`，现已一并收口进 `GlassStyle`**
+    （`shadowRadius/OffsetY/Alpha*`、`innerShadowRadius/OffsetY/Alpha*`）——
+    「改一处全站生效」对阴影两项此前并不成立，现已补齐；
+  - 省电/无背景源的降级路径那条 1dp 白描边也**跟随 `highlightAlphaScale`**，
+    避免降级时反而比玻璃态更扎眼；
+  - ⚠️ **描边宽度会被 ×2 放大**：vendored `HighlightModifier` 里
+    `strokeWidth = ceil(width.toPx()) * 2f`。420dpi 屏上 1dp → 2.625px → ceil 3
+    → **实际 6px**；且有量化台阶（0.5dp→4px，0.25dp→2px，0→关闭）。调参按倍数换算。
+  - ⚠️ **折射带剖面写死在 shader 里**：`RoundedRectRefractionShaderString` 的
+    `circleMap(x)=1-sqrt(1-x²)` 是圆弧剖面，**没有参数能改成直线（斜切面）**；
+    真要做斜切面必须改 vendored shader（`circleMap` 换恒等映射）。
+    `Lens.kt` 只支持 `CornerBasedShape`，换形状会抛 `throwUnsupportedSDFException`。
 - **关键坑（严禁重犯）**：
   1. `drawBackdrop` 为了采样模糊/折射，会把背景层向四周扩 `padding`；
      **必须把该背景层 clip 到面板形状再合成**，否则后绘制的面板会用扩边背景
@@ -146,6 +164,18 @@
 - **状态切换文案不得改变宽度**：文案由「复制公钥」变为「已复制 ✓」这类变长时，因为等分宽度才不会引发兄弟按钮重新测量与抖动；
 - **加载态用显式参数**：`GlassActionButton(loading = true)`，**严禁用 `text == "xxx"` 这类字符串比较来判断是否展示 loading**。
 
+### 6. 天气族归类（单一事实来源，严禁各处另写关键词链）
+- **唯一入口**：`util/WeatherFamily.kt` 的 `classifyWeather(skycon)` 把和风 skycon 归类到 `WeatherFamily`（Clear / PartlyCloudy / Cloudy / Thunder / Rain / Snow / Sleet / Hail / Haze / Wind / Unknown）；
+- **消费方**：背景渐变（`WeatherUtils.getWeatherGradient`）、玻璃卡片配色（`getWeatherTheme` 的 `isPrecipitating`）、粒子特效（`WeatherEffectOverlay.effectTypeOf`）、城市卡片色（`CityListRow.getCityCardGradient`）、逐时图表色与降水概率（`HourlyForecast`）；
+- **血泪事故**：`THUNDER_SHOWER` / `SLEET` / `HAIL` 不含任何旧关键词（RAIN/STORM/SNOW/CLOUDY/CLEAR/HAZE/WIND），曾全部落进 `else -> 晴天蓝`，出现「闪电配晴空」；同时 `THUNDER_SHOWER` 被判为非降水而套用浅色玻璃。**新增 skycon 或新增判定时只改 `classifyWeather` 一处**；
+- **判定顺序即优先级**：`THUNDER` 最先（否则被当成普通降水）→ `SLEET`/`HAIL` 独立 → `PARTLY_CLOUDY` 先于 `CLOUDY`（前者含子串）→ `SNOW`/`RAIN` 先于裸 `STORM`；
+- **族 → 调色板映射**（`ui/theme/Color.kt`，每组 5 色）：Clear/Unknown→晴、PartlyCloudy→多云、Cloudy→阴、**Thunder→雷暴（独立配色，比普通雨更暗更沉）**、Rain/Hail→雨、Snow/Sleet→雪、Haze→霾雾尘、Wind→大风。
+
+### 7. 天空渐变锚点（唯一口径）
+- **`SkyGradientStops`（`util/WeatherUtils.kt`）是全项目唯一锚点**：非等距 `0 / 0.40 / 0.65 / 0.85 / 1.0`，天顶色占上 40%；
+- **所有天空渐变必须走 `skyGradientColorStops(colors)`**（主屏 `WeatherBackground`、次级页 `weatherPageBackground`、root 层 `screenBackgroundBrush`），**严禁直接用 `Brush.verticalGradient(colors = ...)` 的默认等距停靠**——两套锚点并存会让「天顶压深」的设计口径失效；
+- `skyGradientColorStops` 在颜色数与锚点数不一致时退回等距分布（直接 zip 会静默截断并把后面的颜色挤在同一个锚点上）。
+
 ## 离线逆地理编码 (Offline Geocoding)
 - **定位与编码方案**: 采用全离线两阶段空间查询体系（阶段一：天地图 2,900 个法定区县多边形射线法命中；阶段二：民政部 2026 最新 39,188 个乡镇街道驻地最近邻匹配）
 - **数据管线位置**: `data/geocoding/`（全流程构建脚本 `build_offline_geodata.py`、区县边界 `counties_2026.geojson`、乡镇标准字典 `townships_2026.json`）
@@ -173,11 +203,56 @@
   断言示例数据**零缺失**。真实接口字段升级 → 校验器同步升级 → 该测试立刻指出
   示例数据缺了什么，**不需要人工逐字段核对**。
 
+### 示例数据铁律：只给「原始观测量」，派生量一律由 App 自算
+- **空气质量：实况 + 逐小时（已接入），逐日不接**。
+  - 端点：`/airquality/v1/current`（实况）、`/airquality/v1/hourly`（未来 24h，逐时 AQI 行用）；
+    **逐日 `/airquality/v1/daily` 不接**（展示价值低，多一次请求）；
+  - 官方逐时端点的 `indexes` 只有 `qaqi` / `gb-defra`，**没有 us-epa**，
+    因此逐时 AQI 由**分项浓度本地自算**（`AqiCalculator`）——与实况同一套算法；
+  - 模型 `HourlyAirQuality` **只存原始观测量**（六项分项浓度 + 单位），
+    逐时 AQI 由 `HourlyAirQuality.resolvedHourlyAqi()` 统一口径产出；
+  - 逐时端点失败**不记 DataIssue**（该行有则显示无则不显示，报错会每次刷新弹提示）；
+  - 计费：空气质量属「天气和基础服务」，与天气预报同一阶梯，**每月 5 万次内 0 元**；
+- **AQI / AQHI / 分项 IAQI 全部由 App 自算**：
+  - `AqiCalculator`（US EPA）+ `AqhiCalculator`（香港 EPD）是唯一算法；
+  - 统一取值口径在 `util/AqiCalculator.kt` / `util/AqhiCalculator.kt` 的扩展函数
+    `AirQuality.resolvedAqi()` / `resolvedAqhi()` / `resolvedCategory()` / `resolvedPrimaryPollutant()`：
+    **接口给了就用接口的，没给就按分项浓度自算**，UI 一律走这几个函数；
+  - 示例数据**只给六项分项浓度**（PM2.5/PM10/O3/SO2/NO2/CO + 单位），
+    **不预置** `aqi` / `*Iaqi` / `description`——否则会出现「浓度和 AQI 对不上」；
+- **分钟级降水必须是真数据**：下雨时给 5 分钟累计降水（对流单体：中间强两端弱），
+  不下雨时全 0；
+  **必须与逐时降水量自洽**：同一小时内 12 个 5 分钟累计之和 = 该小时的降水量（mm），
+  否则图上强度会和逐小时预报对不上；
+- **分钟级 summary 是自然语言描述**（和风 /v7/minutely/5m 的 `summary` 口径，
+  官方示例「95分钟后雨就停了」），**不是「有降水/无降水」这种标签**：
+  有雨时按数据推导「X分钟后开始有雨，Y分钟后雨就停了」，无雨时「未来两小时无降水」；
+- **分钟级降水的面板归属（生产 UI 规则）**：
+  - **有降水** → 只显示「分钟级降水」卡片，**卡片头部用 API 返回的描述**
+    （`minutely.description`），**不再另外渲染一条描述面板**（同一句话说两遍）；
+  - **无降水**（或用户在设置里关掉了分钟级卡片）→ 只显示 API 返回的文字描述面板；
+  - 即：`forecast_keypoint` 面板与分钟级卡片**互斥**，由 `showMinutely` 二选一；
+- **标题必须描述正在展示的那份数据**：展示示例数据时标题是「几内亚湾」（`MockWeatherData.DEFAULT_CITY_NAME`），
+  展示真实数据时才用城市名；`WeatherUiState.Success.isSampleData` 标记当前是否示例数据。
+  **严禁**在 UI 层把地名改写成「北京市」或过滤掉「Mountain View / 美国」这类真实地名。
+
 ## 版本管理
 - **版本号位置**: `app/build.gradle.kts` 中的 `versionCode` 和 `versionName`
 - **版本号升级**: 发版时 patch +1、versionCode +1，无需单独的 bump 脚本。当小版本号（patch）超过 100 之后自动进位并迭代一次中版本号（minor），例如：`3.0.100` 之后的下一个版本就是 `3.1.0`。
 - **当前发布状态（v1.0.5 / 2026-10-19）**: 全 UI 切换至统一 Backdrop 液态玻璃框架（主页、设置、城市管理、预警详情、引导页、浮动弹窗）；Clear 玻璃无白罩，太阳/月亮轨迹驱动动态高光，阴影收敛；修复扩边背景覆盖相邻面板、直角白遮罩、黑角与背景采样粘滞。正式 APK 经本地签名后附带于 GitHub Release（v1.0.5）分发。
 - **当前发布状态（v1.0.7 / 2026-10-20）**: 玻璃材质参数收口到 `GlassStyle`；折射参数对齐上游 Backdrop 官方口径（`blur 4dp`、amount = 2 × height、height 收敛到最小圆角半径内）；高光升级为**太阳 + 月亮双光源**（物理高度角/方位角 → 屏幕空间三维投影，CIE 统一口径色温）；多城市按各自经纬度各成一场；接入和风天文接口（带本地 NOAA/Meeus 兜底）；新增数据完整性校验层与重做后的示例数据（世界地图中心点·几内亚湾）。正式 APK 经本地签名后附带于 GitHub Release（v1.0.7）分发。
+- **当前发布状态（v1.0.8 / 2026-10-20）**:
+  - **背景色错配修复**：`THUNDER_SHOWER` / `SLEET` / `HAIL` 过去不匹配任何关键词而落进「晴天蓝」，
+    出现「闪电配晴空」；新增 `WeatherFamily` 单一归类入口 + 雷暴专属配色；
+  - **天空渐变锚点统一**：全站改用非等距 `SkyGradientStops`（天顶占 40%），消除「两套锚点并存」；
+  - **示例数据重构**：只给原始观测量，派生量一律 App 自算（AQI/AQHI/IAQI）；
+    地点标题与展示数据一致（几内亚湾）；分钟级降水与逐时降水量自洽、summary 改为官方自然语言口径；
+  - **接入和风逐小时空气质量** `/airquality/v1/hourly`：恢复首页逐时 AQI 行 + 设置页开关，
+    AQI 由本地 EPA 算法自算（官方逐时无 us-epa 指数）；逐日空气质量不接。
+- **当前发布状态（v1.0.9 / 2026-10-20，本地已构建待测试）**:
+  - **玻璃边缘存在感收敛为「薄片」观感**：折射带宽砍半、高光变细变柔且只留迎光角、
+    内投影收小（厚玻璃感的大头）；内/外投影参数一并收口进 `GlassStyle`，
+    补齐此前「改一处全站生效」对阴影两项的缺口；省电降级路径的描边同步跟随高光增益。
 
 ## 发版与构建规则
 - **本地编译优先**: 以后所有 Release 版本采用本地优先编译验证（`./gradlew assembleRelease`），不再推送到 GitHub Actions 远程编译；

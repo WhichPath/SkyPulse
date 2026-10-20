@@ -106,6 +106,25 @@ val RainyNightGradient = listOf(
     Color(0xFF324A60)
 )
 
+// Thunderstorm (Day) — 比雨天更暗更沉的钢青蓝，顶部压到近黑
+// （雷暴对应独立的强对流配色：过去 THUNDER_SHOWER 落到了 else -> 晴天蓝）
+val ThunderGradient = listOf(
+    Color(0xFF2B333E),  // 顶部深钢蓝
+    Color(0xFF353E4B),
+    Color(0xFF404A59),
+    Color(0xFF4C5768),
+    Color(0xFF586477)   // 底部
+)
+
+// Thunderstorm (Night) — 近黑的冷蓝夜色，仅地平线留一线微光
+val ThunderNightGradient = listOf(
+    Color(0xFF070C12),
+    Color(0xFF0C1219),
+    Color(0xFF111923),
+    Color(0xFF17212C),
+    Color(0xFF1D2935)
+)
+
 // Snowy (Day) — cold gray-blue
 val SnowyGradient = listOf(
     Color(0xFF6E8A9E),

@@ -18,11 +18,23 @@ import java.util.*
 val SkyGradientStops: List<Float> = listOf(0.0f, 0.40f, 0.65f, 0.85f, 1.0f)
 
 /**
- * 将天空渐变色与 [SkyGradientStops] 锚点组合为 Brush.verticalGradient(vararg) 所需的颜色停靠对。
- * 调用方用展开运算符传入：Brush.verticalGradient(colorStops = *skyGradientColorStops(colors), ...)。
+ * 将天空渐变色与 [SkyGradientStops] 锚点组合为 Brush.verticalGradient 所需的颜色停靠对。
+ * 调用方直接传入：Brush.verticalGradient(colorStops = skyGradientColorStops(colors), ...)。
+ *
+ * 颜色数与锚点数不一致时退回**等距**分布：直接 zip 会静默截断，
+ * 把后面的颜色挤在同一个锚点上（例如 4 色配 5 锚点 → 第 4、5 个锚点共用第 4 色），
+ * 造成色阶错位，而不是「只是不够非等距」。
  */
-fun skyGradientColorStops(colors: List<Color>): Array<Pair<Float, Color>> =
-    colors.zip(SkyGradientStops) { color, stop -> stop to color }.toTypedArray()
+fun skyGradientColorStops(colors: List<Color>): Array<Pair<Float, Color>> {
+    if (colors.isEmpty()) return arrayOf(0f to Color.Transparent)
+    if (colors.size == SkyGradientStops.size) {
+        return colors.zip(SkyGradientStops) { color, stop -> stop to color }.toTypedArray()
+    }
+    return Array(colors.size) { index ->
+        val stop = if (colors.size == 1) 0f else index.toFloat() / (colors.size - 1)
+        stop to colors[index]
+    }
+}
 
 object WeatherUtils {
 
@@ -59,9 +71,9 @@ object WeatherUtils {
         // 白天非雨雪向白色提亮 55%（清透有蓝天感），雨雪与夜晚向黑色压暗 55%。
         // 卡片因此保留天气色彩个性，且无需逐天气手工调色；文字恒白可读。
         val hue = background[background.size / 2]
-        val precipOrSnow = skycon?.let {
-            it.contains("RAIN") || it.contains("STORM") || it.contains("SNOW")
-        } == true
+        // 降水判定统一走天气族：雷阵雨/雨夹雪/冰雹同样必须压暗，
+        // 否则会落进「白天非降水 → 浅色玻璃」分支，浅色玻璃压在暗背景上不可读。
+        val precipOrSnow = classifyWeather(skycon).isPrecipitating
         val glass = if (isDay && !precipOrSnow) {
             val light = lerpColor(saturateColor(hue, 1.35f), Color.White, 0.35f)
             GlassColors(
@@ -157,17 +169,41 @@ object WeatherUtils {
         return getWeatherInfo(skycon, isDay)
     }
 
+    /**
+     * 天空渐变调色板。
+     *
+     * 归类统一走 [classifyWeather]，不再在本处另写关键词链——
+     * 历史上 `THUNDER_SHOWER` / `SLEET` / `HAIL` 因不匹配任何关键词而落到
+     * `else -> 晴天蓝`，出现「闪电配晴空」的错配。
+     *
+     * 族 → 调色板映射：
+     * - Clear / Unknown → 晴
+     * - PartlyCloudy → 多云
+     * - Cloudy → 阴
+     * - Thunder → 雷暴（独立配色：比普通雨更暗更沉）
+     * - Rain / Hail → 雨
+     * - Snow / Sleet → 雪（雨夹雪本质是低温降水）
+     * - Haze → 霾雾尘
+     * - Wind → 大风
+     */
     fun getWeatherGradient(skycon: String?, isDay: Boolean = true): List<Color> {
-        return when {
-            skycon == null -> if (isDay) SunnyGradient else SunnyNightGradient
-            skycon.contains("CLEAR") -> if (isDay) SunnyGradient else SunnyNightGradient
-            skycon.contains("PARTLY_CLOUDY") -> if (isDay) PartialCloudGradient else PartialCloudNightGradient
-            skycon.contains("CLOUDY") -> if (isDay) CloudyGradient else CloudyNightGradient
-            skycon.contains("RAIN") || skycon.contains("STORM") -> if (isDay) RainyGradient else RainyNightGradient
-            skycon.contains("SNOW") -> if (isDay) SnowyGradient else SnowyNightGradient
-            skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> if (isDay) HazeGradient else HazeNightGradient
-            skycon == "WIND" -> if (isDay) WindyGradient else WindyNightGradient
-            else -> if (isDay) SunnyGradient else SunnyNightGradient
+        return when (classifyWeather(skycon)) {
+            WeatherFamily.Clear, WeatherFamily.Unknown ->
+                if (isDay) SunnyGradient else SunnyNightGradient
+            WeatherFamily.PartlyCloudy ->
+                if (isDay) PartialCloudGradient else PartialCloudNightGradient
+            WeatherFamily.Cloudy ->
+                if (isDay) CloudyGradient else CloudyNightGradient
+            WeatherFamily.Thunder ->
+                if (isDay) ThunderGradient else ThunderNightGradient
+            WeatherFamily.Rain, WeatherFamily.Hail ->
+                if (isDay) RainyGradient else RainyNightGradient
+            WeatherFamily.Snow, WeatherFamily.Sleet ->
+                if (isDay) SnowyGradient else SnowyNightGradient
+            WeatherFamily.Haze ->
+                if (isDay) HazeGradient else HazeNightGradient
+            WeatherFamily.Wind ->
+                if (isDay) WindyGradient else WindyNightGradient
         }
     }
 

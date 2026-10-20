@@ -1,5 +1,6 @@
 package com.ridgecast.weather.util
 
+import com.ridgecast.weather.model.AirQuality
 import kotlin.math.exp
 import kotlin.math.max
 
@@ -132,3 +133,14 @@ object AqhiCalculator {
         return u == "μg/m3" || u == "ug/m3" || u == "μg/m³"
     }
 }
+
+/**
+ * 香港 AQHI 的**统一取值口径**：只由分项浓度算（任何数据源都不提供 AQHI）。
+ *
+ * 与 [resolvedAqi] 配套：示例数据只给分项浓度，AQI 与 AQHI 都由 App 自算，
+ * 与真实数据路径走同一套算法。
+ */
+fun AirQuality.resolvedAqhi(): AqhiCalculator.AqhiResult? = AqhiCalculator.calculate(
+    pm25 = pm25, pm10 = pm10, o3 = o3, no2 = no2, so2 = so2,
+    o3Unit = o3Unit, no2Unit = no2Unit, so2Unit = so2Unit
+)

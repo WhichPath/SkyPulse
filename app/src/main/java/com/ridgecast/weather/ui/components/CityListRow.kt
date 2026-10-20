@@ -33,7 +33,10 @@ import com.ridgecast.weather.model.City
 import com.ridgecast.weather.model.WeatherResponse
 import com.ridgecast.weather.ui.theme.LocalSecondaryPageTheme
 import com.ridgecast.weather.ui.theme.SkyPulseDesignSystem
+import com.ridgecast.weather.util.WeatherFamily
 import com.ridgecast.weather.util.WeatherUtils
+import com.ridgecast.weather.util.classifyWeather
+import com.ridgecast.weather.util.resolvedAqi
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -171,8 +174,7 @@ fun SwipeableCityListRow(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Row 2: air quality (left) + weather description (right)
-                val aqiValue = weather?.result?.realtime?.air_quality?.aqi?.usa?.toInt()
-                    ?: weather?.result?.realtime?.air_quality?.aqi?.chn?.toInt()
+                val aqiValue = weather?.result?.realtime?.air_quality?.resolvedAqi()
                 val aqiDesc = aqiValue?.let {
                     when {
                         it <= 50 -> null
@@ -282,15 +284,15 @@ fun CitySearchResultRow(
 }
 
 private fun getCityCardGradient(skycon: String?, isDay: Boolean): List<Color> {
-    return when {
-        skycon == null || skycon.contains("CLEAR") -> listOf(Color(0xFF4A90D9), Color(0xFF87CEEB))
-        skycon.contains("PARTLY_CLOUDY") -> listOf(Color(0xFF5B9BD5), Color(0xFF8BB8E0))
-        skycon.contains("CLOUDY") -> if (isDay) listOf(Color(0xFF6B7F8F), Color(0xFF8A9EAF)) else listOf(Color(0xFF8A9EB5), Color(0xFFA8B8C8))
-        skycon.contains("RAIN") || skycon.contains("STORM") -> listOf(Color(0xFF556070), Color(0xFF7A8FA0))
-        skycon.contains("SNOW") -> listOf(Color(0xFF7A94AA), Color(0xFF8EA5B8))
-        skycon.contains("HAZE") || skycon == "FOG" -> listOf(Color(0xFF8A7B6E), Color(0xFFAA9B90))
-        skycon == "WIND" -> listOf(Color(0xFF3E7F77), Color(0xFF4A8F87))
-        else -> listOf(Color(0xFF4A90D9), Color(0xFF87CEEB))
+    return when (classifyWeather(skycon)) {
+        WeatherFamily.Clear, WeatherFamily.Unknown -> listOf(Color(0xFF4A90D9), Color(0xFF87CEEB))
+        WeatherFamily.PartlyCloudy -> listOf(Color(0xFF5B9BD5), Color(0xFF8BB8E0))
+        WeatherFamily.Cloudy -> if (isDay) listOf(Color(0xFF6B7F8F), Color(0xFF8A9EAF)) else listOf(Color(0xFF8A9EB5), Color(0xFFA8B8C8))
+        WeatherFamily.Thunder -> listOf(Color(0xFF39424F), Color(0xFF525E70))
+        WeatherFamily.Rain, WeatherFamily.Hail -> listOf(Color(0xFF556070), Color(0xFF7A8FA0))
+        WeatherFamily.Snow, WeatherFamily.Sleet -> listOf(Color(0xFF7A94AA), Color(0xFF8EA5B8))
+        WeatherFamily.Haze -> listOf(Color(0xFF8A7B6E), Color(0xFFAA9B90))
+        WeatherFamily.Wind -> listOf(Color(0xFF3E7F77), Color(0xFF4A8F87))
     }
 }
 

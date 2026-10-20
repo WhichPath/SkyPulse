@@ -24,6 +24,9 @@ import com.ridgecast.weather.ui.theme.TextSecondary
 import com.ridgecast.weather.ui.theme.TextTertiary
 import com.ridgecast.weather.util.AqhiCalculator
 import com.ridgecast.weather.util.AqiCalculator
+import com.ridgecast.weather.util.resolvedAqhi
+import com.ridgecast.weather.util.resolvedAqi
+import com.ridgecast.weather.util.resolvedCategory
 
 // ============ AQI 色阶 (与全应用统一高对比度色阶保持一致) ============
 private val AqiColorExcellent = SemanticColorGood          // 优 ≤50 - 亮翠绿
@@ -74,22 +77,13 @@ fun AirQualityDetailCard(
 ) {
     if (airQuality == null) return
 
-    val aqiValue = airQuality.aqi?.usa?.toInt() ?: airQuality.aqi?.chn?.toInt()
+    val aqiValue = airQuality.resolvedAqi()
     if (aqiValue == null) return
 
-    val category = airQuality.description?.usa ?: aqiCategory(aqiValue)
+    val category = airQuality.resolvedCategory() ?: aqiCategory(aqiValue)
     val explanationController = LocalExplanationController.current
 
-    val aqhi = AqhiCalculator.calculate(
-        pm25 = airQuality.pm25,
-        pm10 = airQuality.pm10,
-        o3 = airQuality.o3,
-        no2 = airQuality.no2,
-        so2 = airQuality.so2,
-        o3Unit = airQuality.o3Unit,
-        no2Unit = airQuality.no2Unit,
-        so2Unit = airQuality.so2Unit
-    )
+    val aqhi = airQuality.resolvedAqhi()
 
     val pm25Unit = airQuality.pm25Unit ?: "μg/m³"
     val pm10Unit = airQuality.pm10Unit ?: "μg/m³"

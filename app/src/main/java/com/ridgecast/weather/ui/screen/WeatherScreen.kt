@@ -54,6 +54,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ridgecast.weather.ui.glass.weatherPageBackground
 import com.ridgecast.weather.data.WeatherSettings
 import com.ridgecast.weather.data.ThemeMode
+import com.ridgecast.weather.data.mock.MockWeatherData
 import com.ridgecast.weather.domain.CitySelectionPolicy
 import com.ridgecast.weather.model.sortedByPublishTimeDescending
 import com.ridgecast.weather.util.AqhiCalculator
@@ -101,14 +102,12 @@ fun WeatherScreen(
     val effectiveLocationName by remember {
         derivedStateOf {
             when (val s = uiState) {
-                is WeatherUiState.Success -> {
-                    if (s.locationName.contains("Mountain View") || s.locationName.contains("美国") || s.locationName == "定位中...") {
-                        "北京市"
-                    } else {
-                        s.locationName
-                    }
-                }
-                else -> "北京市"
+                // 标题直接用状态里的地名：ViewModel 已经区分了「示例数据（几内亚湾）」
+                // 与「真实城市」，这里不再二次改写。
+                is WeatherUiState.Success -> s.locationName
+                // 加载中/出错时用中性占位：不再伪造「北京市」——
+                // 真实定位城市可能根本不在北京，展示假地名会误导。
+                else -> "定位中..."
             }
         }
     }
@@ -421,16 +420,22 @@ fun WeatherScreen(
                                             key = { page -> effectiveCities.getOrNull(page)?.id ?: page.toString() }
                                         ) { page ->
                                             val city = effectiveCities.getOrNull(page)
-                                            val contentState = remember(city, cityWeatherMap, effectiveLocationName, state.weather) {
-                                                val weather = city?.let { cityWeatherMap[it.id]?.weather } ?: state.weather
-                                                val resolvedName = if (city?.isCurrentLocation == true) {
-                                                    effectiveLocationName
-                                                } else {
-                                                    city?.name?.takeIf { !it.contains("Mountain View") && !it.contains("美国") } ?: "北京市"
+                                            val contentState = remember(city, cityWeatherMap, effectiveLocationName, state) {
+                                                val cityWeather = city?.let { cityWeatherMap[it.id]?.weather }
+                                                val weather = cityWeather ?: state.weather
+                                                // 标题必须描述**正在展示的那份数据**：
+                                                // 这一页回落到了示例数据时用示例地名（几内亚湾），
+                                                // 有该城市的真实数据时才用城市名。
+                                                val showsSample = cityWeather == null && state.isSampleData
+                                                val resolvedName = when {
+                                                    showsSample -> MockWeatherData.DEFAULT_CITY_NAME
+                                                    city?.isCurrentLocation == true -> effectiveLocationName
+                                                    else -> city?.name ?: effectiveLocationName
                                                 }
                                                 WeatherUiState.Success(
                                                     weather = weather,
-                                                    locationName = resolvedName
+                                                    locationName = resolvedName,
+                                                    isSampleData = showsSample
                                                 )
                                             }
                                             // 收藏状态：定位城市看是否已收藏，克隆城市看是否接近定位城市
@@ -653,7 +658,7 @@ private fun AnimatedContentTransitionScope<AppScreen>.skyPulseScreenTransition()
 
 private fun AppScreen.screenBackgroundBrush(weatherTheme: WeatherTheme, secondaryPageColors: SecondaryPageColors): Brush {
     return when (this) {
-        AppScreen.CityDetail -> Brush.verticalGradient(colorStops = *skyGradientColorStops(weatherTheme.backgroundGradient))
+        AppScreen.CityDetail -> Brush.verticalGradient(colorStops = skyGradientColorStops(weatherTheme.backgroundGradient))
         // 次级页与主页同源：色相取自当前天气，再按深浅色模式调整明度，
         // 保证既看得出天气、又不会牺牲文字对比度
         AppScreen.CityList,
@@ -809,35 +814,12 @@ private fun WeatherContentBody(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            result?.forecastKeypoint?.let { keypoint ->
-                GlassCard(
-                    modifier = Modifier.padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal),
-                    radius = SkyPulseDesignSystem.Radius.pill
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = keypoint,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Normal,
-                                letterSpacing = 0.2.sp
-                            ),
-                            color = TextPrimary.copy(alpha = 0.92f),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
-            }
-
             val minutelyData = result?.minutely?.precipitation_2h
             val showMinutely = !minutelyData.isNullOrEmpty() && minutelyData.any { it != 0.0 }
 
             if (settings.showCardMinutely && showMinutely) {
+                // 有降水：只显示分钟级降水卡片（卡片头部即 API 返回的描述）。
+                // 不再额外渲染一条「未来两小时有降水」的描述面板——同一句话说两遍。
                 MinutelyPrecipitationCard(
                     minutely = result?.minutely,
                     modifier = Modifier
@@ -845,6 +827,32 @@ private fun WeatherContentBody(
                         .padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal)
                 )
                 Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
+            } else {
+                // 无降水（或用户关掉了分钟级卡片）：只显示 API 返回的文字描述。
+                result?.forecastKeypoint?.let { keypoint ->
+                    GlassCard(
+                        modifier = Modifier.padding(horizontal = SkyPulseDesignSystem.Spacing.screenHorizontal),
+                        radius = SkyPulseDesignSystem.Radius.pill
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = keypoint,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Normal,
+                                    letterSpacing = 0.2.sp
+                                ),
+                                color = TextPrimary.copy(alpha = 0.92f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(SkyPulseDesignSystem.Spacing.sectionGap))
+                }
             }
 
             HourlyForecastCard(

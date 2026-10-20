@@ -14,6 +14,7 @@ import com.ridgecast.weather.ui.components.WeatherSvgRenderer
 import com.ridgecast.weather.util.FileLogger
 import androidx.compose.ui.graphics.toArgb
 import com.ridgecast.weather.util.WeatherUtils
+import com.ridgecast.weather.util.resolvedAqi
 
 import java.text.SimpleDateFormat
 import java.util.*
@@ -476,10 +477,10 @@ object WeatherWidgetUpdater {
             val humidity = realtime?.humidity
             val humidityText = if (humidity != null) "湿度 ${(humidity * 100).toInt()}%" else "湿度 --"
 
-            // Get AQI
-            val aqi = realtime?.air_quality?.aqi?.usa ?: realtime?.air_quality?.aqi?.chn
+            // Get AQI（统一口径：接口给了就用，没给就按分项浓度自算）
+            val aqi = realtime?.air_quality?.resolvedAqi()
             val aqiText = if (aqi != null) {
-                val v = aqi.toInt()
+                val v = aqi
                 val desc = when {
                     v <= 50 -> null
                     v <= 100 -> "中等"

@@ -64,7 +64,9 @@ fun MinutelyPrecipitationCard(
     GlassCard(modifier = modifier.alpha(cardAlpha)) {
         Column(modifier = Modifier.padding(vertical = 16.dp)) {
             Text(
-                text = "分钟级降水",
+                // 头部用 API 返回的描述（和风 minutely summary，如「未来两小时有降水」），
+                // 没有描述时退回通用标题。
+                text = minutely?.description?.takeIf { it.isNotBlank() } ?: "分钟级降水",
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary,
                 modifier = Modifier.padding(horizontal = 16.dp)

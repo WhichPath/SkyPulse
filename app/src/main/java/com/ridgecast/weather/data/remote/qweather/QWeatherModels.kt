@@ -92,6 +92,21 @@ data class QWeatherAirResponse(
     val pollutants: List<QWeatherPollutant>? = null
 )
 
+// ============ v1 空气质量：逐小时预报 ============
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirHourlyResponse(
+    val metadata: QWeatherAirMeta? = null,
+    val hours: List<QWeatherAirHour>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class QWeatherAirHour(
+    val forecastTime: String? = null,
+    val indexes: List<QWeatherAirIndex>? = null,
+    val pollutants: List<QWeatherPollutant>? = null
+)
+
 @JsonClass(generateAdapter = true)
 data class QWeatherAirMeta(
     val tag: String? = null,

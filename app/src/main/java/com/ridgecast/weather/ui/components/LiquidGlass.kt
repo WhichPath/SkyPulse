@@ -65,7 +65,12 @@ fun Modifier.liquidGlass(
             .background(tint)
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = if (isDark) 0.16f else 0.30f),
+                // 降级路径（无背景源 / 省电）没有真实高光可画，
+                // 用一条同口径的细描边代替，**强度跟随高光增益**，
+                // 免得降级时反而比玻璃态更扎眼。
+                color = Color.White.copy(
+                    alpha = style.highlightAlphaScale * (if (isDark) 0.16f else 0.30f)
+                ),
                 shape = shape
             )
     }
@@ -113,16 +118,16 @@ fun Modifier.liquidGlass(
         },
         shadow = {
             Shadow(
-                radius = 7.dp,
-                offset = DpOffset(0.dp, 3.dp),
-                color = Color.Black.copy(alpha = if (isDark) 0.28f else 0.13f)
+                radius = style.shadowRadius,
+                offset = DpOffset(0.dp, style.shadowOffsetY),
+                color = Color.Black.copy(alpha = style.shadowAlpha(isDark))
             )
         },
         innerShadow = {
             InnerShadow(
-                radius = 8.dp,
-                offset = DpOffset(0.dp, 2.dp),
-                color = Color.Black.copy(alpha = if (isDark) 0.14f else 0.05f)
+                radius = style.innerShadowRadius,
+                offset = DpOffset(0.dp, style.innerShadowOffsetY),
+                color = Color.Black.copy(alpha = style.innerShadowAlpha(isDark))
             )
         },
     ).clip(shape)

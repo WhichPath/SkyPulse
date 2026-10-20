@@ -18,16 +18,17 @@ import javax.inject.Singleton
  * 实现 WeatherApiService 接口，编排多个和风端点调用，
  * 将结果映射为现有的 WeatherResponse（彩云格式）模型。
  *
- * 一次刷新发起 6 个并行请求：
+ * 一次刷新发起 7 个并行请求：
  * 1. 实况天气 /weather/v1/current/{lat}/{lon}（v1，含 uvIndex）
  * 2. 逐日预报 /weather/v1/daily/{lat}/{lon}（v1，含 uvIndexMax）
  * 3. 逐小时预报 /weather/v1/hourly/{lat}/{lon}（v1，含真实逐小时 uvIndex）
  * 4. 分钟级降水 /v7/minutely/5m（v7，和风无 v1 版本）
  * 5. 天气预警 /weatheralert/v1/current/{lat}/{lon}
  * 6. 空气质量 /airquality/v1/current/{lat}/{lon}
+ * 7. 逐小时空气质量 /airquality/v1/hourly/{lat}/{lon}（未来 24h 分项污染物）
  *
  * 实况、逐日、逐小时为核心请求（失败则整体失败）；
- * 分钟降水、预警、空气质量为非核心请求（失败不影响主天气数据）。
+ * 分钟降水、预警、空气质量、逐小时空气质量为非核心请求（失败不影响主天气数据）。
  */
 @Singleton
 class QWeatherApiService @Inject constructor(
@@ -110,6 +111,7 @@ class QWeatherApiService @Inject constructor(
     private fun humanSource(endpoint: String): String = when (endpoint) {
         "warning" -> "预警"
         "air" -> "空气质量"
+        "airHourly" -> "逐小时空气质量"
         "minutely" -> "分钟级降水"
         "current" -> "实况"
         "daily" -> "每日预报"
@@ -177,6 +179,12 @@ class QWeatherApiService @Inject constructor(
         val airDeferred = async {
             safeApiCall(endpoint = "air", issueSink = reportIssue) { api.getAirNow(latitude, longitude) }
         }
+        // 逐小时空气质量：用于首页逐时 AQI 行（分项浓度 → 本地 US EPA 口径自算）。
+        // **不记 DataIssue**：该端点属于「有则显示、无则不显示」的增强行，
+        // 失败时整行缺席即可；报错会让每次刷新都弹提示（用户未开通该 API 时尤其烦人）。
+        val airHourlyDeferred = async {
+            safeApiCall(endpoint = "airHourly", issueSink = null) { api.getAirHourly(latitude, longitude) }
+        }
 
         // 天文（玻璃高光的物理光源）：非核心增强，且**本地可兜底**，
         // 因此不记 DataIssue（不打扰用户），失败时 UI 用本地算法重算。
@@ -205,11 +213,12 @@ class QWeatherApiService @Inject constructor(
         val minutely = minutelyDeferred.await()
         val warning = warningDeferred.await()
         val air = airDeferred.await()
+        val airHourly = airHourlyDeferred.await()
         val astronomySolar = astronomySolarDeferred.await()
         val astronomyMoon = astronomyMoonDeferred.await()
 
         // 诊断日志：记录各端点响应码
-        FileLogger.i(TAG, "api_response_codes: now=${now?.condition?.code}, daily=${daily?.days?.size ?: -1}, hourly=${hourly?.hours?.size ?: -1}, minutely=${minutely?.code}, warning=${warning?.alerts?.size ?: -1}, air=${air?.indexes?.size ?: -1}")
+        FileLogger.i(TAG, "api_response_codes: now=${now?.condition?.code}, daily=${daily?.days?.size ?: -1}, hourly=${hourly?.hours?.size ?: -1}, minutely=${minutely?.code}, warning=${warning?.alerts?.size ?: -1}, air=${air?.indexes?.size ?: -1}, airHourly=${airHourly?.hours?.size ?: -1}")
 
         // 核心数据缺失则抛异常（允许上层 decide 是否回退缓存）
         if (now?.condition == null || daily?.days == null || hourly?.hours == null) {
@@ -225,6 +234,7 @@ class QWeatherApiService @Inject constructor(
             minutely = minutely,
             warning = warning,
             air = air,
+            airHourly = airHourly,
             astronomySolar = astronomySolar,
             astronomyMoon = astronomyMoon,
             longitude = longitude,

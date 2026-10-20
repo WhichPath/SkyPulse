@@ -1,5 +1,7 @@
 package com.ridgecast.weather.util
 
+import com.ridgecast.weather.model.AirQuality
+import com.ridgecast.weather.model.HourlyAirQuality
 import kotlin.math.roundToInt
 
 /**
@@ -243,3 +245,71 @@ object AqiCalculator {
         return aqiDouble.roundToInt().coerceIn(0, 500)
     }
 }
+
+/**
+ * 逐时 AQI 的**统一取值口径**。
+ *
+ * 优先用数据源直接给的逐时 AQI；
+ * 缺失时（官方逐时端点只给 qaqi / gb-defra，没有 us-epa），
+ * 由 App 用本文件同一套 EPA 算法按逐时分项浓度自算。
+ *
+ * 返回与逐时序列等长的列表，缺数据的小时为 null。
+ */
+fun HourlyAirQuality.resolvedHourlyAqi(): List<Int?> {
+    val apiAqi = aqi
+    if (!apiAqi.isNullOrEmpty()) {
+        return apiAqi.map { it.value?.usa?.toInt() ?: it.value?.chn?.toInt() }
+    }
+    val size = listOfNotNull(pm25, pm10, o3, so2, no2, co).maxOfOrNull { it.size } ?: return emptyList()
+    return (0 until size).map { i ->
+        AqiCalculator.calculate(
+            pm25 = pm25?.getOrNull(i)?.value,
+            pm10 = pm10?.getOrNull(i)?.value,
+            o3 = o3?.getOrNull(i)?.value,
+            no2 = no2?.getOrNull(i)?.value,
+            so2 = so2?.getOrNull(i)?.value,
+            co = co?.getOrNull(i)?.value,
+            o3Unit = o3Unit,
+            no2Unit = no2Unit,
+            so2Unit = so2Unit,
+            coUnit = coUnit
+        )?.aqi
+    }
+}
+
+/**
+ * 空气质量指数（AQI）的**统一取值口径**。
+ *
+ * 优先用数据源直接给出的 AQI（和风 v1 `indexes`）；
+ * 数据源只给分项浓度时（示例数据即如此），由 App 用本文件同一套 EPA 算法自算。
+ *
+ * 意义：示例数据与真实数据在 UI 上表现一致，
+ * 且**所有 AQI 数值都出自同一套算法**，不会出现「浓度和 AQI 对不上」的情况。
+ */
+fun AirQuality.resolvedAqi(): Int? =
+    aqi?.usa?.toInt()
+        ?: aqi?.chn?.toInt()
+        ?: AqiCalculator.calculate(
+            pm25 = pm25, pm10 = pm10, o3 = o3, no2 = no2, so2 = so2, co = co,
+            o3Unit = o3Unit, no2Unit = no2Unit, so2Unit = so2Unit, coUnit = coUnit
+        )?.aqi
+
+/**
+ * 空气质量等级文案（统一口径）。
+ *
+ * 数据源给了描述就用数据源的（和风同时给中/美两套），
+ * 否则按自算出的 AQI 落到同一套分级。
+ */
+fun AirQuality.resolvedCategory(): String? =
+    description?.usa
+        ?: resolvedAqi()?.let { AqiCalculator.getCategory(it) }
+
+/**
+ * 首要污染物（统一口径）：由分项 IAQI 得出。
+ */
+fun AirQuality.resolvedPrimaryPollutant(): String? =
+    primaryPollutant
+        ?: AqiCalculator.calculate(
+            pm25 = pm25, pm10 = pm10, o3 = o3, no2 = no2, so2 = so2, co = co,
+            o3Unit = o3Unit, no2Unit = no2Unit, so2Unit = so2Unit, coUnit = coUnit
+        )?.primaryPollutant

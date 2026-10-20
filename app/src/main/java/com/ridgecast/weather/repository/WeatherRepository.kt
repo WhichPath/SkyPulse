@@ -149,8 +149,13 @@ class WeatherRepository @Inject constructor(
             visibility = hourly.visibility?.filterHourlyValuesFrom(threshold),
             dswrf = hourly.dswrf?.filterHourlyValuesFrom(threshold),
             air_quality = hourly.air_quality?.copy(
-                aqi = hourly.air_quality.aqi?.filterHourlyAqiFrom(threshold),
-                pm25 = hourly.air_quality.pm25?.filterHourlyValuesFrom(threshold)
+                pm25 = hourly.air_quality.pm25?.filterHourlyValuesFrom(threshold),
+                pm10 = hourly.air_quality.pm10?.filterHourlyValuesFrom(threshold),
+                o3 = hourly.air_quality.o3?.filterHourlyValuesFrom(threshold),
+                so2 = hourly.air_quality.so2?.filterHourlyValuesFrom(threshold),
+                no2 = hourly.air_quality.no2?.filterHourlyValuesFrom(threshold),
+                co = hourly.air_quality.co?.filterHourlyValuesFrom(threshold),
+                aqi = hourly.air_quality.aqi?.filterHourlyAqiFrom(threshold)
             ),
             life_index = hourly.life_index?.copy(
                 ultraviolet = hourly.life_index.ultraviolet?.filterHourlyUvFrom(threshold)

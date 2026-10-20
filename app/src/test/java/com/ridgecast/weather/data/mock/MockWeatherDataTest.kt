@@ -1,8 +1,12 @@
 package com.ridgecast.weather.data.mock
 
 import com.ridgecast.weather.util.WeatherDataValidator
+import com.ridgecast.weather.util.resolvedAqhi
+import com.ridgecast.weather.util.resolvedAqi
+import com.ridgecast.weather.util.resolvedHourlyAqi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -44,9 +48,122 @@ class MockWeatherDataTest {
         assertNotNull(realtime?.skycon)
         assertNotNull(realtime?.pressure)
         assertNotNull(realtime?.wind?.scale)
-        assertNotNull(realtime?.air_quality?.aqi?.chn)
-        assertNotNull(realtime?.air_quality?.aqi?.usa)
         assertNotNull(realtime?.life_index?.ultraviolet?.index)
+    }
+
+    @Test
+    fun `air quality only carries raw measurements so the app can compute aqi and aqhi`() {
+        val air = sample.result?.realtime?.air_quality
+        assertNotNull("实况空气质量必须给出分项浓度", air)
+
+        // 原始观测量：六项污染物浓度必须在
+        assertNotNull("PM2.5", air?.pm25)
+        assertNotNull("PM10", air?.pm10)
+        assertNotNull("O3", air?.o3)
+        assertNotNull("SO2", air?.so2)
+        assertNotNull("NO2", air?.no2)
+        assertNotNull("CO", air?.co)
+
+        // 派生量：示例数据不得预置，AQI/AQHI 一律由 App 自算
+        assertNull("示例数据不应预置 AQI", air?.aqi)
+        assertNull("示例数据不应预置分项 IAQI", air?.pm25Iaqi)
+
+        // 自算必须能得到合理结果（赤道海域：优 / AQHI 低）
+        val aqi = air?.resolvedAqi()
+        assertNotNull("应由分项浓度算出 AQI", aqi)
+        assertTrue("AQI 应在 0..100，实际 $aqi", aqi!! in 0..100)
+        val aqhi = air?.resolvedAqhi()
+        assertNotNull("应由分项浓度算出 AQHI", aqhi)
+        assertTrue("AQHI 等级应为低/中，实际 ${aqhi!!.category}", aqhi.category in listOf("低", "中"))
+    }
+
+    @Test
+    fun `hourly air quality carries raw pollutants so the app can compute aqi`() {
+        val air = sample.result?.hourly?.air_quality
+        assertNotNull("逐时空气质量必须给出分项浓度", air)
+        assertNotNull("PM2.5", air?.pm25)
+        assertNotNull("PM10", air?.pm10)
+        assertNotNull("O3", air?.o3)
+        assertNotNull("SO2", air?.so2)
+        assertNotNull("NO2", air?.no2)
+        assertNotNull("CO", air?.co)
+        // 派生量不预置
+        assertNull("示例数据不应预置逐时 AQI", air?.aqi)
+
+        // App 自算必须得到逐时 AQI
+        val computed = air?.resolvedHourlyAqi()
+        assertNotNull(computed)
+        assertEquals(air?.pm25?.size, computed?.size)
+        assertTrue("逐时 AQI 应能算出来", computed?.any { it != null } == true)
+    }
+
+    @Test
+    fun `only realtime carries air quality`() {
+        // 逐时/逐日在**模型里就没有**空气质量字段（和风 v1 对应端点不提供该数据），
+        // 因此空气质量只可能来自实况，示例数据也不得凭空造出逐时/逐日 AQI。
+        val air = sample.result?.realtime?.air_quality
+        assertNotNull("空气质量只存在于实况", air)
+        assertNotNull(air?.pm25)
+    }
+
+    @Test
+    fun `minutely precipitation is real data not a placeholder`() {
+        val minutely = sample.result?.minutely
+        assertNotNull("必须提供分钟级降水", minutely)
+        val series = minutely!!.precipitation_2h
+        assertNotNull("分钟级降水序列必须存在", series)
+        assertEquals(24, series!!.size)
+        assertEquals(series.size, minutely.times?.size)
+
+        val raining = series.any { it != 0.0 }
+        // 分钟级窗口覆盖「当前小时 + 下一小时」，有雨与否应与这两小时的天气一致
+        val coveredSkycons = sample.result?.hourly?.skycon?.take(2).orEmpty()
+        val shouldRain = coveredSkycons.any {
+            it.value?.contains("RAIN") == true || it.value?.contains("STORM") == true
+        }
+        assertEquals(
+            "分钟级降水的有无必须与窗口内天气一致（$coveredSkycons）",
+            shouldRain,
+            raining
+        )
+        // summary 与和风同口径：**自然语言描述**（官方示例「95分钟后雨就停了」），
+        // 不是「有降水/无降水」这种标签
+        val description = minutely.description.orEmpty()
+        if (raining) {
+            assertTrue(
+                "有降水时 summary 应是自然语言时间描述，实际 $description",
+                description.contains("分钟后") && (description.contains("雨") || description.contains("雪"))
+            )
+        } else {
+            assertEquals("未来两小时无降水", description)
+        }
+    }
+
+    @Test
+    fun `minutely precipitation sums up to the hourly precipitation`() {
+        val result = sample.result!!
+        val hourlyRain = result.hourly!!.precipitation!!.mapNotNull { it.value }
+        val series = result.minutely!!.precipitation_2h!!
+        assertNotNull(series)
+
+        // 同一小时内的 12 个 5 分钟累计之和，必须等于该小时的降水量（mm）——
+        // 否则图上强度会和逐小时预报对不上
+        for (h in 0 until minOf(hourlyRain.size, series.size / 12)) {
+            val sum = series.subList(h * 12, h * 12 + 12).sum()
+            assertEquals(
+                "第 $h 小时的分钟级累计之和（$sum）应等于该小时降水量（${hourlyRain[h]}）",
+                hourlyRain[h], sum, 0.1
+            )
+        }
+    }
+
+    @Test
+    fun `forecast keypoint comes from the minutely summary`() {        val minutely = sample.result?.minutely
+        assertEquals(
+            "forecast_keypoint 必须取自分钟级 summary，不得塞气候说明文案",
+            minutely?.description,
+            sample.result?.forecastKeypoint
+        )
     }
 
     @Test
@@ -59,7 +176,6 @@ class MockWeatherDataTest {
         assertEquals(hourly.temperature!!.size, hourly.humidity!!.size)
         assertEquals(hourly.temperature!!.size, hourly.cloudrate!!.size)
         assertEquals(hourly.temperature!!.size, hourly.precipitation!!.size)
-        assertEquals(hourly.temperature!!.size, hourly.air_quality!!.aqi!!.size)
         assertEquals(hourly.temperature!!.size, hourly.life_index!!.ultraviolet!!.size)
 
         val daily = result.daily!!
@@ -68,7 +184,6 @@ class MockWeatherDataTest {
         assertEquals(daily.astro!!.size, daily.skycon!!.size)
         assertEquals(daily.astro!!.size, daily.wind!!.size)
         assertEquals(daily.astro!!.size, daily.precipitation!!.size)
-        assertEquals(daily.astro!!.size, daily.air_quality!!.aqi!!.size)
     }
 
     @Test

@@ -41,6 +41,7 @@ import com.ridgecast.weather.model.RealtimeWeather
 import com.ridgecast.weather.ui.theme.*
 import com.ridgecast.weather.ui.screen.LocalSkipCardAnimation
 import com.ridgecast.weather.util.WeatherUtils
+import com.ridgecast.weather.util.resolvedAqi
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -312,7 +313,7 @@ fun CurrentWeather(
     LaunchedEffect(Unit) { visible = true }
     LaunchedEffect(skipAnimation) { if (skipAnimation) visible = true }
 
-    val aqiValue = realtime?.air_quality?.aqi?.usa?.toInt() ?: realtime?.air_quality?.aqi?.chn?.toInt()
+    val aqiValue = realtime?.air_quality?.resolvedAqi()
     val aqiValueText = aqiValue?.toString() ?: "--"
     val aqiColor = aqiValue?.let {
         when {

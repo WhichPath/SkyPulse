@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import com.ridgecast.weather.model.DailyForecast
 import com.ridgecast.weather.ui.glass.AtmosphereLightField
 import com.ridgecast.weather.util.WeatherUtils
+import com.ridgecast.weather.util.skyGradientColorStops
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -71,8 +72,12 @@ fun WeatherBackground(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
+                        // 用与次级页一致的 SkyGradientStops 非等距锚点：
+                        // 天顶色占据上 40%，向地平线加速提亮。
+                        // 此前这里用的是默认等距停靠（0/0.25/0.5/0.75/1.0），
+                        // 与 WeatherUtils.SkyGradientStops 的设计口径不一致。
                         Brush.verticalGradient(
-                            colors = animatedColors,
+                            colorStops = skyGradientColorStops(animatedColors),
                             startY = 0f,
                             endY = Float.POSITIVE_INFINITY
                         )

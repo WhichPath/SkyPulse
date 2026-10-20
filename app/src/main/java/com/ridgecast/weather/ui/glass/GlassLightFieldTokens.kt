@@ -3,6 +3,7 @@ package com.ridgecast.weather.ui.glass
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import com.ridgecast.weather.util.skyGradientColorStops
 
 /**
  * 次级页面背景：与主页同源的天气渐变，按深浅色模式调整明度。
@@ -19,7 +20,9 @@ fun weatherPageBackground(
     val amount = if (isDark) 0.52f else 0.86f
     val colors = weatherGradient.map { lerp(it, target, amount) }
     return Brush.verticalGradient(
-        colors = colors,
+        // 与主页共用 SkyGradientStops 非等距锚点，避免次级页与主屏的
+        // 「天顶压深」口径不一致。
+        colorStops = skyGradientColorStops(colors),
         startY = 0f,
         endY = Float.POSITIVE_INFINITY
     )

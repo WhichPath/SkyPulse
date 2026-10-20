@@ -47,6 +47,21 @@ interface QWeatherApi {
         @Query("lang") lang: String = "zh"
     ): QWeatherAirResponse
 
+    /**
+     * 逐小时空气质量预报（未来 24 小时，路径参数：纬度/经度）。
+     *
+     * 官方文档：/docs/api/air-quality/air-hourly-forecast/
+     * 逐时响应含 `pollutants`（分项浓度 + 单位 + 分指数）与 `indexes`；
+     * 但 `indexes` 只有 qaqi / gb-defra，**没有 us-epa**，
+     * 因此本项目的 US EPA 口径 AQI 由分项浓度本地自算。
+     */
+    @GET("airquality/v1/hourly/{lat}/{lon}")
+    suspend fun getAirHourly(
+        @Path("lat") lat: Double,
+        @Path("lon") lon: Double,
+        @Query("lang") lang: String = "zh"
+    ): QWeatherAirHourlyResponse
+
     // ============ v2 GeoAPI ============
 
     /** 城市搜索，location 可为城市名或 "经度,纬度" */

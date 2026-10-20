@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ridgecast.weather.data.LocationManager
 import com.ridgecast.weather.data.PermissionDataStore
+import com.ridgecast.weather.data.mock.MockWeatherData
 import com.ridgecast.weather.domain.CitySelectionPolicy
 import com.ridgecast.weather.domain.ManageCityUseCase
 import com.ridgecast.weather.domain.RefreshWeatherUseCase
@@ -41,11 +42,40 @@ import javax.inject.Inject
 
 // ============ UI State ============
 
+/**
+ * 定位城市名未知时的兜底地名。
+ *
+ * 与 [LocationManager.DEFAULT_LATITUDE] / [LocationManager.DEFAULT_LONGITUDE] 同址（北京），
+ * 只用于「确实有北京的默认坐标但还没拿到地名」的场景，
+ * **不得**用来给示例数据（几内亚湾）当标题。
+ */
+private const val DEFAULT_LOCATION_NAME = "北京市"
+
+/**
+ * 退回示例数据（世界地图中心点 · 几内亚湾）。
+ *
+ * 标题必须是示例地名：示例数据的观测地点是几内亚湾，
+ * 标成「北京市」会让人以为这是北京的天气。
+ */
+private fun sampleDataState(): WeatherUiState.Success = WeatherUiState.Success(
+    weather = MockWeatherData.createSampleWeather(),
+    locationName = MockWeatherData.DEFAULT_CITY_NAME,
+    isSampleData = true
+)
+
 sealed class WeatherUiState {
     data object Loading : WeatherUiState()
     data class Success(
         val weather: WeatherResponse,
-        val locationName: String = "定位中..."
+        val locationName: String = "定位中...",
+        /**
+         * 当前展示的是否是**示例数据**（世界地图中心点 · 几内亚湾）。
+         *
+         * 标题必须描述正在展示的那份数据：
+         * 展示示例数据时用示例地名（几内亚湾），
+         * 展示真实数据时才用城市名——否则会出现「几内亚湾的天气标着北京市」。
+         */
+        val isSampleData: Boolean = false
     ) : WeatherUiState()
     data class Error(val message: String) : WeatherUiState()
 }
@@ -144,12 +174,7 @@ class WeatherViewModel @Inject constructor(
         cityId to errorMsg
     }.flatMapLatest { (cityId, errorMsg) ->
         if (cityId == null) {
-            flowOf(
-                WeatherUiState.Success(
-                    weather = com.ridgecast.weather.data.mock.MockWeatherData.createSampleWeather(),
-                    locationName = com.ridgecast.weather.data.mock.MockWeatherData.DEFAULT_CITY_NAME
-                )
-            )
+            flowOf(sampleDataState())
         } else {
             repository.observeWeather(cityId).map { entity ->
                 if (entity != null) {
@@ -159,26 +184,20 @@ class WeatherViewModel @Inject constructor(
                         val locationName = if (city?.isCurrentLocation == true) {
                             locationManager.getCachedLocation()?.name
                                 ?: city.name.takeIf { it != "当前定位" && it != "定位中..." }
-                                ?: "北京市"
+                                ?: DEFAULT_LOCATION_NAME
                         } else {
-                            city?.name ?: "北京市"
+                            city?.name ?: DEFAULT_LOCATION_NAME
                         }
                         WeatherUiState.Success(weather, locationName)
                     } else {
-                        WeatherUiState.Success(
-                            weather = com.ridgecast.weather.data.mock.MockWeatherData.createSampleWeather(),
-                            locationName = "北京市"
-                        )
+                        // 缓存解析失败：退回示例数据，标题也必须是示例地名
+                        sampleDataState()
                     }
                 } else if (errorMsg != null) {
                     WeatherUiState.Error(errorMsg)
                 } else {
-                    val city = _savedCities.value.find { it.id == cityId }
-                    val locationName = city?.name?.takeIf { it != "当前定位" && it != "定位中..." } ?: "北京市"
-                    WeatherUiState.Success(
-                        weather = com.ridgecast.weather.data.mock.MockWeatherData.createSampleWeather(),
-                        locationName = locationName
-                    )
+                    // 无缓存：退回示例数据，标题也必须是示例地名
+                    sampleDataState()
                 }
             }
         }

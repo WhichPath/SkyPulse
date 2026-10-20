@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.currentStateAsState
+import com.ridgecast.weather.util.WeatherFamily
+import com.ridgecast.weather.util.classifyWeather
 import kotlinx.coroutines.isActive
 import kotlin.math.PI
 import kotlin.math.abs
@@ -146,29 +148,26 @@ private fun WeatherEffectContent(
 
 /**
  * 天气效果类型（用于切换过渡：同类型强度变化不触发 Crossfade）
- * 选择逻辑与原 when 分支完全一致
+ *
+ * 归类走 [classifyWeather]，与背景渐变、玻璃配色共用同一套天气族判定，
+ * 避免「粒子层下雪、渐变层却是晴天蓝」这类跨层错配。
  */
 private fun effectTypeOf(skycon: String?, isDay: Boolean): String {
-    return when {
+    return when (classifyWeather(skycon)) {
+        WeatherFamily.Clear -> if (isDay) "SUNNY_DAY" else "CLEAR_NIGHT"
+        // 多云夜间复用晴夜（星空），与历史行为一致
+        WeatherFamily.PartlyCloudy -> if (isDay) "PARTLY_CLOUDY_DAY" else "CLEAR_NIGHT"
+        WeatherFamily.Cloudy -> "CLOUDY"
+        WeatherFamily.Thunder -> "THUNDER_SHOWER"
+        WeatherFamily.Rain -> "RAIN"
+        WeatherFamily.Snow -> "SNOW"
+        WeatherFamily.Sleet -> "SLEET"
+        // 冰雹暂无专属粒子效果
+        WeatherFamily.Hail -> "NONE"
+        WeatherFamily.Haze -> "FOG"
+        WeatherFamily.Wind -> "WIND"
         // 无数据（启动加载中）时不渲染粒子效果，避免先闪出晴天特效再切换到实际天气
-        skycon == null -> "NONE"
-        skycon.contains("CLEAR") -> if (isDay) "SUNNY_DAY" else "CLEAR_NIGHT"
-        skycon.contains("PARTLY_CLOUDY") -> if (isDay) "PARTLY_CLOUDY_DAY" else "CLEAR_NIGHT"
-        skycon.contains("CLOUDY") -> "CLOUDY"
-        // THUNDER_SHOWER: 雷阵雨 - 雨+闪电
-        skycon == "THUNDER_SHOWER" -> "THUNDER_SHOWER"
-        // STORM_SNOW: 暴雪 - 必须在 STORM_RAIN 之前判断
-        skycon == "STORM_SNOW" -> "SNOW"
-        // SLEET: 雨夹雪 - 雨+雪混合
-        skycon == "SLEET" -> "SLEET"
-        // RAIN 相关: LIGHT_RAIN, MODERATE_RAIN, HEAVY_RAIN, STORM_RAIN
-        skycon.contains("RAIN") -> "RAIN"
-        // SNOW 相关: LIGHT_SNOW, MODERATE_SNOW, HEAVY_SNOW
-        skycon.contains("SNOW") -> "SNOW"
-        // 霾/雾/浮尘/沙尘
-        skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> "FOG"
-        skycon == "WIND" -> "WIND"
-        else -> "NONE"
+        WeatherFamily.Unknown -> "NONE"
     }
 }
 

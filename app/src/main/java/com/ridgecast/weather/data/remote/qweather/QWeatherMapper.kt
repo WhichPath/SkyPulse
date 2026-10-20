@@ -15,6 +15,7 @@ import com.ridgecast.weather.model.DailySkycon
 import com.ridgecast.weather.model.DailyTemperature
 import com.ridgecast.weather.model.DailyValue
 import com.ridgecast.weather.model.DailyWind
+import com.ridgecast.weather.model.HourlyAirQuality
 import com.ridgecast.weather.model.HourlyForecast
 import com.ridgecast.weather.model.HourlyLifeIndex
 import com.ridgecast.weather.model.HourlySkycon
@@ -65,6 +66,7 @@ object QWeatherMapper {
         minutely: QWeatherMinutelyResponse?,
         warning: QWeatherWarningResponse?,
         air: QWeatherAirResponse?,
+        airHourly: QWeatherAirHourlyResponse? = null,
         astronomySolar: QWeatherSolarElevationResponse? = null,
         astronomyMoon: QWeatherAstronomyMoonResponse? = null,
         longitude: Double,
@@ -76,7 +78,7 @@ object QWeatherMapper {
         val realtime = mapRealtimeV1(now, air)
         val minutelyForecast = mapMinutely(minutely)
         val dailyForecast = mapDailyV1(daily)
-        val hourlyForecast = mapHourlyV1(hourly, dailyForecast?.astro)
+        val hourlyForecast = mapHourlyV1(hourly, dailyForecast?.astro, mapAirHourly(airHourly))
         val alert = mapWarning(warning)
         val astronomy = mapAstronomy(
             solar = astronomySolar,
@@ -301,8 +303,68 @@ object QWeatherMapper {
         )
     }
 
-    // ============ Minutely (分钟级降水) ============
+    /**
+     * 逐小时空气质量（/airquality/v1/hourly，未来 24 小时）。
+     *
+     * 与实况同构：**只映射原始观测量**（各污染物浓度 + 单位），
+     * 逐时 AQI 由 App 用本地 US EPA 算法自算
+     * （官方逐时 `indexes` 只有 qaqi / gb-defra，没有 us-epa）。
+     */
+    internal fun mapAirHourly(air: QWeatherAirHourlyResponse?): HourlyAirQuality? {
+        val hours = air?.hours ?: return null
+        if (hours.isEmpty()) return null
 
+        fun series(code: String): List<HourlyValue>? {
+            val values = hours.map { hour ->
+                hour.pollutants?.firstOrNull { it.code == code }?.concentration?.value
+            }
+            return if (values.all { it == null }) null
+            else values.mapIndexed { i, v -> HourlyValue(datetime = hours[i].forecastTime, value = v) }
+        }
+
+        // 单位按第一个有值的污染物取（同一端点内各小时单位一致）
+        fun unitOf(code: String, defaultUnit: String): String {
+            val raw = hours.asSequence()
+                .mapNotNull { it.pollutants?.firstOrNull { p -> p.code == code }?.concentration?.unit?.trim() }
+                .firstOrNull { it.isNotBlank() }
+                ?: return defaultUnit
+            return when {
+                raw.equals("ug/m3", ignoreCase = true) || raw.equals("μg/m3", ignoreCase = true) -> "μg/m³"
+                raw.equals("mg/m3", ignoreCase = true) || raw.equals("mg/m³", ignoreCase = true) -> "mg/m³"
+                raw.equals("ppb", ignoreCase = true) -> "ppb"
+                raw.equals("ppm", ignoreCase = true) -> "ppm"
+                else -> raw
+            }
+        }
+
+        val pm25 = series("pm2p5")
+        val pm10 = series("pm10")
+        val o3 = series("o3")
+        val so2 = series("so2")
+        val no2 = series("no2")
+        val co = series("co")
+        if (pm25 == null && pm10 == null && o3 == null && so2 == null && no2 == null && co == null) {
+            return null
+        }
+
+        return HourlyAirQuality(
+            pm25 = pm25,
+            pm10 = pm10,
+            o3 = o3,
+            so2 = so2,
+            no2 = no2,
+            co = co,
+            aqi = null,
+            pm25Unit = unitOf("pm2p5", "μg/m³"),
+            pm10Unit = unitOf("pm10", "μg/m³"),
+            o3Unit = unitOf("o3", "μg/m³"),
+            so2Unit = unitOf("so2", "μg/m³"),
+            no2Unit = unitOf("no2", "μg/m³"),
+            coUnit = unitOf("co", "mg/m³")
+        )
+    }
+
+    // ============ Minutely (分钟级降水) ============
     private fun mapMinutely(minutely: QWeatherMinutelyResponse?): MinutelyForecast? {
         val items = minutely?.minutely ?: return null
         val precipList = items.mapNotNull { it.precip?.toDoubleOrNull() }
@@ -328,7 +390,8 @@ object QWeatherMapper {
 
     private fun mapHourlyV1(
         hourly: QWeatherV1HourlyResponse?,
-        astro: List<DailyAstro>? = null
+        astro: List<DailyAstro>? = null,
+        airQuality: HourlyAirQuality? = null
     ): HourlyForecast? {
         val items = hourly?.hours ?: return null
         if (items.isEmpty()) return null
@@ -390,7 +453,7 @@ object QWeatherMapper {
                 HourlyValue(datetime = it.forecastTime, value = it.visibility?.value)
             },
             dswrf = null,
-            air_quality = null,
+            air_quality = airQuality,
             life_index = HourlyLifeIndex(ultraviolet = hourlyUv)
         )
     }
@@ -501,7 +564,8 @@ object QWeatherMapper {
                 val date = it.forecastStartTime?.substringBefore("T")
                 DailySkycon(date = date, value = iconToSkycon(it.nighttime?.condition?.code, isDay = false))
             },
-            air_quality = null,
+            // 逐日空气质量端点（/airquality/v1/daily）存在但本项目未接入，
+            // 模型里也没有该字段
             life_index = DailyLifeIndex(
                 ultraviolet = items.map {
                     val date = it.forecastStartTime?.substringBefore("T")

@@ -84,9 +84,9 @@ object WeatherDataValidator {
                 "hourly.humidity" to hourly.humidity?.size,
                 "hourly.cloudrate" to hourly.cloudrate?.size,
                 "hourly.precipitation" to hourly.precipitation?.size,
-                "hourly.air_quality.aqi" to hourly.air_quality?.aqi?.size,
                 "hourly.life_index.ultraviolet" to hourly.life_index?.ultraviolet?.size
             )
+            // 逐日**不含**空气质量：官方逐日端点存在但本项目未接入，模型里也没有该字段
             val sizes = series.map { it.second }
             if (sizes.all { it == null }) {
                 collector.missing("hourly.*")
@@ -113,9 +113,36 @@ object WeatherDataValidator {
                     collector.need("hourly.wind[$i].direction", w.direction)
                     collector.need("hourly.wind[$i].scale", w.scale)
                 }
-                hourly.air_quality?.aqi?.forEachIndexed { i, a ->
-                    collector.need("hourly.air_quality.aqi[$i].value.chn", a.value?.chn)
-                    collector.need("hourly.air_quality.aqi[$i].value.usa", a.value?.usa)
+                // 逐时空气质量：分项浓度是原始观测量，必须齐全；
+                // 逐时 AQI 由 App 自算，故不作为必填项校验
+                hourly.air_quality?.let { air ->
+                    listOf(
+                        "hourly.air_quality.pm25" to air.pm25?.size,
+                        "hourly.air_quality.pm10" to air.pm10?.size,
+                        "hourly.air_quality.o3" to air.o3?.size,
+                        "hourly.air_quality.so2" to air.so2?.size,
+                        "hourly.air_quality.no2" to air.no2?.size,
+                        "hourly.air_quality.co" to air.co?.size
+                    ).forEach { (path, size) -> collector.needSize(path, size) }
+                    air.pm25?.forEachIndexed { i, v ->
+                        collector.need("hourly.air_quality.pm25[$i].value", v.value)
+                        collector.need("hourly.air_quality.pm25[$i].datetime", v.datetime)
+                    }
+                    air.pm10?.forEachIndexed { i, v ->
+                        collector.need("hourly.air_quality.pm10[$i].value", v.value)
+                    }
+                    air.o3?.forEachIndexed { i, v ->
+                        collector.need("hourly.air_quality.o3[$i].value", v.value)
+                    }
+                    air.so2?.forEachIndexed { i, v ->
+                        collector.need("hourly.air_quality.so2[$i].value", v.value)
+                    }
+                    air.no2?.forEachIndexed { i, v ->
+                        collector.need("hourly.air_quality.no2[$i].value", v.value)
+                    }
+                    air.co?.forEachIndexed { i, v ->
+                        collector.need("hourly.air_quality.co[$i].value", v.value)
+                    }
                 }
                 hourly.life_index?.ultraviolet?.forEachIndexed { i, u ->
                     collector.need("hourly.life_index.ultraviolet[$i].index", u.index)
@@ -136,9 +163,9 @@ object WeatherDataValidator {
                 "daily.skycon" to daily.skycon?.size,
                 "daily.wind" to daily.wind?.size,
                 "daily.precipitation" to daily.precipitation?.size,
-                "daily.air_quality.aqi" to daily.air_quality?.aqi?.size,
                 "daily.life_index.ultraviolet" to daily.life_index?.ultraviolet?.size
             )
+            // 逐日同样不含空气质量（与逐时同理）
             val sizes = series.map { it.second }
             series.forEach { (path, size) -> collector.needSize(path, size) }
             val expected = sizes.filterNotNull().maxOrNull() ?: 0
@@ -187,10 +214,6 @@ object WeatherDataValidator {
                 collector.need("daily.precipitation[$i].max", p.max)
                 collector.need("daily.precipitation[$i].min", p.min)
                 collector.need("daily.precipitation[$i].avg", p.avg)
-            }
-            daily.air_quality?.aqi?.forEachIndexed { i, a ->
-                collector.need("daily.air_quality.aqi[$i].max.chn", a.max?.chn)
-                collector.need("daily.air_quality.aqi[$i].avg.usa", a.avg?.usa)
             }
         }
 
@@ -246,11 +269,19 @@ object WeatherDataValidator {
         collector.need("realtime.wind.gust", realtime.wind?.gust)
         collector.need("realtime.wind.scale", realtime.wind?.scale)
         collector.need("realtime.precipitation.local.intensity", realtime.precipitation?.local?.intensity)
-        collector.need("realtime.air_quality.aqi.chn", realtime.air_quality?.aqi?.chn)
-        collector.need("realtime.air_quality.aqi.usa", realtime.air_quality?.aqi?.usa)
-        collector.need("realtime.air_quality.description.chn", realtime.air_quality?.description?.chn)
+        // AQI/等级文案是**派生量**：数据源给了就用数据源的，
+        // 只给分项浓度时由 App 用 AqiCalculator/AqhiCalculator 自算，
+        // 因此不算缺失（示例数据即只给分项浓度）。
+        collector.note("realtime.air_quality.aqi.chn", realtime.air_quality?.aqi?.chn)
+        collector.note("realtime.air_quality.aqi.usa", realtime.air_quality?.aqi?.usa)
+        collector.note("realtime.air_quality.description.chn", realtime.air_quality?.description?.chn)
+        // 分项浓度是**原始观测量**：必须有，否则 AQI/AQHI 都无从谈起
         collector.need("realtime.air_quality.pm25", realtime.air_quality?.pm25)
         collector.need("realtime.air_quality.pm10", realtime.air_quality?.pm10)
+        collector.need("realtime.air_quality.o3", realtime.air_quality?.o3)
+        collector.need("realtime.air_quality.so2", realtime.air_quality?.so2)
+        collector.need("realtime.air_quality.no2", realtime.air_quality?.no2)
+        collector.need("realtime.air_quality.co", realtime.air_quality?.co)
         collector.need("realtime.life_index.ultraviolet.index", realtime.life_index?.ultraviolet?.index)
         collector.need("realtime.life_index.comfort.index", realtime.life_index?.comfort?.index)
     }
@@ -291,6 +322,17 @@ object WeatherDataValidator {
 
         fun note(path: String) {
             noteItems += path
+        }
+
+        /**
+         * 可选项缺失提示：仅当 [value] 真的缺失时才记一笔。
+         *
+         * 用于「派生量」字段（如 AQI）——数据源给了就静默，
+         * 没给只提示、不算缺失（App 能自算）。
+         */
+        fun note(path: String, value: Any?) {
+            checkedCount++
+            if (value == null) noteItems += path
         }
 
         fun need(path: String, value: Any?) {

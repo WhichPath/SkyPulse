@@ -37,7 +37,10 @@ import com.ridgecast.weather.model.HourlyForecast
 import com.ridgecast.weather.model.HourlyWind
 import com.ridgecast.weather.ui.theme.*
 import com.ridgecast.weather.ui.screen.LocalSkipCardAnimation
+import com.ridgecast.weather.util.WeatherFamily
 import com.ridgecast.weather.util.WeatherUtils
+import com.ridgecast.weather.util.resolvedHourlyAqi
+import com.ridgecast.weather.util.classifyWeather
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -377,8 +380,11 @@ private fun HourlyTemperatureChart(
     val precipitation = hourlyData.precipitation
     val winds = hourlyData.wind
     val gustValues = hourlyData.gust
-    val aqiValues = hourlyData.air_quality?.aqi
     val uvItems = hourlyData.life_index?.ultraviolet
+    // 逐时 AQI：数据源给了就用，没给则按逐时分项浓度本地自算（US EPA 口径）
+    val aqiValues = remember(hourlyData.air_quality) {
+        hourlyData.air_quality?.resolvedHourlyAqi().orEmpty()
+    }
 
     val theme = LocalWeatherTheme.current
     val textMeasurer = rememberTextMeasurer()
@@ -467,19 +473,31 @@ private fun HourlyTemperatureChart(
             when {
                 // 缺失天气现象时不要伪造晴天色，否则连续未知时段会变成整块黄色
                 skycon == null -> Color.Transparent to Color.Transparent
+                // 暴雨/暴雪（STORM_*）沿用雷暴靛蓝色，保持既有观感
                 skycon.contains("STORM") -> chartColors.storm
-                skycon.contains("HEAVY_RAIN") || skycon.contains("HEAVY_SNOW") -> chartColors.rain
-                skycon.contains("RAIN") || skycon.contains("SNOW") -> chartColors.rain
-                skycon.contains("LIGHT_RAIN") || skycon.contains("LIGHT_SNOW") -> chartColors.rain
-                skycon.contains("PARTLY_CLOUDY") -> chartColors.partlyCloudy
-                skycon.contains("CLOUDY") -> chartColors.cloudy
-                skycon.contains("HAZE") || skycon == "FOG" || skycon == "DUST" || skycon == "SAND" -> chartColors.haze
-                skycon == "WIND" -> chartColors.wind
-                skycon.contains("CLEAR") -> chartColors.clear
-                // 未识别的天气代码同样不要落成晴天色块
-                else -> Color.Transparent to Color.Transparent
+                else -> when (classifyWeather(skycon)) {
+                    // 雷阵雨原来会落到 else 变成全透明，柱体整个不可见
+                    WeatherFamily.Thunder -> chartColors.storm
+                    WeatherFamily.Rain,
+                    WeatherFamily.Snow,
+                    WeatherFamily.Sleet,
+                    WeatherFamily.Hail -> chartColors.rain
+                    WeatherFamily.PartlyCloudy -> chartColors.partlyCloudy
+                    WeatherFamily.Cloudy -> chartColors.cloudy
+                    WeatherFamily.Haze -> chartColors.haze
+                    WeatherFamily.Wind -> chartColors.wind
+                    WeatherFamily.Clear -> chartColors.clear
+                    // 未识别的天气代码同样不要落成晴天色块
+                    WeatherFamily.Unknown -> Color.Transparent to Color.Transparent
+                }
             }
         }
+    }
+
+    // 降水概率只在降水时段显示（雷阵雨/雨夹雪/冰雹同样属于降水）。
+    // 预计算一次，避免在 Canvas 逐帧绘制循环里反复做字符串匹配。
+    val isPrecipFlags = remember(skyconValues) {
+        skyconValues.map { skycon -> skycon != null && classifyWeather(skycon).isPrecipitating }
     }
     val horizontalEdgeGuard = rememberHorizontalScrollEdgeGuard()
 
@@ -706,14 +724,15 @@ private fun HourlyTemperatureChart(
                                 val labelStyle = TextStyle(fontSize = 12.sp, color = TextSecondary)
                                 val labelCenterY = curveBottomPx + (canvasH - curveBottomPx) * 0.45f
                                 for (i in windowStart until windowEnd) {
-                                    val skycon = skyconValues[i] ?: continue
+                                    // 缺少天气现象的时段不绘制标签（与历史行为一致）
+                                    if (skyconValues[i] == null) continue
                                     val leftX = if (i == 0) contentLeftLocal else (points[i - 1].x + points[i].x) / 2f
                                     val rightX = if (i == itemCount - 1) contentRightLocal else (points[i].x + points[i + 1].x) / 2f
                                     val centerX = (leftX + rightX) / 2f
                                     // 昼夜标记与天气描述已在组合期预计算，这里直接索引，不再逐格解析日期
                                     val weatherInfo = weatherInfos[i]
                                     val weatherResult = textMeasurer.measure(AnnotatedString(weatherInfo.description), style = labelStyle)
-                                    val isPrecip = skycon.contains("RAIN") || skycon.contains("STORM") || skycon.contains("SNOW")
+                                    val isPrecip = isPrecipFlags[i]
                                     val prob = probValues[i]
                                     val probText = if (isPrecip && prob >= 1.0) "${prob.toInt()}%" else ""
                                     val lineSpacing = 2.dp.toPx()
@@ -751,10 +770,59 @@ private fun HourlyTemperatureChart(
                         }
                     }
 
-                    val showParams = showUv || showWind || showWindGust
+                    val showParams = showAqi || showUv || showWind || showWindGust
                     if (showParams) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(7.5.dp)) {
+                            // AQI Row
+                            if (showAqi) {
+                                Row(
+                                    modifier = Modifier
+                                        .width(windowWidthDp)
+                                        .padding(start = leadingPadDp, end = trailingPadDp)
+                                ) {
+                                    for (index in windowStart until windowEnd) {
+                                        if (fastScrolling) {
+                                            HourlyCellPlaceholder(width = itemWidthDp)
+                                            continue
+                                        }
+                                        val aqi = aqiValues.getOrNull(index)?.toDouble()
+                                        val label = aqiLabel(aqi)
+                                        val color = aqiColor(aqi, isBrightBg)
+                                        Box(
+                                            modifier = Modifier.width(itemWidthDp).height(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (label.isNotEmpty()) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    modifier = Modifier
+                                                        .width(tagWidth)
+                                                        .clip(ParamTagShape)
+                                                        .background(Color.White.copy(alpha = 0.25f))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                                            .background(color)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(3.dp))
+                                                    Text(
+                                                        text = label,
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                                        color = TextSecondary,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             // UV Row
                             if (showUv) {
                                 Row(
